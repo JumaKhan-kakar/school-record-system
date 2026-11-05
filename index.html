@@ -432,6 +432,7 @@ function loadScript(src){return new Promise(function(res,rej){const s=document.c
 const Cloud = {
   enabled: !!FIREBASE_CONFIG,
   ready: false, authResolved: false, user: null, teacher: null, authError: "",
+  schoolId: "", school: null, readOnly: false, isSuperAdmin: false,
   fb: null, fs: null, auth: null,
   applyingRemote: false, lastSyncedJSON: "", localBeforeSync: "", unsubs: [],
   firstSeen: {}, firstDone: false, seedChecked: false, cloudFirst: {},
@@ -451,16 +452,33 @@ const Cloud = {
       }catch(e){self.authResolved=true;render();}
     }).catch(function(){self.authResolved=true;render();});
   },
+  /* SaaS: every school is a tenant. All school data lives under schools/{schoolId}/...
+     The teacher's root mapping doc (teachers/{uid}) names their school; the school doc
+     carries name, plan and subscription status. */
+  coll: function(name){return this.fs.collection("schools").doc(this.schoolId).collection(name);},
   onAuth: function(u){
     const self=this;
-    self.user=u||null;self.teacher=null;
+    self.user=u||null;self.teacher=null;self.school=null;self.schoolId="";self.readOnly=false;self.isSuperAdmin=false;
     if(!u){self.authResolved=true;self.ready=false;self.stopListeners();render();return;}
     self.fs.collection("teachers").doc(u.uid).get().then(function(snap){
       if(!snap.exists){self.authError="not_allowed";try{self.auth.signOut();}catch(e){}self.authResolved=true;render();return;}
-      self.teacher=snap.data()||{};self.authResolved=true;self.ready=true;
-      self.localBeforeSync=JSON.stringify(db());
-      self.startListeners();
-      render();
+      self.teacher=snap.data()||{};
+      const sid=self.teacher.schoolId||"";
+      if(!sid){self.authError="not_allowed";try{self.auth.signOut();}catch(e){}self.authResolved=true;render();return;}
+      self.schoolId=sid;
+      return self.fs.collection("schools").doc(sid).get().then(function(ssnap){
+        if(!ssnap.exists){self.authError="not_allowed";try{self.auth.signOut();}catch(e){}self.authResolved=true;render();return;}
+        self.school=ssnap.data()||{};
+        self.readOnly=self.school.status!=="active";
+        if(self.school.name){db().settings.schoolName=self.school.name;Store.trySave();}
+        return self.fs.collection("platformAdmins").doc(u.uid).get().then(function(asnap){
+          self.isSuperAdmin=asnap.exists;
+          self.authResolved=true;self.ready=true;
+          self.localBeforeSync=JSON.stringify(db());
+          self.startListeners();
+          render();
+        });
+      });
     }).catch(function(){self.authResolved=true;render();});
   },
   signIn: function(email,pass){
@@ -469,7 +487,7 @@ const Cloud = {
       return {ok:false,error:t("login_fail")};
     });
   },
-  signOut: function(){const self=this;self.stopListeners();self.user=null;self.teacher=null;self.ready=false;try{self.auth.signOut();}catch(e){}render();},
+  signOut: function(){const self=this;self.stopListeners();self.user=null;self.teacher=null;self.school=null;self.schoolId="";self.readOnly=false;self.isSuperAdmin=false;self.ready=false;try{self.auth.signOut();}catch(e){}render();},
   changePassword: function(np){
     const self=this;
     return self.user.updatePassword(np).then(function(){return {ok:true};}).catch(function(e){return {ok:false,error:(e&&e.code==="auth/requires-recent-login")?t("login_reauth"):t("login_fail")};});
@@ -479,7 +497,7 @@ const Cloud = {
     const self=this;self.stopListeners();
     const colls=["students","exams","marks","labItems","labMaint","certificates","settings"];
     colls.forEach(function(c){
-      const un=self.fs.collection(c).onSnapshot(function(snap){
+      const un=self.coll(c).onSnapshot(function(snap){
         self.applyChanges(c,snap.docChanges());
         if(!self.firstSeen[c]){self.firstSeen[c]=true;
           if(Object.keys(self.firstSeen).length>=colls.length&&!self.seedChecked){self.seedChecked=true;self.firstDone=true;self.seedCheck();}
@@ -551,15 +569,15 @@ const Cloud = {
     return f;
   },
   pushDoc: function(coll,id,data){
-    if(!this.ready||!this.fs)return;
-    try{this.fs.collection(coll).doc(id).set(JSON.parse(JSON.stringify(data)));}catch(e){}
+    if(!this.ready||!this.fs||!this.schoolId)return;
+    try{this.coll(coll).doc(id).set(JSON.parse(JSON.stringify(data)));}catch(e){}
   },
   deleteDoc: function(coll,id){
-    if(!this.ready||!this.fs)return;
-    try{this.fs.collection(coll).doc(id).delete();}catch(e){}
+    if(!this.ready||!this.fs||!this.schoolId)return;
+    try{this.coll(coll).doc(id).delete();}catch(e){}
   },
   onLocalSave: function(){
-    if(!this.enabled||!this.ready||!this.user||this.applyingRemote||!this.firstDone||!this.fs)return;
+    if(!this.enabled||!this.ready||!this.user||!this.schoolId||this.applyingRemote||!this.firstDone||!this.fs)return;
     try{
       const cur=db(),prev=this.lastSyncedJSON?JSON.parse(this.lastSyncedJSON):null;
       if(!prev){this.lastSyncedJSON=JSON.stringify(cur);return;}
@@ -568,10 +586,10 @@ const Cloud = {
       const self=this;
       Object.keys(b).forEach(function(coll){
         Object.keys(b[coll]).forEach(function(id){
-          if(JSON.stringify(a[coll][id]||null)!==JSON.stringify(b[coll][id])){batch.set(self.fs.collection(coll).doc(id),JSON.parse(JSON.stringify(b[coll][id])));n++;}
+          if(JSON.stringify(a[coll][id]||null)!==JSON.stringify(b[coll][id])){batch.set(self.coll(coll).doc(id),JSON.parse(JSON.stringify(b[coll][id])));n++;}
         });
         Object.keys(a[coll]).forEach(function(id){
-          if(!b[coll][id]){batch.delete(self.fs.collection(coll).doc(id));n++;}
+          if(!b[coll][id]){batch.delete(self.coll(coll).doc(id));n++;}
         });
       });
       if(n>0)batch.commit().catch(function(){});
@@ -589,7 +607,7 @@ const Cloud = {
       const self=this;
       Object.keys(lf).forEach(function(coll){
         Object.keys(lf[coll]).forEach(function(id){
-          if(!cf[coll]||!cf[coll][id]){batch.set(self.fs.collection(coll).doc(id),JSON.parse(JSON.stringify(lf[coll][id])));n++;}
+          if(!cf[coll]||!cf[coll][id]){batch.set(self.coll(coll).doc(id),JSON.parse(JSON.stringify(lf[coll][id])));n++;}
         });
       });
       if(n>0)batch.commit().catch(function(){});
@@ -1600,9 +1618,10 @@ function render(){
     if(!Cloud.user){renderLogin();return;}
   }
   renderTabs();const v=$("view");
-  v.innerHTML = curTab==="home"?viewHome():curTab==="adm"?viewAdm():curTab==="dob"?viewDob():
+  const roBanner=(typeof Cloud!=="undefined"&&Cloud.enabled&&Cloud.readOnly)?'<div class="msg err" style="margin:.5rem 0">🔒 '+esc(t("sub_expired"))+'</div>':"";
+  v.innerHTML = roBanner+(curTab==="home"?viewHome():curTab==="adm"?viewAdm():curTab==="dob"?viewDob():
     curTab==="exam"?viewExam():curTab==="result"?viewResult():curTab==="lab"?viewLab():
-    curTab==="cert"?viewCert():viewSettings();
+    curTab==="cert"?viewCert():viewSettings());
   const fns={home:afterHome,adm:afterAdm,dob:afterDob,exam:afterExam,result:afterResult,lab:afterLab,cert:afterCert,settings:afterSettings};
   if(fns[curTab])fns[curTab]();
   v.scrollTop=0;if(typeof window!=="undefined")window.scrollTo(0,0);
@@ -2605,6 +2624,15 @@ pass_changed:{en:"Password changed.",ur:"پاس ورڈ تبدیل ہو گیا۔"
 sync_on:{en:"Live sync: ON — every entry reaches all teachers instantly",ur:"لائیو مطابقت: آن — ہر اندراج فوراً تمام اساتذہ تک پہنچتا ہے"},
 sync_off:{en:"Saved on this phone only (not connected)",ur:"صرف اس فون پر محفوظ ہے (جڑا ہوا نہیں)"},
 account:{en:"Teacher account",ur:"استاد اکاؤنٹ"},
+school_sub:{en:"School & subscription",ur:"اسکول اور سبسکرپشن"},
+plan_trial:{en:"Trial",ur:"آزمائشی"},
+plan_paid:{en:"Paid",ur:"ادا شدہ"},
+plan_free:{en:"Free",ur:"مفت"},
+sub_active:{en:"Active",ur:"فعال"},
+sub_expired_short:{en:"Expired",ur:"ختم"},
+sub_until:{en:"Valid until",ur:"تک درست"},
+sub_expired:{en:"Subscription expired — the tool is read-only. Renew to keep entering data.",ur:"سبسکرپشن ختم ہو گئی ہے — ٹول صرف دیکھنے کے لیے ہے۔ ڈیٹا داخل کرنے کے لیے تجدید کروائیں۔"},
+sub_renew:{en:"To renew, pay via JazzCash / EasyPaisa / bank transfer and tell the admin — the subscription is switched on after payment.",ur:"تجدید کے لیے JazzCash / EasyPaisa / بینک ٹرانسفر سے ادائیگی کریں اور ایڈمن کو بتائیں — ادائیگی کے بعد سبسکرپشن آن کر دی جائے گی۔"},
 restore_warn:{en:"Replace ALL data on this phone with the backup file? Your current entries will be lost. To combine two phones safely, use 'Receive from another phone' instead.",ur:"کیا اس فون کا تمام ڈیٹا بیک اپ فائل سے بدل دیں؟ آپ کی موجودہ اندراجات ختم ہو جائیں گی۔ دو فونز کو محفوظ طریقے سے ملانے کے لیے 'دوسرے فون سے ڈیٹا لیں' استعمال کریں۔"},
 device_name:{en:"This phone's name",ur:"اس فون کا نام"},
 device_ph:{en:"e.g. Jumran's phone",ur:"مثلاً جمراں کا فون"},
@@ -3028,6 +3056,18 @@ function certDossierHTML(st){
 }
 
 /* ================= settings ================= */
+function schoolCardHTML(){
+  if(typeof Cloud==="undefined"||!Cloud.enabled||!Cloud.school)return "";
+  const s=Cloud.school;
+  const planTxt=s.plan==="trial"?t("plan_trial"):s.plan==="paid"?t("plan_paid"):t("plan_free");
+  const statusTxt=s.status==="active"?t("sub_active"):t("sub_expired_short");
+  const until=s.paidUntil||s.trialEndsAt||"";
+  let h='<div class="card"><h3>🏫 '+esc(t("school_sub"))+'</h3>'+
+    '<p><b>'+esc(s.name||"—")+'</b> • '+esc(planTxt)+' • '+esc(statusTxt)+
+    (until?" • "+esc(t("sub_until"))+": "+esc(String(until).slice(0,10)):"")+'</p>';
+  if(s.status!=="active")h+='<p class="muted">'+esc(t("sub_renew"))+'</p>';
+  return h+"</div>";
+}
 function accountCardHTML(){
   if(typeof Cloud==="undefined"||!Cloud.enabled)return "";
   let h='<div class="card"><h3>👤 '+esc(t("account"))+'</h3>';
@@ -3100,6 +3140,7 @@ function viewSettings(){
     '<p class="muted">📲 '+esc(t("merge_hint"))+"</p>"+
     '<p class="muted">'+esc(t("seed_warn"))+"</p><div id=\"s-msg\"></div></div>";
   h+=snapshotsCardHTML();
+  h+=schoolCardHTML();
   h+=accountCardHTML();
   h+=storageMeterHTML();
   h+='<div class="card"><h3>'+esc(t("audit"))+"</h3><div class=\"hist\" style=\"max-height:300px;overflow:auto\">"+
