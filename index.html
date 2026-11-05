@@ -375,14 +375,28 @@ function inBand(a,band){const tm=ageMonths(a);return tm>=(band.minY*12+band.minM
 /* ================= Store ================= */
 const LS_KEY="srs_v1";
 function defaultAgeBands(){const b={};for(let c=1;c<=10;c++){b[String(c)]={minY:4+c,minM:0,maxY:6+c,maxM:0};}return b;}
+/* Board (BISE) age rules — configurable per board, never hard-coded: boards differ
+   (e.g. Multan 13y Part-I / 14y Part-II on 1 Aug; Lahore private 2027 13y 2mo;
+   Rawalpindi 2026 12y 2mo). Defaults = Multan. */
+function defaultBoard(){return {name:"BISE",part1Y:13,part1M:0,part2Y:14,part2M:0,asOf:"2026-08-01"};}
+function boardEligible(st){
+  const b=db().settings.board||defaultBoard();
+  const n=parseInt(String(st.cls||"").trim(),10);
+  if(n!==9&&n!==10)return null;
+  if(!st.dob)return null;
+  const age=calcAge(st.dob,b.asOf||todayISO());
+  const min=n===9?{y:Number(b.part1Y)||0,m:Number(b.part1M)||0}:{y:Number(b.part2Y)||0,m:Number(b.part2M)||0};
+  return ageMonths(age)>=(min.y*12+min.m);
+}
 function defaultDB(){return {
   v:1,
   seq:{adm:{},cert:{}},
-  students:[],exams:[],marks:{},labItems:[],labMaint:[],certificates:[],
+  students:[],exams:[],marks:{},labItems:[],labMaint:[],certificates:[],timetable:{},
   settings:{
     schoolName:"",deviceName:"",lang:"ur",passPct:33,regPhotoDataUrl:"",
     gradeScale:[{min:90,g:"A+"},{min:80,g:"A"},{min:70,g:"B"},{min:60,g:"C"},{min:50,g:"D"},{min:0,g:"F"}],
     divisions:[{min:60,d:"1st"},{min:50,d:"2nd"},{min:40,d:"3rd"},{min:0,d:"Fail"}],
+    board:defaultBoard(),
     ageBands:defaultAgeBands()
   },
   audit:[]
@@ -495,7 +509,7 @@ const Cloud = {
   stopListeners: function(){this.unsubs.forEach(function(u){try{u();}catch(e){}});this.unsubs=[];this.firstSeen={};this.firstDone=false;this.seedChecked=false;this.cloudFirst={};},
   startListeners: function(){
     const self=this;self.stopListeners();
-    const colls=["students","exams","marks","labItems","labMaint","certificates","settings"];
+    const colls=["students","exams","marks","labItems","labMaint","certificates","settings","timetable"];
     colls.forEach(function(c){
       const un=self.coll(c).onSnapshot(function(snap){
         self.applyChanges(c,snap.docChanges());
@@ -535,6 +549,7 @@ const Cloud = {
       return;
     }
     if(coll==="settings"){if(d.settings)D.settings=Object.assign({},D.settings,d.settings);if(d.seq)D.seq=Object.assign({},D.seq,d.seq);return;}
+    if(coll==="timetable"){D.timetable[id]=d.grid||{};return;}
     const arr={students:D.students,exams:D.exams,labItems:D.labItems,labMaint:D.labMaint,certificates:D.certificates}[coll];
     if(!arr)return;
     const rec=Object.assign({},d,{id:id});
@@ -550,13 +565,14 @@ const Cloud = {
     const D=db();
     if(coll==="marks"){const p=String(id).split("__");if(p.length===2&&D.marks[p[0]])delete D.marks[p[0]][p[1]];return;}
     if(coll==="settings")return;
+    if(coll==="timetable"){delete D.timetable[id];return;}
     const arr={students:D.students,exams:D.exams,labItems:D.labItems,labMaint:D.labMaint,certificates:D.certificates}[coll];
     if(!arr)return;
     const ix=arr.findIndex(function(x){return x.id===id;});
     if(ix>=0)arr.splice(ix,1);
   },
   flatten: function(d){
-    const f={students:{},exams:{},marks:{},labItems:{},labMaint:{},certificates:{},settings:{}};
+    const f={students:{},exams:{},marks:{},labItems:{},labMaint:{},certificates:{},settings:{},timetable:{}};
     (d.students||[]).forEach(function(s){f.students[s.id]=s;});
     (d.exams||[]).forEach(function(e){f.exams[e.id]=e;});
     Object.keys(d.marks||{}).forEach(function(ex){Object.keys(d.marks[ex]||{}).forEach(function(st){
@@ -565,6 +581,7 @@ const Cloud = {
     (d.labItems||[]).forEach(function(x){f.labItems[x.id]=x;});
     (d.labMaint||[]).forEach(function(x){f.labMaint[x.id]=x;});
     (d.certificates||[]).forEach(function(c){f.certificates[c.id]=c;});
+    Object.keys(d.timetable||{}).forEach(function(k){f.timetable[k]={cls:k,grid:d.timetable[k]};});
     f.settings.main={settings:d.settings,seq:d.seq};
     return f;
   },
@@ -575,6 +592,17 @@ const Cloud = {
   deleteDoc: function(coll,id){
     if(!this.ready||!this.fs||!this.schoolId)return;
     try{this.coll(coll).doc(id).delete();}catch(e){}
+  },
+  /* parent portal: fetch ONE public result by its hash. No sign-in, no list —
+     the Firestore rules allow public reads only on publicResults. */
+  getPublicResult: function(schoolId,hash){
+    const self=this;
+    if(!self.fs||!schoolId||!hash)return Promise.resolve(null);
+    try{
+      return self.fs.collection("schools").doc(schoolId).collection("publicResults").doc(hash).get()
+        .then(function(d){return d.exists?d.data():null;})
+        .catch(function(){return null;});
+    }catch(e){return Promise.resolve(null);}
   },
   onLocalSave: function(){
     if(!this.enabled||!this.ready||!this.user||!this.schoolId||this.applyingRemote||!this.firstDone||!this.fs)return;
@@ -771,7 +799,7 @@ function addExam(d){
     .map(function(s){return {name:String(s.name).trim(),max:Number(s.max)};});
   if(!subs.length)return {ok:false,error:t("req")};
   const ex={id:uid("ex"),name:String(d.name||"").trim()||autoExamName(d),term:d.term,year:String(d.year||new Date().getFullYear()),
-    cls:String(d.cls).trim(),section:String(d.section).trim(),subjects:subs,history:[]};
+    cls:String(d.cls).trim(),section:String(d.section).trim(),subjects:subs,locked:false,history:[]};
   db().exams.push(ex);
   logHist(ex,"create-exam",ex.name+" ("+ex.year+", "+clsLabel(ex.cls,ex.section)+")");
   Store.save();
@@ -791,9 +819,18 @@ function studentsOf(cls,section){
   return db().students.filter(function(s){return s.cls===String(cls)&&s.section===String(section);})
     .sort(function(a,b){return a.admNo<b.admNo?-1:1;});
 }
+function lockExam(id,locked){
+  const ex=db().exams.find(function(e){return e.id===id;});
+  if(!ex)return {ok:false};
+  ex.locked=!!locked;
+  audit(locked?"lock-marks":"unlock-marks",ex.name+" ("+ex.year+", "+clsLabel(ex.cls,ex.section)+")");
+  Store.save();
+  return {ok:true};
+}
 function setMark(examId,studentId,subject,raw){
   const ex=db().exams.find(function(e){return e.id===examId;});
   if(!ex)return {ok:false,error:t("no_records")};
+  if(ex.locked)return {ok:false,error:t("marks_locked")};
   const sub=ex.subjects.find(function(s){return s.name===subject;});
   if(!sub)return {ok:false,error:t("no_records")};
   const r=String(raw==null?"":raw).trim();
@@ -934,7 +971,91 @@ function getDossier(studentId,asOf){
     return (a.exam.term==="mid"?0:1)-(b.exam.term==="mid"?0:1);
   });
   return {student:st,age:age,asOf:asOf,band:band,
-    eligible:band?inBand(age,band):null,terms:terms};
+    eligible:band?inBand(age,band):null,boardElig:boardEligible(st),terms:terms};
+}
+/* ================= TIMETABLE (round 12) =================
+   Weekly class timetable: 6 days (Mon-Sat) x 8 periods, subject + teacher per cell.
+   Stored per class (clsLabel key) so sections have their own timetable.
+   Conflict detection: the same teacher in two classes at the same day+period. */
+let curTTCls="";
+const TT_DAYS=["day_mon","day_tue","day_wed","day_thu","day_fri","day_sat"];
+function ttClasses(){
+  const out=[];
+  db().students.forEach(function(s){const k=clsLabel(s.cls,s.section);if(out.indexOf(k)<0)out.push(k);});
+  db().exams.forEach(function(e){const k=clsLabel(e.cls,e.section);if(out.indexOf(k)<0)out.push(k);});
+  return out.sort();
+}
+function ttCell(cls,day,per){
+  const g=(db().timetable||{})[cls];
+  return (g&&g[day]&&g[day][per])||{subject:"",teacher:""};
+}
+function setTTCell(cls,day,per,k,v){
+  db().timetable=db().timetable||{};
+  const g=db().timetable[cls]=db().timetable[cls]||{};
+  const d=g[day]=g[day]||{};
+  const c=d[per]=d[per]||{subject:"",teacher:""};
+  c[k]=String(v==null?"":v).trim();
+  if(!c.subject&&!c.teacher)delete d[per];
+  Store.save();
+  return {ok:true};
+}
+function ttConflicts(){
+  /* returns [{day,per,teacher,classes:[...]}] for every clash */
+  const map={};
+  Object.keys(db().timetable||{}).forEach(function(cls){
+    const g=db().timetable[cls];
+    Object.keys(g||{}).forEach(function(day){
+      Object.keys(g[day]||{}).forEach(function(per){
+        const t=(g[day][per]||{}).teacher;
+        if(!t)return;
+        const key=day+"|"+per+"|"+t.toLowerCase();
+        map[key]=map[key]||{day:+day,per:+per,teacher:t,classes:[]};
+        if(map[key].classes.indexOf(cls)<0)map[key].classes.push(cls);
+      });
+    });
+  });
+  return Object.keys(map).map(function(k){return map[k];}).filter(function(c){return c.classes.length>1;});
+}
+function viewTimetable(){
+  const classes=ttClasses();
+  if(!classes.length)return '<div class="card"><h2>'+esc(t("tt_title"))+'</h2><p class="muted">'+esc(t("tt_no_class"))+"</p></div>";
+  if(!curTTCls||classes.indexOf(curTTCls)<0)curTTCls=classes[0];
+  let h='<div class="card"><h2>'+esc(t("tt_title"))+'</h2><p class="muted">'+esc(t("tt_hint"))+"</p>"+
+    '<div class="toolbar"><div class="field" style="margin:0;min-width:200px"><label>'+esc(t("cls"))+'</label>'+
+    '<select id="tt-cls">'+classes.map(function(c){return '<option value="'+esc(c)+'"'+(c===curTTCls?" selected":"")+'>'+esc(c)+"</option>";}).join("")+"</select></div></div>"+
+    '<div id="tt-warn"></div>'+
+    '<div class="twrap"><table class="grid"><tr><th>'+t("tt_period")+"</th>";
+  for(let p=1;p<=8;p++)h+='<th class="num">'+p+"</th>";
+  h+="</tr>";
+  for(let d=0;d<6;d++){
+    h+="<tr><td><b>"+esc(t(TT_DAYS[d]))+"</b></td>";
+    for(let p=1;p<=8;p++){
+      const c=ttCell(curTTCls,d,p);
+      h+='<td><input class="tt-cell" data-day="'+d+'" data-per="'+p+'" data-k="subject" placeholder="'+esc(t("tt_subject"))+'" value="'+esc(c.subject)+'" style="width:100%;min-width:90px">'+
+        '<input class="tt-cell" data-day="'+d+'" data-per="'+p+'" data-k="teacher" placeholder="'+esc(t("tt_teacher"))+'" value="'+esc(c.teacher)+'" style="width:100%;min-width:90px;margin-top:.2rem"></td>';
+    }
+    h+="</tr>";
+  }
+  h+="</table></div></div>";
+  return h;
+}
+function drawTTWarn(){
+  const box=$("tt-warn");if(!box)return;
+  const cf=ttConflicts();
+  if(!cf.length){box.innerHTML='<p class="muted">✓ '+esc(t("tt_no_conflict"))+"</p>";return;}
+  box.innerHTML='<div class="msg err">⚠ '+esc(t("tt_conflict"))+":<br>"+
+    cf.map(function(c){return esc(t(TT_DAYS[c.day]))+" • "+esc(t("tt_period"))+" "+c.per+" • <b>"+esc(c.teacher)+"</b>: "+c.classes.map(esc).join(" + ");}).join("<br>")+"</div>";
+}
+function afterTimetable(){
+  const sel=$("tt-cls");
+  if(sel)sel.onchange=function(){curTTCls=sel.value;render();};
+  Array.prototype.forEach.call(document.querySelectorAll("input.tt-cell"),function(inp){
+    inp.onchange=function(){
+      setTTCell(curTTCls,+inp.getAttribute("data-day"),+inp.getAttribute("data-per"),inp.getAttribute("data-k"),inp.value);
+      drawTTWarn();
+    };
+  });
+  drawTTWarn();
 }
 /* ================= lab ================= */
 function addLabItem(d){
@@ -1579,7 +1700,7 @@ function applyLang(){
   $("hdr-school").textContent=db().settings.schoolName||"—";
   $("lang-toggle").textContent=(L==="ur")?"EN":"اردو";
 }
-const TABS=[["home","nav_home"],["adm","nav_adm"],["dob","nav_dob"],["exam","nav_exam"],["result","nav_result"],["lab","nav_lab"],["cert","nav_cert"],["settings","nav_settings"]];
+const TABS=[["home","nav_home"],["adm","nav_adm"],["dob","nav_dob"],["exam","nav_exam"],["result","nav_result"],["tt","nav_tt"],["lab","nav_lab"],["cert","nav_cert"],["settings","nav_settings"]];
 function renderTabs(){
   $("tabs").innerHTML=TABS.map(function(x){
     return '<button type="button" role="tab" class="tab" data-tab="'+x[0]+'" aria-selected="'+(curTab===x[0])+'">'+esc(t(x[1]))+"</button>";
@@ -1587,6 +1708,56 @@ function renderTabs(){
   Array.prototype.forEach.call($("tabs").children,function(b){
     b.onclick=function(){curTab=b.getAttribute("data-tab");render();};
   });
+}
+/* ---- parent mode: public result check, no account ---- */
+let parentMode=false,parentSchoolId="";
+function parentSchoolFromURL(){
+  try{
+    const q=new URLSearchParams((typeof location!=="undefined")?location.search:"");
+    return q.get("school")||"";
+  }catch(e){return "";}
+}
+function parentHashFromURL(){
+  try{return (typeof location!=="undefined")&&(location.hash||"")==="#parent";}catch(e){return false;}
+}
+function renderParent(){
+  applyLang();
+  $("tabs").innerHTML="";
+  const schoolId=parentSchoolId;
+  let h='<div class="card" style="max-width:480px;margin:2rem auto"><h2>👨‍👩‍👧 '+esc(t("parent_title"))+'</h2>';
+  if(!schoolId){
+    h+='<p class="muted">'+esc(t("parent_noschool"))+"</p>";
+  }else{
+    h+='<p class="muted">'+esc(t("parent_hint"))+'</p>'+
+      '<div class="field"><label>'+esc(t("adm_no"))+'</label><input id="pp-adm" autocomplete="off"></div>'+
+      '<div class="field"><label>'+esc(t("parent_pin"))+'</label><input id="pp-pin" inputmode="numeric" autocomplete="off" maxlength="4"></div>'+
+      '<div class="field"><label>'+esc(t("father_name"))+'</label><input id="pp-father" autocomplete="off"></div>'+
+      '<div id="pp-msg"></div>'+
+      '<button type="button" class="btn btn-primary" id="pp-go" style="width:100%">'+esc(t("parent_go"))+"</button>";
+  }
+  h+='<div style="margin-top:1rem"><button type="button" class="btn btn-sm" id="pp-back">← '+esc(t("parent_back"))+"</button></div></div>"+
+    '<div id="pp-result"></div>';
+  $("view").innerHTML=h;
+  const back=$("pp-back");
+  if(back)back.onclick=function(){parentMode=false;render();};
+  const go=$("pp-go");
+  if(!go)return;
+  go.onclick=function(){
+    const adm=$("pp-adm").value.trim(),pin=$("pp-pin").value.trim(),father=$("pp-father").value.trim();
+    const msg=$("pp-msg"),res=$("pp-result");
+    if(!adm||!pin||!father){msg.innerHTML='<div class="msg err">'+esc(t("req"))+"</div>";return;}
+    if(!Cloud.fs){msg.innerHTML='<div class="msg err">⏳ '+esc(t("connecting"))+"</div>";return;}
+    msg.innerHTML="";res.innerHTML="";
+    go.disabled=true;
+    Cloud.getPublicResult(schoolId,parentHash(schoolId,adm,pin,father)).then(function(payload){
+      go.disabled=false;
+      if(!payload){msg.innerHTML='<div class="msg err">'+esc(t("parent_notfound"))+"</div>";return;}
+      res.innerHTML=rcardHTML(payload)+
+        '<div class="card" style="text-align:center"><button type="button" class="btn btn-primary" id="pp-print">'+esc(t("print"))+"</button></div>";
+      const pr=$("pp-print");
+      if(pr)pr.onclick=function(){doPrint(rcardHTML(payload));};
+    });
+  };
 }
 function renderLogin(){
   applyLang();
@@ -1599,7 +1770,8 @@ function renderLogin(){
     '<div class="field"><label>'+esc(t("login_email"))+'</label><input id="lg-email" type="email" autocomplete="username"></div>'+
     '<div class="field"><label>'+esc(t("login_pass"))+'</label><input id="lg-pass" type="password" autocomplete="current-password"></div>'+
     '<div id="lg-msg">'+msg+'</div>'+
-    '<button type="button" class="btn btn-primary" id="lg-go" style="width:100%">'+esc(t("login_go"))+'</button></div>';
+    '<button type="button" class="btn btn-primary" id="lg-go" style="width:100%">'+esc(t("login_go"))+'</button>'+
+    '<div style="margin-top:1rem;text-align:center"><button type="button" class="btn btn-sm" id="lg-parent">👨‍👩‍👧 '+esc(t("parent_title"))+"</button></div></div>";
   $("lg-go").onclick=function(){
     const em=$("lg-email").value.trim(),pw=$("lg-pass").value;
     if(!em||!pw){$("lg-msg").innerHTML='<div class="msg err">'+esc(t("req"))+'</div>';return;}
@@ -1610,9 +1782,12 @@ function renderLogin(){
     });
   };
   $("lg-pass").addEventListener("keydown",function(e){if(e.key==="Enter")$("lg-go").click();});
+  const lp=$("lg-parent");
+  if(lp)lp.onclick=function(){parentMode=true;parentSchoolId=parentSchoolFromURL();render();};
 }
 function render(){
   applyLang();
+  if(parentMode){renderParent();return;}
   if(typeof Cloud!=="undefined"&&Cloud.enabled){
     if(!Cloud.authResolved){$("tabs").innerHTML="";$("view").innerHTML='<div class="card"><p class="muted">⏳ '+esc(t("connecting"))+'</p></div>';return;}
     if(!Cloud.user){renderLogin();return;}
@@ -1620,9 +1795,9 @@ function render(){
   renderTabs();const v=$("view");
   const roBanner=(typeof Cloud!=="undefined"&&Cloud.enabled&&Cloud.readOnly)?'<div class="msg err" style="margin:.5rem 0">🔒 '+esc(t("sub_expired"))+'</div>':"";
   v.innerHTML = roBanner+(curTab==="home"?viewHome():curTab==="adm"?viewAdm():curTab==="dob"?viewDob():
-    curTab==="exam"?viewExam():curTab==="result"?viewResult():curTab==="lab"?viewLab():
+    curTab==="exam"?viewExam():curTab==="result"?viewResult():curTab==="tt"?viewTimetable():curTab==="lab"?viewLab():
     curTab==="cert"?viewCert():viewSettings());
-  const fns={home:afterHome,adm:afterAdm,dob:afterDob,exam:afterExam,result:afterResult,lab:afterLab,cert:afterCert,settings:afterSettings};
+  const fns={home:afterHome,adm:afterAdm,dob:afterDob,exam:afterExam,result:afterResult,tt:afterTimetable,lab:afterLab,cert:afterCert,settings:afterSettings};
   if(fns[curTab])fns[curTab]();
   v.scrollTop=0;if(typeof window!=="undefined")window.scrollTo(0,0);
 }
@@ -1687,6 +1862,124 @@ function broadsheetPrintHTML(examId){
    future portal will call. Nothing in Part B is built or exposed in UI. */
 /* Standalone card payload for ONE student in ONE exam.
    Pure data, no HTML — the future self-download portal calls this. */
+/* ================= PARENT PORTAL (round 13) =================
+   Parents open the school's result link (?school=<schoolId>#parent) and enter
+   admission number + 4-digit PIN + father's name. The app hashes those four
+   values (SHA-256) and fetches exactly one public document — no account, no
+   app install, no list of students is ever exposed. Security rests on knowing
+   all three values; the PIN is the secret the school hands out. */
+function sha256Hex(str){
+  function rr(v,a){return (v>>>a)|(v<<(32-a));}
+  var K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  var H=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  var bytes=[];
+  for(var i=0;i<str.length;i++){
+    var c=str.charCodeAt(i);
+    if(c<0x80)bytes.push(c);
+    else if(c<0x800){bytes.push(0xc0|(c>>6),0x80|(c&0x3f));}
+    else if(c<0xd800||c>=0xe000){bytes.push(0xe0|(c>>12),0x80|((c>>6)&0x3f),0x80|(c&0x3f));}
+    else{i++;var c2=str.charCodeAt(i);var cp=0x10000+((c&0x3ff)<<10)+(c2&0x3ff);
+      bytes.push(0xf0|(cp>>18),0x80|((cp>>12)&0x3f),0x80|((cp>>6)&0x3f),0x80|(cp&0x3f));}
+  }
+  var bitLen=bytes.length*8;
+  bytes.push(0x80);
+  while(bytes.length%64!==56)bytes.push(0);
+  for(var b=7;b>=0;b--)bytes.push((bitLen/Math.pow(2,b*8))&0xff);
+  for(var off=0;off<bytes.length;off+=64){
+    var w=[];
+    for(var t2=0;t2<16;t2++)w[t2]=(bytes[off+t2*4]<<24)|(bytes[off+t2*4+1]<<16)|(bytes[off+t2*4+2]<<8)|bytes[off+t2*4+3];
+    for(var t3=16;t3<64;t3++){
+      var s0=rr(w[t3-15],7)^rr(w[t3-15],18)^(w[t3-15]>>>3);
+      var s1=rr(w[t3-2],17)^rr(w[t3-2],19)^(w[t3-2]>>>10);
+      w[t3]=(w[t3-16]+s0+w[t3-7]+s1)|0;
+    }
+    var a=H[0],b2=H[1],c2=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7];
+    for(var t4=0;t4<64;t4++){
+      var S1=rr(e,6)^rr(e,11)^rr(e,25);
+      var ch=(e&f)^(~e&g);
+      var temp1=(h+S1+ch+K[t4]+w[t4])|0;
+      var S0=rr(a,2)^rr(a,13)^rr(a,22);
+      var maj=(a&b2)^(a&c2)^(b2&c2);
+      var temp2=(S0+maj)|0;
+      h=g;g=f;f=e;e=(d+temp1)|0;d=c2;c2=b2;b2=a;a=(temp1+temp2)|0;
+    }
+    H[0]=(H[0]+a)|0;H[1]=(H[1]+b2)|0;H[2]=(H[2]+c2)|0;H[3]=(H[3]+d)|0;
+    H[4]=(H[4]+e)|0;H[5]=(H[5]+f)|0;H[6]=(H[6]+g)|0;H[7]=(H[7]+h)|0;
+  }
+  var out="";
+  for(var i2=0;i2<8;i2++){var v=H[i2];for(var s=28;s>=0;s-=4)out+="0123456789abcdef"[(v>>>s)&0xf];}
+  return out;
+}
+function parentHash(schoolId,admNo,pin,fatherName){
+  return sha256Hex(String(schoolId||"")+"|"+String(admNo||"").trim()+"|"+String(pin||"").trim()+"|"+String(fatherName||"").toLowerCase().trim());
+}
+function ensurePin(st){
+  if(st.pin)return st.pin;
+  let pin=null,tries=0;
+  do{pin=String(1000+Math.floor(Math.random()*9000));tries++;}
+  while(tries<25&&db().students.some(function(s){return s.pin===pin;}));
+  st.pin=pin;Store.save();
+  return pin;
+}
+/* Publish a LOCKED exam's results for parents. Only from a locked (approved)
+   exam; only in cloud mode with a signed-in teacher. */
+function publishResults(examId){
+  const ex=db().exams.find(function(e){return e.id===examId;});
+  if(!ex)return {ok:false,error:t("no_records")};
+  if(!ex.locked)return {ok:false,error:t("publish_locked_only")};
+  if(typeof Cloud==="undefined"||!Cloud.enabled||!Cloud.ready||!Cloud.user||!Cloud.schoolId)return {ok:false,error:t("publish_cloud_only")};
+  const rows=computeResult(examId);
+  const done=rows.filter(function(r){return r.complete;});
+  const schoolId=Cloud.schoolId;
+  let n=0;
+  done.forEach(function(r){
+    const st=r.student;
+    const pin=ensurePin(st);
+    const payload=resultPayload(examId,st.id);
+    if(!payload)return;
+    payload.student.photo=""; /* keep the public doc small; card renders without it */
+    payload.publishedAt=tsNow();
+    Cloud.pushDoc("publicResults",parentHash(schoolId,st.admNo,pin,st.fatherName),payload);
+    n++;
+  });
+  db().settings.published=db().settings.published||{};
+  db().settings.published[examId]={count:n,at:tsNow()};
+  audit("publish-results",ex.name+" ("+ex.year+") — "+n+" "+t("dash_marks_done"));
+  Store.save();
+  return {ok:true,count:n};
+}
+function unpublishResults(examId){
+  const ex=db().exams.find(function(e){return e.id===examId;});
+  if(!ex)return {ok:false};
+  if(typeof Cloud==="undefined"||!Cloud.enabled||!Cloud.ready||!Cloud.user||!Cloud.schoolId)return {ok:false,error:t("publish_cloud_only")};
+  const rows=computeResult(examId);
+  const schoolId=Cloud.schoolId;
+  let n=0;
+  rows.forEach(function(r){
+    const st=r.student;
+    if(!st.pin)return;
+    Cloud.deleteDoc("publicResults",parentHash(schoolId,st.admNo,st.pin,st.fatherName));
+    n++;
+  });
+  if(db().settings.published)delete db().settings.published[examId];
+  audit("unpublish-results",ex.name+" ("+ex.year+")");
+  Store.save();
+  return {ok:true,count:n};
+}
+function parentLink(){
+  if(typeof Cloud==="undefined"||!Cloud.schoolId)return "";
+  try{
+    const base=(typeof location!=="undefined")?location.origin+location.pathname:"";
+    return base+"?school="+encodeURIComponent(Cloud.schoolId)+"#parent";
+  }catch(e){return "";}
+}
 function resultPayload(examId,studentId){
   const ex=db().exams.find(function(e){return e.id===examId;});if(!ex)return null;
   const st=db().students.find(function(s){return s.id===studentId;});if(!st)return null;
@@ -1780,6 +2073,20 @@ function dashStatsHTML(){
     keys.map(function(k){
       return '<button type="button" class="chip" data-clsgo="'+esc(k)+'" style="cursor:pointer">'+esc(k)+": <b>"+groups[k]+"</b></button>";
     }).join("")+"</div>";
+  h+='<span class="chip">'+esc(t("dash_exams"))+": <b>"+db().exams.length+"</b></span>"+
+    '<span class="chip">'+esc(t("dash_certs"))+": <b>"+db().certificates.length+"</b></span></div>";
+  /* marks-submission status per exam (head-teacher morning question) */
+  if(db().exams.length){
+    h+='<h3 style="margin:.8rem 0 .3rem">'+esc(t("dash_marks"))+"</h3><div class=\"toolbar\">";
+    db().exams.forEach(function(ex){
+      const rows=computeResult(ex.id);
+      const done=rows.filter(function(r){return r.complete;}).length;
+      h+='<button type="button" class="chip" data-exgo="'+ex.id+'" style="cursor:pointer">'+
+        (ex.locked?"🔒 ":"")+esc(ex.name+" ("+clsLabel(ex.cls,ex.section)+")")+": <b>"+done+"/"+rows.length+"</b> "+
+        esc(t("dash_marks_done"))+"</button>";
+    });
+    h+="</div>";
+  }
   const al=labAlerts();
   if(al.low.length||al.overdue.length){
     h+='<button type="button" class="btn" data-go="lab" style="width:100%;text-align:start;background:#fff8e1;border-color:var(--warn)">'+
@@ -1787,6 +2094,11 @@ function dashStatsHTML(){
       (al.low.length?esc(t("low_stock"))+" ("+al.low.length+")":"")+
       ((al.low.length&&al.overdue.length)?" • ":"")+
       (al.overdue.length?esc(t("overdue"))+" ("+al.overdue.length+")":"")+" →</button>";
+  }
+  const recent=db().audit.slice(0,5);
+  if(recent.length){
+    h+='<h3 style="margin:.8rem 0 .3rem">'+esc(t("dash_recent"))+"</h3><div class=\"hist\">"+
+      recent.map(function(a){return "<div>"+a.ts.slice(0,16).replace("T"," ")+" — <b>"+esc(a.action)+"</b>: "+esc(a.summary)+"</div>";}).join("")+"</div>";
   }
   h+="</div>";
   return h;
@@ -1859,6 +2171,9 @@ function afterHome(){
   Array.prototype.forEach.call(document.querySelectorAll("[data-go]"),function(b){
     b.onclick=function(){curTab=b.getAttribute("data-go");render();};
   });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-exgo]"),function(b){
+    b.onclick=function(){curExamId=b.getAttribute("data-exgo");curTab="exam";render();};
+  });
   Array.prototype.forEach.call(document.querySelectorAll("[data-clsgo]"),function(b){
     b.onclick=function(){
       const k=b.getAttribute("data-clsgo").split("-");
@@ -1906,7 +2221,8 @@ function viewDossier(id){
   const bandTxt=d.band?(d.band.minY+t("years")+d.band.minM+t("months")+" – "+d.band.maxY+t("years")+d.band.maxM+t("months")):"—";
   h+='<div class="card"><h3>'+esc(t("sec_dob"))+"</h3><div>"+esc(t("dob"))+": "+fmtDate(st.dob)+" • "+esc(t("age"))+
     " ("+esc(t("as_of"))+" "+fmtDate(d.asOf)+"): <b>"+fmtAge(d.age)+"</b> • "+esc(t("elig_band"))+": "+bandTxt+" • "+
-    (d.eligible==null?"—":'<span class="flag'+(d.eligible?" okf":"")+'">'+(d.eligible?esc(t("eligible")):esc(t("not_eligible")))+"</span>")+"</div></div>";
+    (d.eligible==null?"—":'<span class="flag'+(d.eligible?" okf":"")+'">'+(d.eligible?esc(t("eligible")):esc(t("not_eligible")))+"</span>")+
+    (d.boardElig==null?"":' • '+esc(t("board_elig"))+": "+'<span class="flag'+(d.boardElig?" okf":"")+'">'+(d.boardElig?esc(t("eligible")):esc(t("not_eligible")))+"</span>")+"</div></div>";
   h+='<div class="card"><h3>'+esc(t("timeline"))+"</h3>";
   if(!d.terms.length)h+='<p class="muted">'+esc(t("no_exams_yet"))+"</p>";
   d.terms.forEach(function(tm){
@@ -2224,7 +2540,7 @@ function afterAdm(){
         '<button type="button" class="btn btn-sm btn-danger" data-del="'+s.id+'">'+esc(t("del"))+'</button> '+
         '<button type="button" class="btn btn-sm" data-hist="'+s.id+'">'+esc(t("history"))+"</button></td></tr>"+
         '<tr id="hist-'+s.id+'" style="display:none"><td colspan="8"><div class="hist">'+histHTML(s)+"</div></td></tr>";
-    }).join("")||'<tr><td colspan="8" class="muted">'+esc(t("no_records"))+"</td></tr>";
+    }).join("")||'<tr><td colspan="9" class="muted">'+esc(t("no_records"))+"</td></tr>";
     bindRows();
   };
   const bindRows=function(){
@@ -2323,7 +2639,7 @@ function viewDob(){
     '<button type="button" class="btn btn-sm" id="d-print">'+esc(t("print"))+"</button></div>"+
     '<div class="twrap"><table class="grid"><tr><th>'+t("sno")+"</th><th>"+t("adm_no")+"</th><th>"+t("f_name")+
     "</th><th>"+t("cls")+"-"+t("section")+"</th><th>"+t("dob")+"</th><th>"+t("age")+"</th><th>"+t("elig_band")+
-    "</th><th>"+t("elig")+"</th></tr><tbody id=\"d-rows\"></tbody></table></div></div>";
+    "</th><th>"+t("elig")+"</th><th>"+t("board_elig")+"</th></tr><tbody id=\"d-rows\"></tbody></table></div></div>";
   return h;
 }
 function afterDob(){
@@ -2333,9 +2649,11 @@ function afterDob(){
       const a=calcAge(s.dob,asOf),b=db().settings.ageBands[s.cls];
       const bandTxt=b?(b.minY+t("years")+b.minM+t("months")+" – "+b.maxY+t("years")+b.maxM+t("months")):"—";
       const el=b?('<span class="flag'+(inBand(a,b)?" okf":"")+'">'+(inBand(a,b)?esc(t("eligible")):esc(t("not_eligible")))+"</span>"):"—";
+      const be=boardEligible(s);
+      const beTxt=be==null?"—":('<span class="flag'+(be?" okf":"")+'">'+(be?esc(t("eligible")):esc(t("not_eligible")))+"</span>");
       return "<tr><td class=\"num\">"+(i+1)+"</td><td>"+esc(s.admNo)+"</td><td>"+esc(s.name)+"</td><td class=\"num\">"+
         esc(clsLabel(s.cls,s.section))+"</td><td>"+fmtDate(s.dob)+"</td><td class=\"num\">"+fmtAge(a)+"</td><td class=\"num\">"+
-        bandTxt+"</td><td class=\"num\">"+el+"</td></tr>";
+        bandTxt+"</td><td class=\"num\">"+el+"</td><td class=\"num\">"+beTxt+"</td></tr>";
     }).join("")||'<tr><td colspan="8" class="muted">'+esc(t("no_records"))+"</td></tr>";
   };
   $("d-asof").onchange=draw;
@@ -2358,8 +2676,9 @@ function viewExam(){
     '<button type="button" class="btn btn-primary" id="e-create">'+esc(t("add_exam"))+"</button></div>";
   h+='<div class="card"><div class="toolbar"><div class="field" style="margin:0;min-width:200px"><label>'+esc(t("select_exam"))+'</label>'+
     '<select id="e-pick">'+db().exams.map(function(ex){
-      return '<option value="'+ex.id+'"'+(curExamId===ex.id?" selected":"")+'>'+esc(ex.name+" ("+(ex.year||"")+", "+clsLabel(ex.cls,ex.section)+")")+"</option>";
+      return '<option value="'+ex.id+'"'+(curExamId===ex.id?" selected":"")+'>'+(ex.locked?"🔒 ":"")+esc(ex.name+" ("+(ex.year||"")+", "+clsLabel(ex.cls,ex.section)+")")+"</option>";
     }).join("")+'</select></div>'+
+    '<button type="button" class="btn btn-sm" id="e-lock">'+esc(((curExamId?db().exams.find(function(e){return e.id===curExamId;}):db().exams[0])||{}).locked?t("unlock_marks"):t("lock_marks"))+"</button> "+
     '<button type="button" class="btn btn-sm btn-danger" id="e-delexam">'+esc(t("del"))+'</button>'+
     '<button type="button" class="btn btn-sm" id="e-csv">'+esc(t("export_csv"))+'</button>'+
     '<button type="button" class="btn btn-sm" id="e-award">'+esc(t("award_list"))+"</button></div>"+
@@ -2397,6 +2716,8 @@ function afterExam(){
   };
   const pk=$("e-pick");
   pk.onchange=function(){curExamId=pk.value;render();};
+  const lk=$("e-lock");
+  if(lk)lk.onclick=function(){if(!curExamId)return;const ex=db().exams.find(function(e){return e.id===curExamId;});if(ex){lockExam(ex.id,!ex.locked);render();}};
   $("e-delexam").onclick=function(){if(curExamId&&confirm(t("confirm_del"))){deleteExam(curExamId);curExamId=null;render();}};
   $("e-csv").onclick=function(){if(curExamId)downloadFile("marks.csv",exportCSV("marks",curExamId),"text/csv;charset=utf-8");};
   $("e-award").onclick=function(){
@@ -2416,7 +2737,9 @@ function drawGrid(){
   const studs=studentsOf(ex.cls,ex.section);
   if(!studs.length){box.innerHTML='<p class="muted">'+esc(t("no_records"))+"</p>";return;}
   const saved=db().marks[ex.id]||{};
-  let h='<div id="e-gmsg"></div><h3>'+esc(ex.name)+'</h3><div class="twrap"><table class="grid"><tr><th>'+t("sno")+"</th><th>"+
+  let h='<div id="e-gmsg"></div><h3>'+(ex.locked?"🔒 ":"")+esc(ex.name)+'</h3>'+
+    (ex.locked?'<p class="muted">🔒 '+esc(t("locked_badge"))+"</p>":"")+
+    '<div class="twrap"><table class="grid"><tr><th>'+t("sno")+"</th><th>"+
     t("f_name")+"</th>"+ex.subjects.map(function(s){return '<th class="num">'+esc(s.name)+"<br>("+s.max+")</th>";}).join("")+
     '<th class="num">'+t("total")+"</th></tr>";
   studs.forEach(function(st,i){
@@ -2425,13 +2748,13 @@ function drawGrid(){
       "<span><b>"+esc(displayName(st))+"</b><br><span class=\"muted\">"+esc(st.admNo)+"</span></span></div></td>";
     ex.subjects.forEach(function(sj,j){
       const v=m[sj.name];h+='<td class="num"><input class="cell" data-st="'+st.id+'" data-sj="'+esc(sj.name)+'" data-max="'+sj.max+
-        '" data-r="'+i+'" data-c="'+j+'" inputmode="numeric" value="'+(v==null?"":v)+'"></td>';
+        '" data-r="'+i+'" data-c="'+j+'" inputmode="numeric" value="'+(v==null?"":v)+'"'+(ex.locked?" disabled":"")+"></td>";
     });
     h+='<td class="num" data-rowtot="'+st.id+'">—</td></tr>';
   });
   h+='<tr class="totalrow"><td></td><td>'+esc(t("col_total"))+"</td>"+
     ex.subjects.map(function(sj){return '<td class="num" data-coltot="'+esc(sj.name)+'">—</td>';}).join("")+"<td></td></tr></table></div>"+
-    '<button type="button" class="btn btn-primary" id="e-save">'+esc(t("save"))+"</button>";
+    (ex.locked?"":'<button type="button" class="btn btn-primary" id="e-save">'+esc(t("save"))+"</button>");
   box.innerHTML=h;
   const cells=Array.prototype.slice.call(box.querySelectorAll("input.cell"));
   const live=function(){
@@ -2465,7 +2788,9 @@ function drawGrid(){
     const nx=box.querySelector('input.cell[data-r="'+(+tg.getAttribute("data-r")+1)+'"][data-c="'+tg.getAttribute("data-c")+'"]');
     if(nx)nx.focus();else{const sv=$("e-save");if(sv)sv.focus();}
   });
-  $("e-save").onclick=function(){
+  const sv=$("e-save");
+  if(!sv)return;
+  sv.onclick=function(){
     /* two-pass: validate everything first, save nothing until all valid */
     const errs=[];
     cells.forEach(function(c){
@@ -2633,6 +2958,51 @@ sub_expired_short:{en:"Expired",ur:"ختم"},
 sub_until:{en:"Valid until",ur:"تک درست"},
 sub_expired:{en:"Subscription expired — the tool is read-only. Renew to keep entering data.",ur:"سبسکرپشن ختم ہو گئی ہے — ٹول صرف دیکھنے کے لیے ہے۔ ڈیٹا داخل کرنے کے لیے تجدید کروائیں۔"},
 sub_renew:{en:"To renew, pay via JazzCash / EasyPaisa / bank transfer and tell the admin — the subscription is switched on after payment.",ur:"تجدید کے لیے JazzCash / EasyPaisa / بینک ٹرانسفر سے ادائیگی کریں اور ایڈمن کو بتائیں — ادائیگی کے بعد سبسکرپشن آن کر دی جائے گی۔"},
+dash_marks:{en:"Marks entered",ur:"نمبر درج"},
+dash_marks_done:{en:"marks complete",ur:"نمبر مکمل"},
+dash_certs:{en:"Certificates issued",ur:"سرٹیفکیٹ جاری"},
+dash_exams:{en:"Exams",ur:"امتحانات"},
+dash_recent:{en:"Recent activity",ur:"حالیہ سرگرمی"},
+marks_locked:{en:"Marks are locked for this exam — only the admin can unlock them.",ur:"اس امتحان کے نمبر بند ہیں — صرف ایڈمن کھول سکتا ہے۔"},
+lock_marks:{en:"Lock marks",ur:"نمبر بند کریں"},
+unlock_marks:{en:"Unlock marks",ur:"نمبر کھولیں"},
+locked_badge:{en:"Approved — locked",ur:"منظور شدہ — بند"},
+board_rules:{en:"Board (BISE) age rules",ur:"بورڈ عمر کے اصول"},
+board_name:{en:"Board name",ur:"بورڈ کا نام"},
+board_p1:{en:"Class 9 (Part-I) minimum age",ur:"جماعت 9 (حصہ اول) کم از کم عمر"},
+board_p2:{en:"Class 10 (Part-II) minimum age",ur:"جماعت 10 (حصہ دوم) کم از کم عمر"},
+board_asof:{en:"Age as of (date)",ur:"عمر اس تاریخ تک"},
+board_elig:{en:"Board eligibility",ur:"بورڈ اہلیت"},
+board_hint:{en:"Classes 9 and 10 are checked against these rules before board registration. Boards differ — set your own board's limits here.",ur:"جماعت 9 اور 10 بورڈ رجسٹریشن سے پہلے ان اصولوں سے جانچے جاتے ہیں۔ بورڈ مختلف ہوتے ہیں — اپنے بورڈ کی حد یہاں درج کریں۔"},
+nav_tt:{en:"Timetable",ur:"ٹائم ٹیبل"},
+tt_title:{en:"Weekly timetable",ur:"ہفتہ وار ٹائم ٹیبل"},
+tt_hint:{en:"Type the subject and teacher in each cell. A warning appears if the same teacher is booked in two classes at the same time.",ur:"ہر خانے میں مضمون اور استاد لکھیں۔ اگر ایک ہی استاد ایک ہی وقت میں دو جماعتوں میں ہو تو خبردار کیا جائے گا۔"},
+tt_subject:{en:"Subject",ur:"مضمون"},
+tt_teacher:{en:"Teacher",ur:"استاد"},
+tt_conflict:{en:"Timetable clash",ur:"ٹائم ٹیبل میں ٹکراؤ"},
+tt_no_conflict:{en:"No clashes",ur:"کوئی ٹکراؤ نہیں"},
+tt_period:{en:"Period",ur:"پیریڈ"},
+tt_no_class:{en:"Add students first, then build the timetable.",ur:"پہلے طلبہ شامل کریں، پھر ٹائم ٹیبل بنائیں۔"},
+day_mon:{en:"Mon",ur:"پیر"},
+day_tue:{en:"Tue",ur:"منگل"},
+day_wed:{en:"Wed",ur:"بدھ"},
+day_thu:{en:"Thu",ur:"جمعرات"},
+day_fri:{en:"Fri",ur:"جمعہ"},
+day_sat:{en:"Sat",ur:"ہفتہ"},
+publish_results:{en:"Publish results",ur:"نتائج شائع کریں"},
+unpublish_results:{en:"Remove published results",ur:"شائع شدہ نتائج ہٹائیں"},
+publish_locked_only:{en:"Results can only be published after the exam is locked (approved).",ur:"نتائج صرف امتحان بند (منظور) ہونے کے بعد شائع ہو سکتے ہیں۔"},
+publish_cloud_only:{en:"Publishing needs the online version and a teacher sign-in.",ur:"شائع کرنے کے لیے آن لائن ورژن اور استاد سائن ان ضروری ہے۔"},
+publish_done:{en:"Published",ur:"شائع کر دیا گیا"},
+unpublish_done:{en:"Published results removed.",ur:"شائع شدہ نتائج ہٹا دیے گئے۔"},
+publish_link:{en:"Parents open this link to check results:",ur:"والدین نتائج دیکھنے کے لیے یہ لنک کھولیں:"},
+parent_title:{en:"Check your child's result",ur:"اپنے بچے کا نتیجہ دیکھیں"},
+parent_hint:{en:"Enter the admission number, the 4-digit PIN from the school, and the father's name exactly as registered.",ur:"داخلہ نمبر، اسکول سے ملا 4 ہندسوں والا PIN، اور والد کا نام بالکل ویسا ہی لکھیں جیسا رجسٹرڈ ہے۔"},
+parent_pin:{en:"Result PIN (4 digits)",ur:"نتیجہ PIN (4 ہندسے)"},
+parent_go:{en:"Show result",ur:"نتیجہ دکھائیں"},
+parent_notfound:{en:"No result found — check the admission number, PIN and father's name, and try again.",ur:"کوئی نتیجہ نہیں ملا — داخلہ نمبر، PIN اور والد کا نام دوبارہ چیک کریں۔"},
+parent_noschool:{en:"Open your school's result link — it carries the school's name in the address.",ur:"اپنے اسکول کا نتیجہ لنک کھولیں — اس میں اسکول کا نام شامل ہے۔"},
+parent_back:{en:"Back to teacher sign-in",ur:"استاد سائن ان پر واپس"},
 restore_warn:{en:"Replace ALL data on this phone with the backup file? Your current entries will be lost. To combine two phones safely, use 'Receive from another phone' instead.",ur:"کیا اس فون کا تمام ڈیٹا بیک اپ فائل سے بدل دیں؟ آپ کی موجودہ اندراجات ختم ہو جائیں گی۔ دو فونز کو محفوظ طریقے سے ملانے کے لیے 'دوسرے فون سے ڈیٹا لیں' استعمال کریں۔"},
 device_name:{en:"This phone's name",ur:"اس فون کا نام"},
 device_ph:{en:"e.g. Jumran's phone",ur:"مثلاً جمراں کا فون"},
@@ -2725,12 +3095,15 @@ function viewResult(){
   let h='<div class="card"><h2>'+esc(t("res_title"))+'</h2><div class="toolbar">'+
     '<div class="field" style="margin:0;min-width:200px"><label>'+esc(t("select_exam"))+'</label>'+
     '<select id="r-pick">'+db().exams.map(function(ex){
-      return '<option value="'+ex.id+'"'+(curResExamId===ex.id?" selected":"")+'>'+esc(ex.name+" ("+(ex.year||"")+", "+clsLabel(ex.cls,ex.section)+")")+"</option>";
+      return '<option value="'+ex.id+'"'+(curResExamId===ex.id?" selected":"")+'>'+(ex.locked?"🔒 ":"")+esc(ex.name+" ("+(ex.year||"")+", "+clsLabel(ex.cls,ex.section)+")")+"</option>";
     }).join("")+'</select></div>'+
     '<button type="button" class="btn btn-sm" id="r-csv">'+esc(t("export_csv"))+'</button>'+
     '<button type="button" class="btn btn-sm" id="r-print">'+esc(t("print"))+'</button>'+
     '<button type="button" class="btn btn-sm" id="r-award">'+esc(t("award_list"))+'</button>'+
-    '<button type="button" class="btn btn-sm btn-primary" id="r-batch">'+esc(t("print_all_cards"))+"</button></div>"+
+    '<button type="button" class="btn btn-sm btn-primary" id="r-batch">'+esc(t("print_all_cards"))+"</button> "+
+    '<button type="button" class="btn btn-sm" id="r-publish">'+esc(t("publish_results"))+"</button> "+
+    '<button type="button" class="btn btn-sm" id="r-unpublish">'+esc(t("unpublish_results"))+"</button></div>"+
+    '<div id="r-pubmsg"></div>'+
     '<div id="r-sheet"></div><div id="r-awardbox" style="margin-top:1rem"></div></div>';
   h+='<div class="card"><h3>'+esc(t("report_card"))+'</h3><div class="toolbar">'+
     '<div class="field" style="margin:0;min-width:200px"><label>'+esc(t("f_name"))+'</label><select id="r-stu"></select></div>'+
@@ -2750,7 +3123,8 @@ function afterResult(){
     const passed=done.filter(function(r){return r.pass;}).length;
     const failed=done.length-passed;
     const passPct=done.length?Math.round(passed/done.length*100):0;
-    let h='<h3>'+esc(ex.name)+'</h3>'+
+    let h='<h3>'+(ex.locked?"🔒 ":"")+esc(ex.name)+'</h3>'+
+      (ex.locked?'<p class="muted">🔒 '+esc(t("locked_badge"))+"</p>":"")+
       '<p class="muted">'+esc(t("sum_appeared"))+": <b>"+done.length+"</b> • "+
       esc(t("sum_passed"))+": <b>"+passed+"</b> • "+esc(t("sum_failed"))+": <b>"+failed+"</b> • "+
       esc(t("sum_passpct"))+": <b>"+passPct+"%</b>"+
@@ -2773,6 +3147,22 @@ function afterResult(){
     st.innerHTML=rows.map(function(r){return '<option value="'+r.student.id+'">'+esc(displayName(r.student)+" ("+r.student.admNo+")")+"</option>";}).join("");
   };
   pk.onchange=function(){curResExamId=pk.value;drawSheet();};
+  const pub=$("r-publish"),unp=$("r-unpublish"),pubmsg=$("r-pubmsg");
+  if(pub)pub.onclick=function(){
+    if(!curResExamId)return;
+    const ex=db().exams.find(function(e){return e.id===curResExamId;});
+    if(!ex||!ex.locked){pubmsg.innerHTML='<div class="msg err">'+esc(t("publish_locked_only"))+"</div>";return;}
+    const r=publishResults(curResExamId);
+    if(!r.ok){pubmsg.innerHTML='<div class="msg err">'+esc(r.error||t("login_fail"))+"</div>";return;}
+    const link=parentLink();
+    pubmsg.innerHTML='<div class="msg okm">'+esc(t("publish_done"))+" — "+r.count+" "+esc(t("dash_marks_done"))+".</div>"+
+      (link?'<div class="card" style="margin-top:.5rem"><b>'+esc(t("publish_link"))+'</b><br><span style="word-break:break-all">'+esc(link)+"</span></div>":"");
+  };
+  if(unp)unp.onclick=function(){
+    if(!curResExamId)return;
+    const r=unpublishResults(curResExamId);
+    pubmsg.innerHTML=r.ok?'<div class="msg okm">'+esc(t("unpublish_done"))+"</div>":'<div class="msg err">'+esc(r.error||t("login_fail"))+"</div>";
+  };
   $("r-csv").onclick=function(){if(curResExamId)downloadFile("results.csv",exportCSV("results",curResExamId),"text/csv;charset=utf-8");};
   $("r-print").onclick=function(){if(curResExamId)doPrint(broadsheetPrintHTML(curResExamId));};
   $("r-award").onclick=function(){
@@ -3096,6 +3486,16 @@ function snapshotsCardHTML(){
   }
   return h+"</div>";
 }
+function boardCardHTML(){
+  const b=db().settings.board||defaultBoard();
+  return '<div class="card"><h3>🏛 '+esc(t("board_rules"))+'</h3><p class="muted">'+esc(t("board_hint"))+"</p>"+
+    '<div class="grid2">'+
+    '<div class="field"><label>'+esc(t("board_name"))+'</label><input id="s-bname" value="'+esc(b.name||"")+'"></div>'+
+    '<div class="field"><label>'+esc(t("board_asof"))+'</label><input id="s-basof" type="date" value="'+esc(b.asOf||"")+'"></div>'+
+    '<div class="field"><label>'+esc(t("board_p1"))+" ("+esc(t("years"))+" / "+esc(t("months"))+')</label><div class="toolbar"><input id="s-bp1y" inputmode="numeric" value="'+(b.part1Y||0)+'" style="width:80px"><input id="s-bp1m" inputmode="numeric" value="'+(b.part1M||0)+'" style="width:80px"></div></div>'+
+    '<div class="field"><label>'+esc(t("board_p2"))+" ("+esc(t("years"))+" / "+esc(t("months"))+')</label><div class="toolbar"><input id="s-bp2y" inputmode="numeric" value="'+(b.part2Y||0)+'" style="width:80px"><input id="s-bp2m" inputmode="numeric" value="'+(b.part2M||0)+'" style="width:80px"></div></div>'+
+    '</div><button type="button" class="btn btn-primary" id="s-save4">'+esc(t("save"))+"</button></div>";
+}
 function viewSettings(){
   const s=db().settings;
   let h='<div class="card"><h2>'+esc(t("set_title"))+"</h2>"+
@@ -3131,6 +3531,7 @@ function viewSettings(){
         '<td class="num"><input class="cell" data-ab="'+c+'" data-k="maxM" inputmode="numeric" value="'+b.maxM+'"></td></tr>';
     }).join("")+"</table></div>"+
     '<button type="button" class="btn btn-primary" id="s-save3" style="margin-top:.6rem">'+esc(t("save"))+"</button></div>";
+  h+=boardCardHTML();
   h+='<div class="card"><h3>'+esc(t("backup"))+" / "+esc(t("restore"))+"</h3><div class=\"toolbar\">"+
     '<button type="button" class="btn" id="s-backup">'+esc(t("backup"))+"</button>"+
     '<label class="btn">'+esc(t("restore"))+'<input id="s-restore" type="file" accept=".json,application/json" style="display:none"></label>'+
@@ -3174,6 +3575,15 @@ function afterSettings(){
     const s=db().settings;
     Array.prototype.forEach.call(document.querySelectorAll("[data-ab]"),function(inp){
       s.ageBands[inp.getAttribute("data-ab")][inp.getAttribute("data-k")]=Number(inp.value)||0;});
+    Store.save();render();
+  };
+  const sb4=$("s-save4");
+  if(sb4)sb4.onclick=function(){
+    const s=db().settings;
+    s.board={name:$("s-bname").value.trim()||"BISE",
+      part1Y:Number($("s-bp1y").value)||0,part1M:Number($("s-bp1m").value)||0,
+      part2Y:Number($("s-bp2y").value)||0,part2M:Number($("s-bp2m").value)||0,
+      asOf:$("s-basof").value||todayISO()};
     Store.save();render();
   };
   $("s-backup").onclick=function(){downloadFile("srs-backup-"+fileSafe(db().settings.deviceName)+"-"+todayISO()+".json",exportJSON(),"application/json");};
@@ -3289,8 +3699,11 @@ const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,
   calcAge:calcAge,fmtAge:fmtAge,inBand:inBand,displayName:displayName,
   addStudent:addStudent,updateStudent:updateStudent,deleteStudent:deleteStudent,
   findDuplicateStudent:findDuplicateStudent,studentsOf:studentsOf,studentsOfAll:studentsOfAll,
-  addExam:addExam,deleteExam:deleteExam,setMark:setMark,
+  addExam:addExam,deleteExam:deleteExam,setMark:setMark,lockExam:lockExam,
   computeResult:computeResult,resultRowFor:resultRowFor,getDossier:getDossier,
+  boardEligible:boardEligible,defaultBoard:defaultBoard,
+  sha256Hex:sha256Hex,parentHash:parentHash,publishResults:publishResults,unpublishResults:unpublishResults,parentLink:parentLink,
+  setTTCell:setTTCell,ttConflicts:ttConflicts,ttClasses:ttClasses,ttCell:ttCell,
   gradeFor:gradeFor,divisionFor:divisionFor,remarkFor:remarkFor,
   addLabItem:addLabItem,updateLabItem:updateLabItem,deleteLabItem:deleteLabItem,
   addMaint:addMaint,labAlerts:labAlerts,maintTotal:maintTotal,
@@ -3313,7 +3726,9 @@ const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,
   captureStudentPhoto:captureStudentPhoto,storageBytes:storageBytes,storageMeterHTML:storageMeterHTML,
   scanFromText:scanFromText,
   viewDossier:viewDossier};
-function initApp(){db();takeSnapshot("auto");applyLang();if(typeof Cloud!=="undefined")Cloud.init();render();var lt=$("lang-toggle");if(lt&&!lt._wired){lt._wired=true;lt.onclick=function(){db().settings.lang=(lang()==="ur")?"en":"ur";Store.save();render();};}}
+function initApp(){db();takeSnapshot("auto");applyLang();
+  if(parentHashFromURL()){parentMode=true;parentSchoolId=parentSchoolFromURL();}
+  if(typeof Cloud!=="undefined")Cloud.init();render();var lt=$("lang-toggle");if(lt&&!lt._wired){lt._wired=true;lt.onclick=function(){db().settings.lang=(lang()==="ur")?"en":"ur";Store.save();render();};}}
 if(typeof document!=="undefined"&&typeof window!=="undefined"){
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",initApp);
   else initApp();
