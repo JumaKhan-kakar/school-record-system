@@ -1,0 +1,3014 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>School Record System</title>
+<style>
+/* ============ base ============ */
+:root{
+  --bg:#f4f6f8; --card:#ffffff; --ink:#1c2733; --muted:#67727e;
+  --brand:#1a6fd4; --brand-d:#1259ab; --ok:#1e8e3e; --warn:#b26a00;
+  --bad:#c5221f; --line:#dfe5ea; --chip:#e8f0fe;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans","Noto Nastaliq Urdu","Jameel Noori Nastaleeq",sans-serif;
+  font-size:16px;line-height:1.55}
+h1,h2,h3{margin:.4em 0}
+button{font:inherit}
+/* ============ header ============ */
+.hdr{background:var(--brand);color:#fff;padding:.7rem .9rem;position:sticky;top:0;z-index:50}
+.hdr .row{display:flex;align-items:center;gap:.6rem;justify-content:space-between}
+.hdr .school{font-weight:700;font-size:1.15rem}
+.hdr .sub{font-size:.8rem;opacity:.9}
+.langbtn{background:#fff;color:var(--brand);border:0;border-radius:999px;
+  padding:.45rem .95rem;font-weight:700;min-height:44px;cursor:pointer}
+/* ============ tabs ============ */
+.tabs{display:flex;gap:.4rem;overflow-x:auto;background:var(--card);
+  border-bottom:1px solid var(--line);padding:.45rem .6rem;position:sticky;top:57px;z-index:40}
+.tab{white-space:nowrap;border:1px solid var(--line);background:#fff;border-radius:999px;
+  padding:.5rem .95rem;min-height:44px;cursor:pointer;color:var(--ink)}
+.tab[aria-selected="true"]{background:var(--brand);color:#fff;border-color:var(--brand);font-weight:700}
+/* ============ layout ============ */
+.wrap{max-width:1100px;margin:0 auto;padding:.8rem .7rem 3rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:.9rem;margin-bottom:.9rem;box-shadow:0 1px 2px rgba(20,40,60,.05)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+@media(max-width:640px){.grid2{grid-template-columns:1fr}}
+.field{margin-bottom:.65rem}
+.field label{display:block;font-weight:600;margin-bottom:.25rem;font-size:.92rem}
+.field input,.field select,.field textarea{width:100%;padding:.6rem .65rem;min-height:44px;
+  border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff;color:var(--ink)}
+.field .hint{font-size:.8rem;color:var(--muted)}
+.btn{display:inline-block;border:1px solid var(--line);background:#fff;color:var(--ink);
+  border-radius:10px;padding:.6rem 1rem;min-height:44px;cursor:pointer;font-weight:600;margin:.15rem}
+.btn-primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn-primary:active{background:var(--brand-d)}
+.btn-danger{background:#fff;border-color:var(--bad);color:var(--bad)}
+.btn-ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn-sm{padding:.35rem .7rem;min-height:38px;font-size:.88rem}
+.msg{border-radius:10px;padding:.6rem .8rem;margin:.5rem 0;font-weight:600}
+.msg.err{background:#fdecea;color:var(--bad);border:1px solid #f5c6c2}
+.err-input{border-color:#c5221f!important;box-shadow:0 0 0 2px rgba(197,34,31,.18)}
+.msg.okm{background:#e6f4ea;color:var(--ok);border:1px solid #b7dfc0}
+.msg.warnm{background:#fef7e0;color:var(--warn);border:1px solid #f3df9a}
+/* ============ tables ============ */
+.twrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.grid{border-collapse:collapse;width:100%;min-width:640px;background:#fff}
+table.grid th,table.grid td{border:1px solid var(--line);padding:.45rem .5rem;text-align:start;font-size:.92rem}
+table.grid th{background:#eef3f8;position:sticky;top:0}
+table.grid td.num,table.grid th.num{text-align:center}
+table.grid input.cell{width:64px;padding:.35rem .3rem;border:1px solid var(--line);border-radius:6px;text-align:center;font:inherit}
+table.grid input.cell.bad{border-color:var(--bad);background:#fdecea}
+tr.totalrow td{background:#eef3f8;font-weight:700}
+.flag{display:inline-block;background:#fdecea;color:var(--bad);border-radius:6px;padding:.1rem .5rem;font-size:.82rem;font-weight:700}
+.flag.okf{background:#e6f4ea;color:var(--ok)}
+.chip{display:inline-block;background:var(--chip);color:var(--brand-d);border-radius:999px;padding:.15rem .7rem;font-size:.85rem;font-weight:600;margin:.1rem}
+/* ============ misc ============ */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.6rem}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:.8rem;text-align:center}
+.kpi .n{font-size:1.6rem;font-weight:800;color:var(--brand)}
+.kpi .l{font-size:.85rem;color:var(--muted)}
+.hist{font-size:.82rem;color:var(--muted);border-top:1px dashed var(--line);margin-top:.5rem;padding-top:.4rem}
+.hist div{padding:.15rem 0;border-bottom:1px dotted #eef1f4}
+.toolbar{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;margin-bottom:.6rem}
+.search{flex:1;min-width:160px;padding:.6rem .7rem;min-height:44px;border:1px solid var(--line);border-radius:10px;font:inherit}
+.muted{color:var(--muted);font-size:.9rem}
+hr.sep{border:0;border-top:1px solid var(--line);margin:1rem 0}
+#print-area{display:none}
+/* ============ register photo helper + bulk import ============ */
+.regphoto{border:1px dashed var(--line);border-radius:10px;padding:.7rem;margin-bottom:.8rem;background:#fafcff}
+.regphoto-img{max-width:100%;max-height:220px;border:1px solid var(--line);border-radius:8px;display:block;margin-bottom:.5rem}
+.tipbox{background:#fff8e1;border:1px solid #f0dfae;border-radius:10px;padding:.7rem;margin:.6rem 0;font-size:.92rem}
+/* ============ student photos + award list (round 3) ============ */
+.thumb{border-radius:50%;object-fit:cover;vertical-align:middle;flex:none;background:#dfe7f3;border:1px solid var(--line)}
+.thumb-ph{border-radius:50%;vertical-align:middle;flex:none;background:#dfe7f3;color:#3c5a86;display:inline-flex;align-items:center;justify-content:center;font-weight:700;border:1px solid var(--line)}
+.idrow{display:flex;align-items:center;gap:.5rem}
+.storbar{height:10px;background:#eef2f7;border-radius:6px;overflow:hidden;margin:.4rem 0}
+.storbar>div{height:100%;background:var(--brand)}
+.scan-paste{width:100%;min-height:90px;padding:.6rem;border:1px solid var(--line);border-radius:8px;font:inherit;box-sizing:border-box}
+.photocard{display:flex;align-items:center;gap:.7rem;margin-bottom:.6rem}
+/* ============ scan review + voice entry ============ */
+.rev-val{padding:.55rem .7rem;border:1px solid var(--line);border-radius:8px;background:#f2fbf4;min-height:44px;cursor:pointer}
+.field input.amber,.field select.amber{border-color:var(--warn);background:#fff8e1}
+.micwrap{position:relative}
+.micwrap input,.micwrap textarea{padding-inline-end:56px}
+.micbtn{position:absolute;inset-inline-end:6px;top:50%;transform:translateY(-50%);min-width:44px;min-height:44px;border-radius:50%;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:1.15rem;line-height:1;padding:0}
+.micbtn.rec{background:#fdecea;border-color:var(--bad)}
+#mic-toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:#1a73e8;color:#fff;padding:.65rem 1.1rem;border-radius:999px;z-index:9999;font-weight:700;box-shadow:0 2px 10px rgba(0,0,0,.3);animation:micpulse 1.1s ease-in-out infinite;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis}
+@keyframes micpulse{50%{opacity:.65}}
+/* ============ result card (screen preview) ============ */
+.rcard{border:2px solid var(--ink);border-radius:6px;padding:1rem;background:#fff;max-width:700px;margin:0 auto}
+.rcard .rc-head{text-align:center;border-bottom:2px solid var(--ink);padding-bottom:.6rem;margin-bottom:.8rem}
+.rcard .rc-head img{height:54px;vertical-align:middle;margin-inline-end:.6rem}
+.rcard .rc-head h2{margin:.1rem 0}
+.rcard .rc-id{display:grid;grid-template-columns:1fr 1fr;gap:.25rem .8rem;font-size:.92rem;margin-bottom:.7rem}
+.rcard .rc-sum{display:flex;flex-wrap:wrap;gap:.4rem;margin:.7rem 0}
+/* ============ responsive: laptop / desktop ============ */
+@media(max-width:899px){
+  /* phone & tablet portrait: dossier takes the full view, directory hides behind Back */
+  .dossier-open .dircol{display:none}
+}
+@media(min-width:900px){
+  /* laptop/desktop: comfortable two-pane — directory left, dossier right */
+  .wrap{max-width:1280px;padding:1rem 1.2rem 4rem}
+  .dirpane{display:grid;grid-template-columns:minmax(300px,360px) minmax(0,1fr);gap:1rem;align-items:start}
+  .dirpane .card{margin-bottom:0}
+  table.grid{min-width:0}
+  table.grid input.cell{width:80px;padding:.5rem .3rem}
+  .hdr .school{font-size:1.3rem}
+  .tab:hover{background:#e8f0fe}
+  .btn:hover{filter:brightness(.96)}
+}
+/* ============ print ============ */
+@page{size:A4;margin:11mm}
+@media print{
+  .app,#print-area{display:none!important}
+  body{background:#fff}
+  #print-area{display:block!important;direction:ltr}
+  #print-area.rtl{direction:rtl}
+  .prt{font-family:inherit;color:#000}
+  .prt h2{text-align:center;margin:.2rem 0}
+  .prt .sub{text-align:center;margin:.1rem 0 .6rem}
+  .prt table{border-collapse:collapse;width:100%;font-size:11px}
+  .prt th,.prt td{border:1px solid #000;padding:4px 5px;text-align:left}
+  .prt.rtl th,.prt.rtl td{text-align:right}
+  .prt .sign{display:flex;justify-content:space-between;margin-top:2.2rem}
+  .prt .sign div{width:30%;border-top:1px solid #000;padding-top:4px;text-align:center;font-size:11px}
+  .prt .rc-head{text-align:center;border:2px solid #000;padding:.5rem;margin-bottom:.6rem}
+  .prt .rc-info{display:flex;justify-content:space-between;font-size:12px;margin-bottom:.5rem;flex-wrap:wrap;gap:.3rem}
+  .rc-page{page-break-after:always}
+  .rc-page:last-child{page-break-after:auto}
+  .rcard{border:2px solid #000;border-radius:0;padding:8px;max-width:none;margin:0}
+  .rcard .rc-head{border-bottom:2px solid #000}
+  .rcard .rc-head img{height:50px}
+  .rcard .rc-id{font-size:12px}
+  .rcard table{font-size:12px}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="hdr no-print">
+    <div class="row">
+      <div>
+        <div class="school" id="hdr-school">—</div>
+      </div>
+      <button class="langbtn" id="lang-toggle" type="button">EN</button>
+    </div>
+  </header>
+  <nav class="tabs no-print" id="tabs" role="tablist"></nav>
+  <main class="wrap no-print" id="view"></main>
+</div>
+<div id="print-area"></div>
+<script>
+/* =====================================================================
+   VENDOR SLOT — offline OCR engine (optional)
+   Fully-offline text reading needs the OCRAD.js engine (MIT licence, by
+   Kevin Kwok / antimatter15 — a pure-JavaScript port of GNU Ocrad, about
+   1MB, zero language-data downloads). It could not be fetched into this
+   build through the available tools, so the slot is empty.
+   TO ENABLE: download ocrad.js and paste its ENTIRE source between the
+   markers below. It must define a global OCRAD() function. The app
+   auto-detects it (ocrEngine()) — no other change needed, and the shipped
+   file keeps zero external requests.
+   Until then, "Scan register page" captures, enhances and pins the photo
+   for fast entry (fully working offline).
+/*__OCRAD_SRC_START__*/
+/*__OCRAD_SRC_END__*/
+</script>
+<script>
+"use strict";
+/* =====================================================================
+   SCHOOL RECORD SYSTEM — single-file offline app
+   Data: localStorage key "srs_v1". No network calls anywhere.
+   ===================================================================== */
+
+/* ================= i18n dictionary ================= */
+const T = {
+/* nav + header */
+app_name:{en:"School Record System",ur:"اسکول ریکارڈ سسٹم"},
+tagline:{en:"Paper registers, on your phone — works offline",ur:"کاغذی رجسٹر، آپ کے فون پر — آف لائن چلتا ہے"},
+nav_home:{en:"Home",ur:"ہوم"},
+nav_adm:{en:"Admissions",ur:"داخلے"},
+nav_dob:{en:"DOB Records",ur:"تاریخ پیدائش"},
+nav_exam:{en:"Exams & Marks",ur:"امتحانات و نمبرات"},
+nav_result:{en:"Results",ur:"رزلٹ"},
+nav_lab:{en:"Science Lab",ur:"سائنس لیب"},
+nav_settings:{en:"Settings",ur:"ترتیبات"},
+/* common */
+save:{en:"Save",ur:"محفوظ کریں"},
+cancel:{en:"Cancel",ur:"منسوخ کریں"},
+edit:{en:"Edit",ur:"ترمیم"},
+del:{en:"Delete",ur:"حذف کریں"},
+add:{en:"Add",ur:"شامل کریں"},
+add_new:{en:"Add new",ur:"نیا شامل کریں"},
+search:{en:"Search…",ur:"تلاش کریں…"},
+print:{en:"Print",ur:"پرنٹ کریں"},
+export_csv:{en:"Download CSV",ur:"CSV ڈاؤن لوڈ کریں"},
+backup:{en:"Backup (JSON)",ur:"بیک اپ (JSON)"},
+restore:{en:"Restore (JSON)",ur:"بحال کریں (JSON)"},
+history:{en:"History",ur:"ہسٹری"},
+close:{en:"Close",ur:"بند کریں"},
+view:{en:"View",ur:"دیکھیں"},
+total:{en:"Total",ur:"کل"},
+actions:{en:"Actions",ur:"عمل"},
+sno:{en:"S.No",ur:"نمبر"},
+confirm_del:{en:"Delete this record? This cannot be undone.",ur:"کیا یہ ریکارڈ حذف کریں؟ یہ واپس نہیں ہوگا۔"},
+saved_ok:{en:"Saved.",ur:"محفوظ ہو گیا۔"},
+deleted_ok:{en:"Deleted.",ur:"حذف ہو گیا۔"},
+req:{en:"This field is required.",ur:"یہ خانہ ضروری ہے۔"},optional:{en:"optional",ur:"اختیاری"},req_some:{en:"Please fill in these required fields",ur:"براہ کرم یہ ضروری خانے پُر کریں"},dob_future:{en:"Date of birth cannot be in the future.",ur:"تاریخ پیدائش آج کی تاریخ سے آگے نہیں ہو سکتی۔"},exam:{en:"Examination",ur:"امتحان"},
+no_records:{en:"No records yet.",ur:"ابھی کوئی ریکارڈ نہیں۔"},
+/* dashboard */
+dash_title:{en:"Overview",ur:"جائزہ"},
+kpi_students:{en:"Students",ur:"طلبہ"},
+kpi_exams:{en:"Exams",ur:"امتحانات"},
+kpi_lab:{en:"Lab items",ur:"لیب سامان"},
+kpi_alerts:{en:"Lab alerts",ur:"لیب الرٹس"},
+quick_links:{en:"Quick links",ur:"فوری روابط"},
+demo_note:{en:"Tip: load demo data from Settings to try every module.",ur:"مشورہ: ہر حصہ آزمانے کے لیے ترتیبات سے نمونہ ڈیٹا لوڈ کریں۔"},
+/* admissions */
+adm_title:{en:"Admission Register",ur:"داخلہ رجسٹر"},
+adm_no:{en:"Adm. No",ur:"داخلہ نمبر"},
+f_name:{en:"Student name",ur:"طالب علم کا نام"},
+father_name:{en:"Father's name",ur:"والد کا نام"},
+dob:{en:"Date of birth",ur:"تاریخ پیدائش"},
+gender:{en:"Gender",ur:"صنف"},
+male:{en:"Boy",ur:"لڑکا"},
+female:{en:"Girl",ur:"لڑکی"},
+cls:{en:"Class",ur:"جماعت"},
+section:{en:"Section",ur:"سیکشن"},
+adm_date:{en:"Admission date",ur:"تاریخ داخلہ"},
+contact:{en:"Contact number",ur:"رابطہ نمبر"},
+address:{en:"Address",ur:"پتہ"},
+add_student:{en:"Admit student",ur:"طالب علم داخل کریں"},
+edit_student:{en:"Edit student",ur:"طالب علم میں ترمیم"},
+dup_student:{en:"Duplicate blocked",ur:"دہرا اندراج روک دیا گیا"},
+dup_msg:{en:"already exists with the same name, father's name and date of birth.",ur:"اسی نام، والد کے نام اور تاریخ پیدائش کے ساتھ پہلے سے موجود ہے۔"},
+adm_auto:{en:"Admission number is generated automatically and never reused.",ur:"داخلہ نمبر خودکار بنتا ہے اور دوبارہ استعمال نہیں ہوتا۔"},
+/* dob */
+dob_title:{en:"DOB Register",ur:"تاریخ پیدائش رجسٹر"},
+age:{en:"Age",ur:"عمر"},
+years:{en:"y",ur:"سال"},
+months:{en:"m",ur:"ماہ"},
+as_of:{en:"Age as of",ur:"عمر بمطابق تاریخ"},
+elig:{en:"Board-age eligibility",ur:"عمر کی اہلیت"},
+eligible:{en:"Eligible",ur:"اہل"},
+not_eligible:{en:"Not eligible",ur:"نااہل"},
+elig_band:{en:"Band",ur:"حد"},
+/* exams */
+exam_title:{en:"Exams & Marks Entry",ur:"امتحانات و نمبرات کا اندراج"},
+exam_name:{en:"Exam name",ur:"امتحان کا نام"},
+term:{en:"Term",ur:"ٹرم"},
+mid:{en:"Mid-term",ur:"ششماہی"},
+final:{en:"Final-term",ur:"سالانہ"},
+subjects:{en:"Subjects",ur:"مضامین"},
+max_marks:{en:"Max marks",ur:"کل نمبر"},
+add_exam:{en:"Create exam",ur:"امتحان بنائیں"},
+subject_name:{en:"Subject",ur:"مضمون"},
+add_subject:{en:"Add subject",ur:"مضمون شامل کریں"},
+enter_marks:{en:"Enter marks",ur:"نمبرات درج کریں"},
+obtained:{en:"Obtained",ur:"حاصل کردہ"},
+col_total:{en:"Column total",ur:"کالم کا میزان"},
+v_required:{en:"Marks required — empty cells are not saved.",ur:"نمبر ضروری ہیں — خالی خانے محفوظ نہیں ہوں گے۔"},
+v_number:{en:"Must be a number.",ur:"عدد ہونا ضروری ہے۔"},
+v_range:{en:"Must be between 0 and",ur:"0 اور اس کے درمیان ہونا ضروری ہے"},
+v_saved:{en:"All marks saved.",ur:"تمام نمبرات محفوظ ہو گئے۔"},
+v_fix:{en:"Please fix the highlighted cells.",ur:"نمایاں خانے درست کریں۔"},
+select_exam:{en:"Select exam",ur:"امتحان منتخب کریں"},
+/* results */
+res_title:{en:"Result Register",ur:"رزلٹ رجسٹر"},
+percentage:{en:"Percentage",ur:"فیصد"},
+grade:{en:"Grade",ur:"گریڈ"},
+division:{en:"Division",ur:"ڈویژن"},
+position:{en:"Position",ur:"پوزیشن"},
+result:{en:"Result",ur:"نتیجہ"},
+pass:{en:"Pass",ur:"پاس"},
+fail:{en:"Fail",ur:"فیل"},
+report_card:{en:"Report card",ur:"رزلٹ کارڈ"},
+remarks:{en:"Remarks",ur:"ریمارکس"},
+sig_principal:{en:"Principal",ur:"پرنسپل"},
+sig_teacher:{en:"Class teacher",ur:"جماعت کے استاد"},
+sig_parent:{en:"Parent",ur:"والدین"},
+broadsheet:{en:"Broadsheet",ur:"براڈ شیٹ"},
+rk_excellent:{en:"Excellent",ur:"بہترین"},
+rk_vgood:{en:"Very good",ur:"بہت اچھا"},
+rk_good:{en:"Good",ur:"اچھا"},
+rk_fair:{en:"Fair — needs improvement",ur:"مناسب — بہتری کی ضرورت"},
+rk_poor:{en:"Needs hard work",ur:"محنت کی ضرورت"},
+/* lab */
+lab_title:{en:"Science Lab Log",ur:"سائنس لیب رجسٹر"},
+item_name:{en:"Item name",ur:"چیز کا نام"},
+category:{en:"Category",ur:"قسم"},
+qty:{en:"Quantity",ur:"مقدار"},
+unit:{en:"Unit",ur:"اکائی"},
+condition:{en:"Condition",ur:"حالت"},
+c_good:{en:"Good",ur:"اچھی"},
+c_fair:{en:"Fair",ur:"مناسب"},
+c_repair:{en:"Needs repair",ur:"مرمت طلب"},
+c_dead:{en:"Out of order",ur:"خراب"},
+min_stock:{en:"Min. stock level",ur:"کم از کم اسٹاک"},
+next_service:{en:"Next service date",ur:"اگلی سروس کی تاریخ"},
+add_item:{en:"Add item",ur:"سامان شامل کریں"},
+maintenance:{en:"Maintenance",ur:"دیکھ بھال"},
+maint_title:{en:"Maintenance history",ur:"مرمت کی ہسٹری"},
+issue:{en:"Issue",ur:"مسئلہ"},
+action_taken:{en:"Action taken",ur:"کی گئی کارروائی"},
+cost:{en:"Cost (Rs)",ur:"لاگت (روپے)"},
+add_maint:{en:"Add maintenance entry",ur:"مرمت کا اندراج کریں"},
+reminders:{en:"Reminders",ur:"یاد دہانی"},
+low_stock:{en:"Low stock",ur:"کم اسٹاک"},
+overdue:{en:"Service overdue",ur:"سروس کی میعاد گزری"},
+total_cost:{en:"Total maintenance cost",ur:"مرمت کی کل لاگت"},
+inventory:{en:"Inventory",ur:"اسٹاک"},
+cat_equipment:{en:"Equipment",ur:"آلات"},
+cat_chemical:{en:"Chemical",ur:"کیمیکل"},
+cat_glassware:{en:"Glassware",ur:"شیشے کا سامان"},
+cat_other:{en:"Other",ur:"دیگر"},
+/* settings */
+set_title:{en:"Settings",ur:"ترتیبات"},
+school_name:{en:"School name",ur:"اسکول کا نام"},
+school_ph:{en:"e.g. Government Primary School",ur:"مثلاً گورنمنٹ پرائمری اسکول"},
+def_lang:{en:"Default language",ur:"پہلے سے منتخب زبان"},
+pass_pct:{en:"Pass percentage per subject (%)",ur:"فی مضمون پاس فیصد (%)"},
+grade_scale:{en:"Grade scale (minimum %)",ur:"گریڈ اسکیل (کم از کم فیصد)"},
+div_scale:{en:"Division scale (minimum %)",ur:"ڈویژن اسکیل (کم از کم فیصد)"},
+age_bands:{en:"Board-age bands per class (years–months)",ur:"ہر جماعت کی عمر کی حد (سال–ماہ)"},
+band_min:{en:"Min",ur:"کم از کم"},
+band_max:{en:"Max",ur:"زیادہ سے زیادہ"},
+seed_demo:{en:"Load demo data",ur:"نمونہ ڈیٹا لوڈ کریں"},
+seed_warn:{en:"This replaces ALL current data with 12 demo students, 2 exams and lab items.",ur:"اس سے تمام موجودہ ڈیٹا ختم ہو کر 12 نمونہ طلبہ، 2 امتحانات اور لیب سامان آ جائے گا۔"},
+seed_done:{en:"Demo data loaded.",ur:"نمونہ ڈیٹا لوڈ ہو گیا۔"},
+wipe:{en:"Erase all data",ur:"تمام ڈیٹا مٹائیں"},
+wipe_confirm:{en:"Type ERASE to confirm.",ur:"تصدیق کے لیے ERASE لکھیں۔"},
+audit:{en:"Audit trail",ur:"آڈٹ ریکارڈ"},
+};
+
+/* ================= utils ================= */
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+function $(id){return (typeof document!=="undefined")?document.getElementById(id):null;}
+function uid(p){return p+"_"+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36);}
+function todayISO(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function fmtDate(iso){if(!iso)return "—";const p=String(iso).slice(0,10).split("-");return p.length===3?p[2]+"-"+p[1]+"-"+p[0]:iso;}
+function norm(s){return String(s==null?"":s).trim().toLowerCase();}
+function lang(){return (DB&&DB.settings&&DB.settings.lang)||"ur";}
+function t(k){const e=T[k];if(!e)return k;return e[lang()]||e.en||k;}
+/* bilingual label for printed/official surfaces — Urdu + English together,
+   regardless of the UI toggle. Callers wrap the result in esc(). */
+function bl(k){const e=T[k];if(!e)return k;return (e.ur||"")+" / "+(e.en||"");}
+function tsNow(){return new Date().toISOString();}
+/* age as {y,m} of dobISO as-of asOfISO */
+function calcAge(dobISO,asOfISO){
+  const a=String(dobISO).slice(0,10).split("-").map(Number);
+  const b=String(asOfISO).slice(0,10).split("-").map(Number);
+  let y=b[0]-a[0], m=b[1]-a[1];
+  if(b[2]<a[2]) m--;
+  if(m<0){y--;m+=12;}
+  return {y:y,m:m};
+}
+function ageMonths(a){return a.y*12+a.m;}
+function fmtAge(a){return a.y+t("years")+" "+a.m+t("months");}
+function inBand(a,band){const tm=ageMonths(a);return tm>=(band.minY*12+band.minM)&&tm<=(band.maxY*12+band.maxM);}
+
+/* ================= Store ================= */
+const LS_KEY="srs_v1";
+function defaultAgeBands(){const b={};for(let c=1;c<=10;c++){b[String(c)]={minY:4+c,minM:0,maxY:6+c,maxM:0};}return b;}
+function defaultDB(){return {
+  v:1,
+  seq:{adm:{},cert:{}},
+  students:[],exams:[],marks:{},labItems:[],labMaint:[],certificates:[],
+  settings:{
+    schoolName:"",deviceName:"",lang:"ur",passPct:33,regPhotoDataUrl:"",
+    gradeScale:[{min:90,g:"A+"},{min:80,g:"A"},{min:70,g:"B"},{min:60,g:"C"},{min:50,g:"D"},{min:0,g:"F"}],
+    divisions:[{min:60,d:"1st"},{min:50,d:"2nd"},{min:40,d:"3rd"},{min:0,d:"Fail"}],
+    ageBands:defaultAgeBands()
+  },
+  audit:[]
+};}
+const Store={
+  _ls:function(){try{return (typeof localStorage!=="undefined")?localStorage:null;}catch(e){return null;}},
+  load:function(){
+    const ls=this._ls();
+    if(ls){try{const raw=ls.getItem(LS_KEY);if(raw){const d=JSON.parse(raw);if(d&&d.v===1&&d.settings)return d;}}catch(e){}}
+    return defaultDB();
+  },
+  trySave:function(){
+    const ls=this._ls();
+    if(!ls)return true;
+    try{ls.setItem(LS_KEY,JSON.stringify(DB));return true;}
+    catch(e){return false;}
+  },
+  save:function(){this.trySave();}
+};
+let DB=null;
+function db(){if(!DB)DB=Store.load();return DB;}
+/* SyncAdapter stub — cloud sync can slot in later without rewrite */
+const SyncAdapter={
+  status:function(){return "local-only";},
+  push:function(){return {ok:false,reason:"not-configured"};},
+  pull:function(){return {ok:false,reason:"not-configured"};}
+};
+/* ================= history & audit ================= */
+function audit(action,summary){
+  db().audit.unshift({ts:tsNow(),action:action,summary:summary});
+  if(db().audit.length>500)db().audit.length=500;
+}
+function logHist(rec,action,summary){
+  rec.history=rec.history||[];
+  rec.history.unshift({ts:tsNow(),action:action,summary:summary});
+  audit(action,summary);
+}
+function clsLabel(cls,section){cls=String(cls==null?"":cls).trim();section=String(section==null?"":section).trim();return section?cls+"-"+section:cls;}
+function fileSafe(s){return String(s==null?"":s).trim().toLowerCase().replace(/[^a-z0-9\u0600-\u06FF]+/g,"-").replace(/^-+|-+$/g,"")||"phone";}
+/* ================= admissions ================= */
+function nextAdmNo(admDateISO){
+  const yr=String(admDateISO||todayISO()).slice(0,4);
+  db().seq.adm=db().seq.adm||{};
+  const n=db().seq.adm[yr]||1;
+  db().seq.adm[yr]=n+1;
+  return "ADM-"+yr+"-"+String(n).padStart(4,"0");
+}
+function findDuplicateStudent(name,fatherName,dob,excludeId){
+  const n=norm(name),f=norm(fatherName);
+  return db().students.find(function(s){
+    return s.id!==excludeId&&norm(s.name)===n&&norm(s.fatherName)===f&&s.dob===dob;
+  })||null;
+}
+function addStudent(d){
+  const req=[["name","f_name"],["fatherName","father_name"],["dob","dob"],["gender","gender"],["cls","cls"],["admDate","adm_date"]];
+  const missing=[];
+  for(let i=0;i<req.length;i++){if(!String(d[req[i][0]]||"").trim())missing.push(req[i][0]);}
+  if(missing.length){const lk={name:"f_name",fatherName:"father_name",dob:"dob",gender:"gender",cls:"cls",section:"section",admDate:"adm_date"};return {ok:false,error:t("req_some")+": "+missing.map(function(k){return t(lk[k]);}).join(", "),missing:missing};}
+  if(String(d.dob||"")>todayISO())return {ok:false,error:t("dob_future"),missing:["dob"]};
+  const dup=findDuplicateStudent(d.name,d.fatherName,d.dob,null);
+  if(dup)return {ok:false,error:t("dup_student")+": "+dup.name+" ("+t("father_name")+": "+dup.fatherName+", "+t("dob")+": "+fmtDate(dup.dob)+") — "+t("dup_msg")+" ["+dup.admNo+"]"};
+  let pin=String(d.pin||"").trim()||null;
+  if(!pin){let tries=0;do{pin=String(1000+Math.floor(Math.random()*9000));tries++;}while(tries<25&&db().students.some(function(s){return s.pin===pin;}));}
+  const st={id:uid("st"),admNo:nextAdmNo(d.admDate),name:d.name.trim(),fatherName:d.fatherName.trim(),
+    dob:d.dob,gender:d.gender,cls:String(d.cls).trim(),section:String(d.section||"").trim(),
+    admDate:d.admDate,contact:String(d.contact||"").trim(),address:String(d.address||"").trim(),
+    pin:pin,history:[]};
+  db().students.push(st);
+  logHist(st,"admit",st.admNo+" — "+st.name);
+  Store.save();
+  return {ok:true,student:st};
+}
+function updateStudent(id,d){
+  const st=db().students.find(function(s){return s.id===id;});
+  if(!st)return {ok:false,error:t("no_records")};
+  const dup=findDuplicateStudent(d.name,d.fatherName,d.dob,id);
+  if(dup)return {ok:false,error:t("dup_student")+": "+dup.admNo+" — "+t("dup_msg")};
+  const before=st.name+" ("+st.admNo+")";
+  ["name","fatherName","dob","gender","cls","section","admDate","contact","address"].forEach(function(k){
+    if(d[k]!==undefined)st[k]=String(d[k]).trim();
+  });
+  if(d.pin!==undefined)st.pin=String(d.pin).trim()||null;
+  logHist(st,"update",before+" → "+st.name);
+  Store.save();
+  return {ok:true,student:st};
+}
+function deleteStudent(id){
+  const i=db().students.findIndex(function(s){return s.id===id;});
+  if(i<0)return {ok:false};
+  const st=db().students[i];
+  db().students.splice(i,1);
+  audit("delete",st.admNo+" — "+st.name+" ("+t("nav_adm")+")");
+  Store.save();
+  return {ok:true};
+}
+/* ================= student photos (round 3) =================
+   Teachers capture each student's face on the phone; the photo travels with
+   the joint identity on every surface so same-name students are recognized
+   at a glance. Stored as a downscaled JPEG data URL on the student record
+   (target ~20–50 KB each). Optional everywhere — everything works without
+   a photo. Quota failures revert the change and report; data is never
+   corrupted. */
+const PHOTO_MAX_CHARS=200000; /* ~150KB data-URL ceiling per photo */
+function studentPhotoHTML(st,px){
+  px=Number(px)||40;
+  const sz="width:"+px+"px;height:"+px+"px;";
+  if(st&&st.photo)return '<img class="thumb" src="'+st.photo+'" style="'+sz+'" alt="">';
+  const ini=st?String(st.name||"?").trim().slice(0,1).toUpperCase():"?";
+  return '<span class="thumb-ph" style="'+sz+'font-size:'+Math.max(12,Math.round(px*0.42))+'px">'+esc(ini)+"</span>";
+}
+function setStudentPhoto(id,dataUrl){
+  const st=db().students.find(function(s){return s.id===id;});
+  if(!st)return {ok:false,error:t("no_records")};
+  dataUrl=String(dataUrl||"");
+  if(dataUrl&&dataUrl.length>PHOTO_MAX_CHARS)return {ok:false,error:t("photo_big")};
+  const prev=st.photo||"";
+  st.photo=dataUrl;
+  if(!Store.trySave()){st.photo=prev;return {ok:false,error:t("photo_quota")};}
+  logHist(st,"photo",dataUrl?(prev?"photo replaced":"photo added"):"photo removed");
+  return {ok:true};
+}
+/* browser-only: downscale a captured photo file to a small JPEG data URL */
+function captureStudentPhoto(file,cb){
+  const rd=new FileReader();
+  rd.onload=function(){
+    const img=new Image();
+    img.onload=function(){
+      const MAX=480;let w=img.width,h=img.height;
+      const sc=Math.min(1,MAX/Math.max(w,h));
+      w=Math.max(1,Math.round(w*sc));h=Math.max(1,Math.round(h*sc));
+      const cv=document.createElement("canvas");cv.width=w;cv.height=h;
+      cv.getContext("2d").drawImage(img,0,0,w,h);
+      cb(cv.toDataURL("image/jpeg",0.7));
+    };
+    img.onerror=function(){cb(null);};
+    img.src=rd.result;
+  };
+  rd.onerror=function(){cb(null);};
+  rd.readAsDataURL(file);
+}
+/* honest storage meter for Settings */
+function storageBytes(){
+  try{const ls=Store._ls();if(!ls)return 0;const raw=ls.getItem(LS_KEY);return raw?raw.length:0;}
+  catch(e){return 0;}
+}
+function storageMeterHTML(){
+  const b=storageBytes(),kb=Math.round(b/1024),pct=Math.min(100,Math.round(b/5242880*100));
+  return '<div class="card"><h3>'+esc(t("storage_title"))+'</h3>'+
+    '<div class="storbar"><div style="width:'+pct+'%"></div></div>'+
+    '<p class="muted">'+kb+" KB / ~5120 KB ("+pct+'%)</p>'+
+    '<p class="muted">'+esc(t("storage_note"))+"</p></div>";
+}
+/* class promotion (session end): move a whole class/section to the next
+   class in one tap. Admission numbers NEVER change; every student gets a
+   "promoted" history entry and the global audit records the batch. */
+function promoteClass(cls,section,toCls,toSec){
+  const list=studentsOf(cls,section);
+  if(!list.length)return {ok:false,error:t("no_records")};
+  toCls=String(toCls==null?"":toCls).trim();toSec=String(toSec==null?"":toSec).trim();
+  if(!toCls)return {ok:false,error:t("req")};
+  const from=clsLabel(cls,section);
+  list.forEach(function(st){
+    st.cls=toCls;st.section=toSec;
+    logHist(st,"promoted",from+" → "+clsLabel(toCls,toSec));
+  });
+  Store.save();
+  return {ok:true,count:list.length,from:from,to:clsLabel(toCls,toSec)};
+}
+/* ================= exams & marks ================= */
+function autoExamName(d){return (d.term==="mid"?t("mid"):t("final"))+" "+t("exam");}
+function isBoardClass(cls){const n=parseInt(String(cls==null?"":cls).trim(),10);return n===8||n===9||n===10;}
+function addExam(d){
+  if(!d.term||!String(d.cls||"").trim())return {ok:false,error:t("req")};
+  if(isBoardClass(d.cls)&&d.term!=="mid")return {ok:false,error:t("board_term_err")};
+  const subs=(d.subjects||[]).filter(function(s){return String(s.name||"").trim()&&Number(s.max)>0;})
+    .map(function(s){return {name:String(s.name).trim(),max:Number(s.max)};});
+  if(!subs.length)return {ok:false,error:t("req")};
+  const ex={id:uid("ex"),name:String(d.name||"").trim()||autoExamName(d),term:d.term,year:String(d.year||new Date().getFullYear()),
+    cls:String(d.cls).trim(),section:String(d.section).trim(),subjects:subs,history:[]};
+  db().exams.push(ex);
+  logHist(ex,"create-exam",ex.name+" ("+ex.year+", "+clsLabel(ex.cls,ex.section)+")");
+  Store.save();
+  return {ok:true,exam:ex};
+}
+function deleteExam(id){
+  const i=db().exams.findIndex(function(e){return e.id===id;});
+  if(i<0)return {ok:false};
+  const ex=db().exams[i];
+  db().exams.splice(i,1);
+  delete db().marks[id];
+  audit("delete",ex.name+" ("+t("nav_exam")+")");
+  Store.save();
+  return {ok:true};
+}
+function studentsOf(cls,section){
+  return db().students.filter(function(s){return s.cls===String(cls)&&s.section===String(section);})
+    .sort(function(a,b){return a.admNo<b.admNo?-1:1;});
+}
+function setMark(examId,studentId,subject,raw){
+  const ex=db().exams.find(function(e){return e.id===examId;});
+  if(!ex)return {ok:false,error:t("no_records")};
+  const sub=ex.subjects.find(function(s){return s.name===subject;});
+  if(!sub)return {ok:false,error:t("no_records")};
+  const r=String(raw==null?"":raw).trim();
+  if(r==="")return {ok:false,error:t("v_required")};
+  const v=Number(r);
+  if(!isFinite(v))return {ok:false,error:t("v_number")};
+  if(v<0||v>sub.max)return {ok:false,error:t("v_range")+" "+sub.max+"."};
+  db().marks[examId]=db().marks[examId]||{};
+  db().marks[examId][studentId]=db().marks[examId][studentId]||{};
+  db().marks[examId][studentId][subject]=v;
+  return {ok:true,value:v};
+}
+/* ================= results ================= */
+function gradeFor(pct){const s=db().settings.gradeScale.slice().sort(function(a,b){return b.min-a.min;});for(let i=0;i<s.length;i++){if(pct>=s[i].min)return s[i].g;}return "F";}
+function divisionFor(pct){const s=db().settings.divisions.slice().sort(function(a,b){return b.min-a.min;});for(let i=0;i<s.length;i++){if(pct>=s[i].min)return s[i].d;}return "";}
+function remarkFor(g){return g==="A+"?t("rk_excellent"):g==="A"?t("rk_vgood"):g==="B"?t("rk_good"):g==="C"?t("rk_fair"):t("rk_poor");}
+/* result row for one student in one exam (no position yet) */
+function resultRow(ex,st){
+  const passPct=Number(db().settings.passPct)||33;
+  const m=(db().marks[ex.id]&&db().marks[ex.id][st.id])||{};
+  const per={};let total=0,maxTotal=0,complete=true,pass=true;
+  ex.subjects.forEach(function(sj){
+    maxTotal+=sj.max;
+    const v=m[sj.name];
+    if(v==null||!isFinite(Number(v))){complete=false;per[sj.name]=null;}
+    else{per[sj.name]=Number(v);total+=Number(v);if(Number(v)<sj.max*passPct/100)pass=false;}
+  });
+  const pct=complete&&maxTotal>0?total/maxTotal*100:null;
+  return {student:st,per:per,total:total,maxTotal:maxTotal,complete:complete,
+    pct:pct,grade:pct==null?"—":gradeFor(pct),division:pct==null?"—":divisionFor(pct),
+    pass:complete?pass:null,position:null};
+}
+/* standard competition ranking: 1,2,2,4 — assigns positions in place */
+function assignPositions(rows){
+  const done=rows.filter(function(r){return r.complete;});
+  done.forEach(function(r){let higher=0;done.forEach(function(o){if(o.total>r.total)higher++;});r.position=higher+1;});
+}
+function computeResult(examId){
+  const ex=db().exams.find(function(e){return e.id===examId;});
+  if(!ex)return [];
+  const rows=studentsOf(ex.cls,ex.section).map(function(st){return resultRow(ex,st);});
+  assignPositions(rows);
+  return rows;
+}
+/* one student's row inside an exam's cohort (for the dossier, even if the
+   student has since changed class/section) */
+function resultRowFor(examId,studentId){
+  const ex=db().exams.find(function(e){return e.id===examId;});if(!ex)return null;
+  const st=db().students.find(function(s){return s.id===studentId;});if(!st)return null;
+  const row=resultRow(ex,st);
+  if(row.complete){
+    const cohort=studentsOf(ex.cls,ex.section).map(function(s){return resultRow(ex,s);});
+    let higher=0;cohort.forEach(function(o){if(o.complete&&o.total>row.total)higher++;});
+    row.position=higher+1;
+  }
+  return {exam:ex,row:row};
+}
+/* ================= AWARD LIST (round 3) =================
+   Per-exam award roll: per-subject obtained/total, pass marks per paper,
+   position and remarks. Reuses computeResult() — positions are IDENTICAL
+   to the broadsheet by construction (asserted in the harness). */
+function awardListData(examId){return computeResult(examId);}
+function awardSubjectPass(ex,sj){
+  const pp=Number(db().settings.passPct)||33;
+  return Math.round(sj.max*pp/100*10)/10;
+}
+/* Remarks per the paper award roll: Fail, or Pass with 1st/2nd/3rd position. */
+function awardRemark(r){
+  if(!r.complete)return "—";
+  if(!r.pass)return t("fail");
+  if(r.position===1)return t("pass")+" — 1st";
+  if(r.position===2)return t("pass")+" — 2nd";
+  if(r.position===3)return t("pass")+" — 3rd";
+  return t("pass");
+}
+/* Screen award sheet (toggle-aware labels via t()). */
+function awardSheetHTML(examId){
+  const ex=db().exams.find(function(e){return e.id===examId;});if(!ex)return "";
+  const rows=awardListData(examId);
+  let h='<h3>'+esc(ex.name+" ("+clsLabel(ex.cls,ex.section)+")")+'</h3>'+
+    '<div class="twrap"><table class="grid"><tr><th>'+t("sno")+"</th><th>"+t("f_name")+"</th>"+
+    ex.subjects.map(function(sj){
+      return '<th class="num">'+esc(sj.name)+"<br><span class=\"muted\">"+sj.max+" | "+esc(t("pass_marks"))+": "+awardSubjectPass(ex,sj)+"</span></th>";
+    }).join("")+
+    '<th class="num">'+t("total")+'</th><th class="num">'+t("percentage")+'</th><th class="num">'+t("position")+'</th><th>'+t("remarks")+"</th></tr>";
+  rows.forEach(function(r,i){
+    const st=r.student;
+    h+='<tr><td class="num">'+(i+1)+'</td><td><div class="idrow">'+studentPhotoHTML(st,40)+
+      "<span><b>"+esc(displayName(st))+"</b><br><span class=\"muted\">"+esc(st.admNo)+"</span></span></div></td>";
+    ex.subjects.forEach(function(sj){
+      h+='<td class="num">'+(r.per[sj.name]==null?"—":r.per[sj.name]+"/"+sj.max)+"</td>";
+    });
+    h+='<td class="num"><b>'+(r.complete?r.total:"—")+'</b></td><td class="num">'+(r.pct==null?"—":r.pct.toFixed(1)+"%")+
+      '</td><td class="num">'+(r.position==null?"—":r.position)+'</td><td><b>'+esc(awardRemark(r))+"</b></td></tr>";
+  });
+  return h+"</table></div>";
+}
+/* Award list print: BILINGUAL headers (Urdu + English together) via bl(),
+   exam/class header, signature lines — like the paper award roll. */
+function awardListPrintHTML(examId){
+  const ex=db().exams.find(function(e){return e.id===examId;});if(!ex)return "";
+  const rows=awardListData(examId);
+  const head="<tr><th>"+esc(bl("bl_sno"))+"</th><th>"+esc(bl("bl_name"))+"<br>("+esc(bl("bl_admno"))+")</th>"+
+    ex.subjects.map(function(sj){
+      return "<th>"+esc(sj.name)+"<br>("+sj.max+" | "+esc(bl("bl_passmarks"))+" "+awardSubjectPass(ex,sj)+")</th>";
+    }).join("")+
+    "<th>"+esc(bl("bl_total"))+"</th><th>"+esc(bl("bl_pct"))+"</th><th>"+esc(bl("bl_position"))+"</th><th>"+esc(bl("bl_remarks"))+"</th></tr>";
+  const body=rows.map(function(r,i){
+    const cells=ex.subjects.map(function(sj){
+      return "<td>"+(r.per[sj.name]==null?"—":r.per[sj.name]+"/"+sj.max)+"</td>";
+    }).join("");
+    return "<tr><td>"+(i+1)+"</td><td>"+esc(displayName(r.student))+"<br><span>"+esc(r.student.admNo)+"</span></td>"+cells+
+      "<td>"+(r.complete?r.total:"—")+"</td><td>"+(r.pct==null?"—":r.pct.toFixed(1))+"</td><td>"+
+      (r.position==null?"—":r.position)+"</td><td>"+esc(awardRemark(r))+"</td></tr>";
+  }).join("");
+  const sig='<div class="sign"><div>'+esc(bl("bl_sig_prepared"))+"</div><div>"+esc(bl("bl_sig_checked"))+"</div><div>"+esc(bl("bl_sig_pr"))+"</div></div>";
+  return schoolHead(bl("bl_award")+" — "+ex.name+" ("+clsLabel(ex.cls,ex.section)+")")+"<table>"+head+body+"</table>"+sig;
+}
+/* ================= STUDENT DOSSIER — the student-centric hub =================
+   One call returns the student's complete record: profile, admission, DOB+age,
+   and every exam term organized year -> term -> subject. The dossier views
+   read straight off this; it is the primary read path, not an afterthought. */
+function getDossier(studentId,asOf){
+  const st=db().students.find(function(s){return s.id===studentId;});
+  if(!st)return null;
+  asOf=asOf||todayISO();
+  const age=calcAge(st.dob,asOf),band=db().settings.ageBands[st.cls];
+  const withMarks=db().exams.filter(function(ex){const m=db().marks[ex.id];return m&&m[studentId];});
+  const upcoming=db().exams.filter(function(ex){
+    return ex.cls===st.cls&&ex.section===st.section&&!(db().marks[ex.id]&&db().marks[ex.id][studentId]);
+  });
+  const terms=withMarks.concat(upcoming).map(function(ex){
+    const rr=resultRowFor(ex.id,studentId);
+    return {exam:ex,row:rr?rr.row:null};
+  }).sort(function(a,b){
+    const ya=Number(a.exam.year)||0,yb=Number(b.exam.year)||0;
+    if(ya!==yb)return yb-ya;
+    return (a.exam.term==="mid"?0:1)-(b.exam.term==="mid"?0:1);
+  });
+  return {student:st,age:age,asOf:asOf,band:band,
+    eligible:band?inBand(age,band):null,terms:terms};
+}
+/* ================= lab ================= */
+function addLabItem(d){
+  if(!String(d.name||"").trim())return {ok:false,error:t("req")};
+  const it={id:uid("lb"),name:d.name.trim(),category:d.category||"other",qty:Number(d.qty)||0,
+    unit:String(d.unit||"").trim(),condition:d.condition||"good",
+    minStock:Number(d.minStock)||0,nextService:d.nextService||"",history:[]};
+  db().labItems.push(it);
+  logHist(it,"add-item",it.name);
+  Store.save();
+  return {ok:true,item:it};
+}
+function updateLabItem(id,d){
+  const it=db().labItems.find(function(x){return x.id===id;});
+  if(!it)return {ok:false,error:t("no_records")};
+  ["name","category","qty","unit","condition","minStock","nextService"].forEach(function(k){
+    if(d[k]!==undefined)it[k]=(k==="qty"||k==="minStock")?Number(d[k]):String(d[k]).trim();
+  });
+  logHist(it,"update",it.name);
+  Store.save();
+  return {ok:true,item:it};
+}
+function deleteLabItem(id){
+  const i=db().labItems.findIndex(function(x){return x.id===id;});
+  if(i<0)return {ok:false};
+  const it=db().labItems[i];
+  db().labItems.splice(i,1);
+  db().labMaint=db().labMaint.filter(function(mn){return mn.itemId!==id;});
+  audit("delete",it.name+" ("+t("nav_lab")+")");
+  Store.save();
+  return {ok:true};
+}
+function addMaint(d){
+  if(!d.itemId||!d.date)return {ok:false,error:t("req")};
+  const mn={id:uid("mt"),itemId:d.itemId,date:d.date,issue:String(d.issue||"").trim(),
+    action:String(d.action||"").trim(),cost:Number(d.cost)||0,history:[]};
+  db().labMaint.push(mn);
+  const it=db().labItems.find(function(x){return x.id===d.itemId;});
+  logHist(mn,"add-maint",(it?it.name:"?")+" — "+mn.date);
+  Store.save();
+  return {ok:true,entry:mn};
+}
+function labAlerts(){
+  const today=todayISO();
+  const low=db().labItems.filter(function(it){return Number(it.qty)<=Number(it.minStock);});
+  const od=db().labItems.filter(function(it){return it.nextService&&it.nextService<today;});
+  return {low:low,overdue:od};
+}
+function maintTotal(){return db().labMaint.reduce(function(s,m){return s+(Number(m.cost)||0);},0);}
+/* ================= CSV / JSON ================= */
+function csvCell(v){const s=String(v==null?"":v);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}
+function csvOf(headers,rows){return headers.map(csvCell).join(",")+"\n"+rows.map(function(r){return r.map(csvCell).join(",");}).join("\n");}
+function exportCSV(which,arg){
+  if(which==="students"){
+    const rows=db().students.map(function(s,i){return [i+1,s.admNo,s.name,s.fatherName,s.dob,s.gender,s.cls,s.section,s.admDate,s.contact,s.address];});
+    return csvOf([t("sno"),t("adm_no"),t("f_name"),t("father_name"),t("dob"),t("gender"),t("cls"),t("section"),t("adm_date"),t("contact"),t("address")],rows);
+  }
+  if(which==="dob"){
+    const asOf=arg||todayISO();
+    const rows=studentsOfAll().map(function(s,i){const a=calcAge(s.dob,asOf);const b=db().settings.ageBands[s.cls];
+      return [i+1,s.admNo,s.name,clsLabel(s.cls,s.section),s.dob,fmtAge(a),b?(inBand(a,b)?t("eligible"):t("not_eligible")):"—"];});
+    return csvOf([t("sno"),t("adm_no"),t("f_name"),t("cls")+"-"+t("section"),t("dob"),t("age"),t("elig")],rows);
+  }
+  if(which==="marks"){
+    const ex=db().exams.find(function(e){return e.id===arg;});if(!ex)return "";
+    const head=[t("sno"),t("adm_no"),t("f_name")].concat(ex.subjects.map(function(s){return s.name+" ("+s.max+")";})).concat([t("total")]);
+    const rows=studentsOf(ex.cls,ex.section).map(function(st,i){
+      const m=(db().marks[ex.id]&&db().marks[ex.id][st.id])||{};let tot=0;
+      const cells=ex.subjects.map(function(sj){const v=m[sj.name];if(v!=null){tot+=Number(v);return v;}return "";});
+      return [i+1,st.admNo,st.name].concat(cells).concat([tot]);
+    });
+    return csvOf(head,rows);
+  }
+  if(which==="results"){
+    const rows=computeResult(arg);
+    const ex=db().exams.find(function(e){return e.id===arg;});if(!ex)return "";
+    const head=[t("sno"),t("adm_no"),t("f_name")].concat(ex.subjects.map(function(s){return s.name;})).concat([t("total"),t("percentage"),t("grade"),t("division"),t("position"),t("result")]);
+    const rws=rows.map(function(r,i){
+      const cells=ex.subjects.map(function(sj){return r.per[sj.name]==null?"":r.per[sj.name];});
+      return [i+1,r.student.admNo,r.student.name].concat(cells).concat([
+        r.complete?r.total:"",r.pct==null?"":r.pct.toFixed(1),r.grade,r.division,
+        r.position==null?"":r.position,r.pass==null?"":(r.pass?t("pass"):t("fail"))]);
+    });
+    return csvOf(head,rws);
+  }
+  if(which==="award"){
+    const rows=awardListData(arg);
+    const ex=db().exams.find(function(e){return e.id===arg;});if(!ex)return "";
+    const head=[t("sno"),t("adm_no"),t("f_name"),t("father_name")].concat(
+      ex.subjects.map(function(s){return s.name+" ("+s.max+", "+t("pass_marks")+": "+awardSubjectPass(ex,s)+")";})
+    ).concat([t("total"),t("percentage"),t("position"),t("remarks")]);
+    const rws=rows.map(function(r,i){
+      const cells=ex.subjects.map(function(sj){return r.per[sj.name]==null?"":r.per[sj.name]+"/"+sj.max;});
+      return [i+1,r.student.admNo,r.student.name,r.student.fatherName].concat(cells).concat([
+        r.complete?r.total:"",r.pct==null?"":r.pct.toFixed(1),r.position==null?"":r.position,awardRemark(r)]);
+    });
+    return csvOf(head,rws);
+  }
+  if(which==="lab"){
+    const rows=db().labItems.map(function(it,i){return [i+1,it.name,catName(it.category),it.qty,it.unit,condName(it.condition),it.minStock,it.nextService||""];});
+    return csvOf([t("sno"),t("item_name"),t("category"),t("qty"),t("unit"),t("condition"),t("min_stock"),t("next_service")],rows);
+  }
+  if(which==="maintenance"){
+    const rows=db().labMaint.map(function(mn,i){const it=db().labItems.find(function(x){return x.id===mn.itemId;});
+      return [i+1,mn.date,it?it.name:"?",mn.issue,mn.action,mn.cost];});
+    return csvOf([t("sno"),t("maintenance"),t("item_name"),t("issue"),t("action_taken"),t("cost")],rows);
+  }
+  return "";
+}
+function studentsOfAll(){return db().students.slice().sort(function(a,b){return a.admNo<b.admNo?-1:1;});}
+function catName(c){return c==="equipment"?t("cat_equipment"):c==="chemical"?t("cat_chemical"):c==="glassware"?t("cat_glassware"):t("cat_other");}
+function condName(c){return c==="good"?t("c_good"):c==="fair"?t("c_fair"):c==="repair"?t("c_repair"):t("c_dead");}
+function exportJSON(){return JSON.stringify(db(),null,2);}
+function importJSON(text){
+  let d;try{d=JSON.parse(text);}catch(e){return {ok:false,error:"Invalid JSON"};}
+  if(!d||d.v!==1||!d.settings||!Array.isArray(d.students))return {ok:false,error:"Invalid backup file"};
+  takeSnapshot("before-restore");
+  DB=d;Store.save();
+  audit("restore",t("restore"));
+  return {ok:true};
+}
+/* ============ SAFE MERGE — two phones, never overwrites ============
+   Additive-only: new records are added, empty fields are filled, filled
+   fields are NEVER overwritten, nothing is ever deleted. Matching uses the
+   identity rule (name + father's name + dob), never the admission number
+   alone, because two phones generate the same ADM numbers independently.
+   Idempotent: merging the same file twice changes nothing the second time. */
+function mergeJSON(text){
+  let d;try{d=JSON.parse(text);}catch(e){return {ok:false,error:t("merge_bad")};}
+  if(!d||d.v!==1||!d.settings||!Array.isArray(d.students))return {ok:false,error:t("merge_bad")};
+  takeSnapshot("before-merge");
+  const norm=function(s){return String(s==null?"":s).trim().toLowerCase();};
+  const rep={students:0,exams:0,marks:0,certs:0,lab:0,filled:0,conflicts:[],newAdmNos:[]};
+  const stuIds={},examIds={},labIds={},certSerials={},admTaken={};
+  db().students.forEach(function(s){stuIds[s.id]=1;admTaken[s.admNo]=1;});
+  db().exams.forEach(function(e){examIds[e.id]=1;});
+  (db().labItems||[]).forEach(function(l){labIds[l.id]=1;});
+  (db().certificates||[]).forEach(function(c){if(c.serial)certSerials[c.serial]=1;});
+  const byIdent={};
+  db().students.forEach(function(s){byIdent[norm(s.name)+"|"+norm(s.fatherName)+"|"+String(s.dob||"")]=s;});
+  const idMap={};
+  /* ---- students ---- */
+  (d.students||[]).forEach(function(ins){
+    if(!ins||!norm(ins.name))return;
+    const key=norm(ins.name)+"|"+norm(ins.fatherName)+"|"+String(ins.dob||"");
+    const inId=ins.id;
+    const local=byIdent[key];
+    if(local){
+      idMap[inId]=local.id;
+      ["contact","address","photo","pin","gender","cls","section","dob","admDate"].forEach(function(k){
+        if(!String(local[k]==null?"":local[k]).trim()&&String(ins[k]==null?"":ins[k]).trim()){local[k]=ins[k];rep.filled++;}
+      });
+      (ins.history||[]).forEach(function(h){
+        const dup=(local.history||[]).some(function(x){return x.ts===h.ts&&x.action===h.action&&x.summary===h.summary;});
+        if(!dup)local.history.unshift(h);
+      });
+      return;
+    }
+    if(admTaken[ins.admNo]){
+      const fresh=nextAdmNo(ins.admDate||todayISO());
+      rep.newAdmNos.push(ins.name+" ("+ins.admNo+" → "+fresh+")");
+      ins.admNo=fresh;
+    }
+    admTaken[ins.admNo]=1;
+    if(!ins.id||stuIds[ins.id])ins.id=uid("st");
+    idMap[inId]=ins.id;
+    stuIds[ins.id]=1;byIdent[key]=ins;
+    ins.history=ins.history||[];
+    db().students.push(ins);rep.students++;
+  });
+  /* ---- exams + marks ---- */
+  const examByKey={};
+  db().exams.forEach(function(e){examByKey[e.term+"|"+e.year+"|"+e.cls+"|"+e.section]=e;});
+  (d.exams||[]).forEach(function(ine){
+    if(!ine||!ine.term)return;
+    const key=ine.term+"|"+ine.year+"|"+ine.cls+"|"+ine.section;
+    const inExamId=ine.id;
+    let local=examByKey[key];
+    if(!local){
+      if(!ine.id||examIds[ine.id])ine.id=uid("ex");
+      examIds[ine.id]=1;examByKey[key]=ine;
+      ine.history=ine.history||[];
+      db().exams.push(ine);rep.exams++;
+      local=ine;
+    }
+    (ine.subjects||[]).forEach(function(s){
+      if(s&&s.name&&!local.subjects.some(function(x){return x.name===s.name;}))local.subjects.push({name:s.name,max:Number(s.max)||100});
+    });
+    const mk=((d.marks||{})[inExamId])||{};
+    db().marks[local.id]=db().marks[local.id]||{};
+    Object.keys(mk).forEach(function(inStuId){
+      const localId=idMap[inStuId];
+      if(!localId)return;
+      const sm=mk[inStuId]||{};
+      const lm=db().marks[local.id][localId]=db().marks[local.id][localId]||{};
+      Object.keys(sm).forEach(function(sub){
+        const v=sm[sub];
+        if((lm[sub]==null||lm[sub]==="")&&v!=null&&v!==""){lm[sub]=v;rep.marks++;}
+      });
+    });
+  });
+  /* ---- certificates (match by serial — never duplicated) ---- */
+  (d.certificates||[]).forEach(function(c){
+    if(!c||!c.serial||certSerials[c.serial])return;
+    if(!c.id||db().certificates.some(function(x){return x.id===c.id;}))c.id=uid("cert");
+    certSerials[c.serial]=1;
+    db().certificates.push(c);rep.certs++;
+  });
+  /* ---- lab items (match by name; merge maintenance history only) ---- */
+  const labByName={};
+  (db().labItems||[]).forEach(function(l){labByName[norm(l.name)]=l;});
+  (d.labItems||[]).forEach(function(it){
+    if(!it||!norm(it.name))return;
+    const inItemId=it.id;
+    const local=labByName[norm(it.name)];
+    if(local){
+      (d.labMaint||[]).forEach(function(m){
+        if(m.itemId!==inItemId)return;
+        const dup=(db().labMaint||[]).some(function(x){return x.ts===m.ts&&x.itemId===local.id&&x.note===m.note;});
+        if(!dup)db().labMaint.push({id:uid("lm"),itemId:local.id,ts:m.ts,note:m.note,cost:m.cost||0});
+      });
+      return;
+    }
+    if(!it.id||labIds[it.id])it.id=uid("lab");
+    labIds[it.id]=1;labByName[norm(it.name)]=it;
+    db().labItems.push(it);rep.lab++;
+    (d.labMaint||[]).forEach(function(m){
+      if(m.itemId!==inItemId)return;
+      db().labMaint.push({id:uid("lm"),itemId:it.id,ts:m.ts,note:m.note,cost:m.cost||0});
+    });
+  });
+  /* ---- counters: take the max so future numbers never collide ---- */
+  ["adm","cert"].forEach(function(k){
+    db().seq=db().seq||{};db().seq[k]=db().seq[k]||{};
+    const b=(d.seq&&d.seq[k])||{};
+    Object.keys(b).forEach(function(yr){
+      db().seq[k][yr]=Math.max(Number(db().seq[k][yr]||0),Number(b[yr]||0));
+    });
+  });
+  Store.save();
+  audit("merge",t("merge_report")+": "+rep.students+" "+t("mg_students")+", "+rep.marks+" "+t("mg_marks"));
+  return {ok:true,rep:rep};
+}
+
+/* ============ automatic safety snapshots (permanent memory) ============
+   The database already saves permanently on the phone (localStorage — instant,
+   offline, survives app close). These are extra safety copies INSIDE the app:
+   one automatic copy per day, plus one before every restore / merge / erase.
+   Nothing ever leaves the phone. */
+const SNAP_KEY="srs_v1_snaps", SNAP_MAX=5;
+function snapshotsList(){try{const a=JSON.parse(localStorage.getItem(SNAP_KEY)||"[]");return Array.isArray(a)?a:[];}catch(e){return [];}}
+function snapshotsSave(l){try{localStorage.setItem(SNAP_KEY,JSON.stringify(l));return true;}catch(e){return false;}}
+function snapshotCounts(d){let mk=0;try{Object.keys(d.marks||{}).forEach(function(k){Object.keys(d.marks[k]||{}).forEach(function(s){mk+=Object.keys(d.marks[k][s]||{}).length;});});}catch(e){}return {students:(d.students||[]).length,exams:(d.exams||[]).length,marks:mk,certs:(d.certificates||[]).length};}
+function takeSnapshot(reason){
+  if(typeof localStorage==="undefined")return false;
+  let data;try{data=JSON.stringify(db());}catch(e){return false;}
+  const list=snapshotsList();
+  const today=todayISO();
+  if(reason==="auto"&&list.some(function(s){return s.date===today&&s.reason==="auto";}))return true;
+  list.push({ts:tsNow(),date:today,reason:reason,counts:snapshotCounts(db()),data:data});
+  while(list.length>SNAP_MAX)list.shift();
+  if(!snapshotsSave(list)){list.shift();if(!snapshotsSave(list))return false;}
+  return true;
+}
+function snapReasonName(c){return c==="auto"?t("snap_r_auto"):c==="before-restore"?t("snap_r_brestore"):c==="before-merge"?t("snap_r_bmerge"):c==="before-wipe"?t("snap_r_bwipe"):c;}
+function restoreSnapshot(idx){
+  const list=snapshotsList();
+  const s=list[idx];if(!s)return {ok:false,error:t("merge_bad")};
+  takeSnapshot("before-restore");
+  let d;try{d=JSON.parse(s.data);}catch(e){return {ok:false,error:t("merge_bad")};}
+  if(!d||d.v!==1||!d.settings||!Array.isArray(d.students))return {ok:false,error:t("merge_bad")};
+  DB=d;Store.save();
+  return {ok:true};
+}
+/* ================= CSV BULK IMPORT — feed entries from a paper register ====
+   Honest design: true offline handwriting OCR is not feasible in a single
+   offline HTML file. The working route is: (1) a template CSV with bilingual
+   headers + example rows, (2) a strict two-pass importer, (3) a register-page
+   photo pinned beside the entry form for fast manual entry, (4) an in-product
+   tip pointing at the phone's own Lens/camera OCR + paste.
+   TWO-PASS: every row validates first; NOTHING is written unless all rows
+   pass. Duplicates (name+father+DOB vs DB or vs another row in the same file)
+   are blocked with a per-row error that names the clash. */
+var CSV_IMPORT_COLS=["name","fatherName","dob","gender","cls","section","admDate","contact","address"];
+function csvTemplateText(){
+  var head=["Student name / طالب علم کا نام","Father's name / والد کا نام",
+    "Date of birth (YYYY-MM-DD) / تاریخ پیدائش (سال-مہینہ-دن)","Gender (Boy/Girl) / صنف (لڑکا/لڑکی)",
+    "Class / جماعت","Section / سیکشن","Admission date (YYYY-MM-DD) / تاریخ داخلہ (سال-مہینہ-دن)",
+    "Contact number / رابطہ نمبر","Address / پتہ"];
+  var rows=[
+    ["Bilal Hussain","Hussain Ahmed","2015-08-20","Boy","6","A","2026-04-01","0300-1111111","House 1, Street 2"],
+    ["Ayesha Bibi","Khan Muhammad","2016-07-22","Girl","5","B","2026-04-02","0300-2222222","House 3, Street 4"]
+  ];
+  return csvOf(head,rows);
+}
+function parseCSVLine(line){
+  var out=[],cur="",q=false;
+  for(var i=0;i<line.length;i++){
+    var c=line[i];
+    if(q){
+      if(c==='"'){if(line[i+1]==='"'){cur+='"';i++;}else q=false;}
+      else cur+=c;
+    }else if(c==='"'){q=true;}
+    else if(c===","){out.push(cur);cur="";}
+    else cur+=c;
+  }
+  out.push(cur);
+  return out;
+}
+function parseCSV(text){
+  return String(text||"").replace(/\r\n?/g,"\n").split("\n").map(parseCSVLine);
+}
+function normGender(g){
+  var v=String(g==null?"":g).trim().toLowerCase();
+  if(v==="male"||v==="boy"||v==="m"||v==="لڑکا")return "male";
+  if(v==="female"||v==="girl"||v==="f"||v==="لڑکی")return "female";
+  return null;
+}
+function validISODate(s){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(s||"")))return false;
+  var d=new Date(String(s)+"T00:00:00Z");
+  return !isNaN(d.getTime())&&d.toISOString().slice(0,10)===String(s);
+}
+function importStudentsCSV(text){
+  var lines=parseCSV(text);
+  if(!lines.length||lines.every(function(r){return r.join("").trim()==="";}))
+    return {ok:false,errors:[t("imp_none")]};
+  var start=0;
+  if(/name/i.test(String(lines[0][0]||"")))start=1; /* bilingual header row */
+  var rows=lines.slice(start).filter(function(r){return r.join("").trim()!=="";});
+  if(!rows.length)return {ok:false,errors:[t("imp_none")]};
+  var errors=[],good=[],seen={};
+  rows.forEach(function(cols,idx){
+    var rn=idx+start+1; /* 1-based line number in the file */
+    function err(m){errors.push(t("imp_row")+" "+rn+": "+m);}
+    var d={};
+    CSV_IMPORT_COLS.forEach(function(k,i){d[k]=String(cols[i]==null?"":cols[i]).trim();});
+    var req=["name","fatherName","dob","gender","cls","admDate"];
+    var missing=req.filter(function(k){return !d[k];});
+    if(missing.length){err(t("req")+" ("+missing.join(", ")+")");return;}
+    if(!validISODate(d.dob)){err(t("imp_bad_date")+": "+d.dob);return;}
+    if(!validISODate(d.admDate)){err(t("imp_bad_date")+": "+d.admDate);return;}
+    var g=normGender(d.gender);
+    if(!g){err(t("imp_bad_gender")+": "+d.gender);return;}
+    d.gender=g;
+    var dupDB=findDuplicateStudent(d.name,d.fatherName,d.dob,null);
+    if(dupDB){err(t("dup_student")+": "+dupDB.admNo+" ("+dupDB.name+" — "+dupDB.fatherName+")");return;}
+    var key=norm(d.name)+"\u0001"+norm(d.fatherName)+"\u0001"+d.dob;
+    if(seen[key]){err(t("dup_student")+": "+t("imp_dup_in_file")+" ("+t("imp_row")+" "+seen[key]+")");return;}
+    seen[key]=rn;
+    good.push(d);
+  });
+  if(errors.length)return {ok:false,errors:errors}; /* two-pass: nothing written */
+  var added=0;
+  good.forEach(function(d){var r=addStudent(d);if(r.ok)added++;});
+  return {ok:true,count:added};
+}
+
+/* ================= SCAN → EXTRACT → REVIEW → RECORDS =====================
+   Fully-offline register scanner — the primary first-entry route.
+   Honest architecture note (verified 2026-11-04 against
+   fuel-bill-app.html): the fuel app's Tesseract pipeline is NOT offline —
+   it loads tesseract.min.js from a CDN and downloads eng/urd language data
+   over the network on first run (zero embedded traineddata, zero OCRAD in
+   that file). That cannot be replicated under this app's
+   zero-external-requests rule, so this module:
+   - ports the fuel app's preprocessing VERBATIM (proven, offline, no deps);
+   - ports its smart-review pattern (green ✓ / amber tap-to-correct);
+   - resolves the OCR step as: embedded OCRAD() if vendored into the marked
+     slot (the only JS OCR engine that is genuinely offline — ~1MB, zero
+     language data) → Tesseract global if separately loaded → honest
+     fallback: the enhanced photo is pinned for fast entry + Lens tip.
+     Nothing is silently dropped: unparsed OCR lines are listed as raw text.
+   Pure + node-testable: normUrduDigits, parseRegisterLine,
+   parseRegisterLines, validateScanRows. Browser-only: fileToDataURLScan,
+   preprocessForOCR, ocrRecognize, scan UI. */
+/* --- image helpers (ported from fuel-bill-app.html) --- */
+function loadImageScan(dataURL){
+  return new Promise(function(res,rej){
+    const img=new Image();
+    img.onload=function(){res(img);};
+    img.onerror=rej;
+    img.src=dataURL;
+  });
+}
+function fileToDataURLScan(file,maxDim){
+  maxDim=maxDim||1400;
+  return new Promise(function(res,rej){
+    const r=new FileReader();
+    r.onload=function(){
+      loadImageScan(r.result).then(function(img){
+        const s=Math.min(1,maxDim/Math.max(img.width,img.height));
+        const c=document.createElement("canvas");
+        c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);
+        c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+        res(c.toDataURL("image/jpeg",0.82));
+      },rej);
+    };
+    r.onerror=rej;r.readAsDataURL(file);
+  });
+}
+/* ink-on-paper cleanup before OCR: upscale + grayscale + contrast stretch +
+   soft threshold. Falls back to the original image if anything fails. */
+function preprocessForOCR(dataURL){
+  return new Promise(function(res){
+    loadImageScan(dataURL).then(function(img){
+      try{
+        const scale=Math.min(2.2,Math.max(1,1800/Math.max(img.width,img.height)));
+        const c=document.createElement("canvas");
+        c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);
+        const x=c.getContext("2d",{willReadFrequently:true});
+        x.drawImage(img,0,0,c.width,c.height);
+        const d=x.getImageData(0,0,c.width,c.height),p=d.data;
+        for(let i=0;i<p.length;i+=4){
+          const g=0.299*p[i]+0.587*p[i+1]+0.114*p[i+2];
+          let v=(g-128)*1.7+128;
+          v=v>205?255:(v<85?0:v);
+          p[i]=p[i+1]=p[i+2]=v;
+        }
+        x.putImageData(d,0,0);
+        res(c.toDataURL("image/jpeg",0.92));
+      }catch(e){res(dataURL);}
+    },function(){res(dataURL);});
+  });
+}
+/* --- OCR engine resolution: embedded OCRAD → Tesseract global → none --- */
+function ocrEngine(){
+  try{if(typeof OCRAD==="function")return {name:"ocrad"};}catch(e){}
+  try{if(typeof Tesseract!=="undefined"&&Tesseract&&Tesseract.createWorker)return {name:"tesseract"};}catch(e){}
+  return null;
+}
+async function ocrRecognize(cleanedDataURL){
+  const eng=ocrEngine();
+  if(!eng)throw new Error("no-engine");
+  if(eng.name==="ocrad"){
+    const img=await loadImageScan(cleanedDataURL);
+    const c=document.createElement("canvas");c.width=img.width;c.height=img.height;
+    c.getContext("2d").drawImage(img,0,0);
+    return String(OCRAD(c)||"");
+  }
+  /* tesseract branch — mirrors the fuel app; only runs if Tesseract was loaded */
+  const worker=await Tesseract.createWorker(["eng","urd"],1,{});
+  try{const r=await worker.recognize(cleanedDataURL);return (r&&r.data&&r.data.text)||"";}
+  finally{try{await worker.terminate();}catch(e){}}
+}
+/* --- Urdu/Arabic-Indic digit normalization --- */
+var SCAN_URDU_DIGITS={"۰":"0","۱":"1","۲":"2","۳":"3","۴":"4","۵":"5","۶":"6","۷":"7","۸":"8","۹":"9",
+  "٠":"0","١":"1","٢":"2","٣":"3","٤":"4","٥":"5","٦":"6","٧":"7","٨":"8","٩":"9"};
+function normUrduDigits(s){return String(s==null?"":s).replace(/[۰-۹٠-٩]/g,function(c){return SCAN_URDU_DIGITS[c]||c;});}
+/* confidence per field: "high" | "low" | "missing" */
+function scanFld(v,conf){return {v:v==null?"":String(v),conf:conf||(v?"low":"missing")};}
+function cleanNameToken(s){
+  return String(s||"").replace(/[^A-Za-z\u0600-\u06FF\s'\-.]/g," ").replace(/\s+/g," ").trim();
+}
+/* one OCR text line → candidate student row, or null when the line carries
+   nothing usable (→ listed under "could not read", never silently dropped) */
+function parseRegisterLine(line){
+  const raw=String(line==null?"":line);
+  let w=normUrduDigits(raw).trim();
+  if(!w)return null;
+  /* 1. date of birth: yyyy-mm-dd, then dd/mm/yyyy (2- or 4-digit year) */
+  let dob="",dobConf="missing",m;
+  m=w.match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
+  if(m){
+    const iso=m[1]+"-"+String(m[2]).padStart(2,"0")+"-"+String(m[3]).padStart(2,"0");
+    if(validISODate(iso)){dob=iso;dobConf="high";w=w.replace(m[0]," ");}
+  }
+  if(!dob){
+    m=w.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+    if(m){
+      const yy=m[3].length===2?"20"+m[3]:m[3];
+      const iso=yy+"-"+String(m[2]).padStart(2,"0")+"-"+String(m[1]).padStart(2,"0");
+      if(validISODate(iso)){dob=iso;dobConf="high";w=w.replace(m[0]," ");}
+    }
+  }
+  /* 2. class / section tokens ("Class 6 A", "جماعت 6", or standalone "6-A") */
+  let cls="",sec="",clsConf="missing",secConf="missing";
+  m=w.match(/(?:class|cls|جماعت)\s*(\d{1,2})(?:\s*[-–—/ ]\s*([A-Za-z]))?/i);
+  if(m){cls=m[1];sec=(m[2]||"").toUpperCase();clsConf="high";secConf=m[2]?"high":"missing";w=w.replace(m[0]," ");}
+  else{
+    m=w.match(/(^|\s)(\d{1,2})\s*[-–—/]\s*([A-Za-z])(?=\s|$)/);
+    if(m){cls=m[2];sec=m[3].toUpperCase();clsConf="low";secConf="low";w=w.replace(m[0]," ");}
+  }
+  /* 3. leading serial number — informational only, never used as identity */
+  w=w.replace(/^\s*\d{1,3}\s*[.\)\-:]\s*/,"");
+  /* 4. father's-name keywords: s/o, d/o, w/o, son of, daughter of, ولد, بنت, بن, والد */
+  const FK=["بنت","ولد","والد","بن",/\bs\s?\/?\s?o\b/i,/\bd\s?\/?\s?o\b/i,/\bw\s?\/?\s?o\b/i,
+    /\bson of\b/i,/\bdaughter of\b/i,/\bwife of\b/i];
+  let name="",father="",nameConf="missing",fatherConf="missing",gender="",ki=-1,klen=0;
+  for(let i=0;i<FK.length;i++){
+    const k=FK[i];
+    if(typeof k==="string"){const ix=w.indexOf(k);if(ix>=0){ki=ix;klen=k.length;break;}}
+    else{const mm=w.match(k);if(mm&&mm.index!==undefined){ki=mm.index;klen=mm[0].length;break;}}
+  }
+  if(ki>=0){
+    const kwText=w.slice(ki,ki+klen);
+    name=cleanNameToken(w.slice(0,ki));
+    father=cleanNameToken(w.slice(ki+klen)).replace(/^(کا نام|کا|نام)\s+/,"");
+    if(name)nameConf="high";
+    if(father)fatherConf="high";
+    const kwN=kwText.toLowerCase().replace(/[\s\/\.]/g,"");
+    gender=(kwN==="بنت"||/^(do|daughterof|wo|wifeof)$/.test(kwN))?"female":"male";
+  }else{
+    name=cleanNameToken(w);
+    if(name)nameConf="low";
+  }
+  const hasLetters=/[A-Za-z\u0600-\u06FF]/.test(name+father);
+  if(!hasLetters&&!dob)return null;
+  return {name:scanFld(name,name?nameConf:"missing"),
+    fatherName:scanFld(father,father?fatherConf:"missing"),
+    dob:scanFld(dob,dobConf),
+    cls:scanFld(cls,clsConf),section:scanFld(sec,secConf),
+    gender:scanFld(gender,gender?"low":"missing"),
+    raw:raw};
+}
+function parseRegisterLines(text){
+  const lines=String(text==null?"":text).split("\n");
+  const rows=[],unread=[];
+  lines.forEach(function(ln,idx){
+    const t=String(ln).trim();
+    if(!t)return;
+    const r=parseRegisterLine(t);
+    if(r)rows.push(r);else unread.push({line:t,idx:idx});
+  });
+  return {rows:rows,unread:unread};
+}
+/* two-pass validation for scanned rows: nothing is written unless ALL rows
+   pass. Duplicates (vs DB or inside the batch) name the clash. */
+function validateScanRows(rows){
+  const errors=[],clean=[],seen={};
+  rows.forEach(function(r,idx){
+    const rn=idx+1;
+    function err(m){errors.push("Row "+rn+": "+m);}
+    const d={name:String(r.name==null?"":r.name).trim(),fatherName:String(r.fatherName==null?"":r.fatherName).trim(),
+      dob:String(r.dob==null?"":r.dob).trim(),gender:String(r.gender==null?"":r.gender).trim(),
+      cls:String(r.cls==null?"":r.cls).trim(),section:String(r.section==null?"":r.section).trim(),
+      admDate:String(r.admDate||todayISO()).trim(),
+      contact:String(r.contact==null?"":r.contact).trim(),address:String(r.address==null?"":r.address).trim()};
+    const req=["name","fatherName","dob","gender","cls","section"];
+    const missing=req.filter(function(k){return !d[k];});
+    if(missing.length){err(t("req")+" ("+missing.join(", ")+")");return;}
+    if(!validISODate(d.dob)){err(t("imp_bad_date")+": "+d.dob);return;}
+    if(d.gender!=="male"&&d.gender!=="female"){err(t("imp_bad_gender")+": "+d.gender);return;}
+    const dupDB=findDuplicateStudent(d.name,d.fatherName,d.dob,null);
+    if(dupDB){err(t("dup_student")+": "+dupDB.admNo+" ("+dupDB.name+" — "+dupDB.fatherName+")");return;}
+    const key=norm(d.name)+""+norm(d.fatherName)+""+d.dob;
+    if(seen[key]){err(t("dup_student")+": "+t("imp_dup_in_file"));return;}
+    seen[key]=rn;
+    clean.push(d);
+  });
+  if(errors.length)return {ok:false,errors:errors};
+  return {ok:true,clean:clean};
+}
+/* commit: validate everything first, then write; sequential ADM numbers,
+   per-record history + audit via addStudent. */
+function commitScanRows(rows){
+  const v=validateScanRows(rows);
+  if(!v.ok)return v;
+  const added=[];
+  v.clean.forEach(function(d){const r=addStudent(d);if(r.ok)added.push(r.student.admNo);});
+  audit("scan-import",added.length+" "+t("scan_saved"));
+  return {ok:true,count:added.length,added:added};
+}
+
+/* ================= VOICE ENTRY =================
+   Mic buttons on text fields: webkitSpeechRecognition (Chrome on Android).
+   Recognition language follows the UI toggle ('ur-PK' / 'en-US'); interim
+   results appear live in the field, the final transcript lands on end.
+   HONEST LIMIT, shown in-product: the phone's speech service needs internet
+   WHILE speaking — everything else in the app stays fully offline. No
+   speech support → a graceful bilingual message, never silent failure. */
+function speechLang(){return lang()==="ur"?"ur-PK":"en-US";}
+function speechSupported(){
+  try{return (typeof window!=="undefined")&&!!(window.SpeechRecognition||window.webkitSpeechRecognition);}
+  catch(e){return false;}
+}
+let micRec=null,micTarget=null;
+function micHTML(fieldId){
+  return '<button type="button" class="micbtn" data-mic="'+fieldId+'" title="'+esc(t("mic_hint"))+'" aria-label="'+esc(t("mic_hint"))+'">🎤</button>';
+}
+function micField(id,inner){
+  return '<div class="micwrap">'+inner+micHTML(id)+"</div>";
+}
+function micNoteHTML(){
+  return '<div class="muted" style="font-size:.82rem;margin:.3rem 0">🎤 '+esc(t("mic_note"))+"</div>";
+}
+function paintMicBtns(){
+  if(typeof document==="undefined")return;
+  Array.prototype.forEach.call(document.querySelectorAll("[data-mic]"),function(b){
+    const on=micTarget&&b.getAttribute("data-mic")===micTarget;
+    b.classList.toggle("rec",!!on);
+    b.textContent=on?"⏹":"🎤";
+  });
+}
+function micToast(msg){if(typeof document==="undefined")return;var d=$("mic-toast");if(!d){d=document.createElement("div");d.id="mic-toast";document.body.appendChild(d);}d.textContent=msg;d.style.display="block";}
+function micToastHide(){if(typeof document==="undefined")return;var d=$("mic-toast");if(d)d.style.display="none";}
+function stopMic(){if(micRec){try{micRec.stop();}catch(e){}}micRec=null;micTarget=null;paintMicBtns();micToastHide();}
+function toggleMic(fieldId){
+  const F=$(fieldId);if(!F)return;
+  if(!speechSupported()){alert(t("mic_nosupport"));return;}
+  if(micRec){stopMic();return;}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  let rec;
+  try{rec=new SR();}catch(e){alert(t("mic_nosupport"));return;}
+  rec.lang=speechLang();rec.interimResults=true;rec.continuous=false;rec.maxAlternatives=1;
+  micTarget=fieldId;micRec=rec;paintMicBtns();
+  let finalTxt="";
+  rec.onresult=function(e){
+    let interim="";
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const tr=e.results[i][0].transcript;
+      if(e.results[i].isFinal)finalTxt+=tr;else interim+=tr;
+    }
+    F.value=finalTxt+interim;
+    try{F.dispatchEvent(new Event("input",{bubbles:true}));}catch(ee){}
+  };
+  rec.onstart=function(){micToast("🎙 "+t("mic_listening"));};
+  rec.onend=function(){micRec=null;micTarget=null;paintMicBtns();micToastHide();};
+  rec.onerror=function(e){
+    const code=(e&&e.error)||"";
+    micRec=null;micTarget=null;paintMicBtns();micToastHide();
+    if(code==="aborted")return;
+    alert(code==="not-allowed"||code==="service-not-allowed"?t("mic_err_perm"):code==="no-speech"?t("mic_err_nospeech"):code==="network"?t("mic_err_net"):t("mic_err"));
+  };
+  try{rec.start();}catch(e){micRec=null;micTarget=null;paintMicBtns();micToastHide();}
+}
+function bindMic(){
+  if(typeof document==="undefined")return;
+  Array.prototype.forEach.call(document.querySelectorAll("[data-mic]"),function(b){
+    b.onclick=function(){toggleMic(b.getAttribute("data-mic"));};
+  });
+}
+
+/* ================= UI shell ================= */
+let curTab="home", curExamId=null, curResExamId=null, admEditId=null, labEditId=null, dobAsOf=todayISO(), maintItemFilter="",
+    admFlash=null, admKeepOpen=false, admPhotoPending="", admDraft=null;
+function applyLang(){
+  if(typeof document==="undefined")return;
+  const L=lang();
+  document.documentElement.lang=L;
+  document.documentElement.dir=(L==="ur")?"rtl":"ltr";
+  $("hdr-school").textContent=db().settings.schoolName||"—";
+  $("lang-toggle").textContent=(L==="ur")?"EN":"اردو";
+}
+const TABS=[["home","nav_home"],["adm","nav_adm"],["dob","nav_dob"],["exam","nav_exam"],["result","nav_result"],["lab","nav_lab"],["cert","nav_cert"],["settings","nav_settings"]];
+function renderTabs(){
+  $("tabs").innerHTML=TABS.map(function(x){
+    return '<button type="button" role="tab" class="tab" data-tab="'+x[0]+'" aria-selected="'+(curTab===x[0])+'">'+esc(t(x[1]))+"</button>";
+  }).join("");
+  Array.prototype.forEach.call($("tabs").children,function(b){
+    b.onclick=function(){curTab=b.getAttribute("data-tab");render();};
+  });
+}
+function render(){applyLang();renderTabs();const v=$("view");
+  v.innerHTML = curTab==="home"?viewHome():curTab==="adm"?viewAdm():curTab==="dob"?viewDob():
+    curTab==="exam"?viewExam():curTab==="result"?viewResult():curTab==="lab"?viewLab():
+    curTab==="cert"?viewCert():viewSettings();
+  const fns={home:afterHome,adm:afterAdm,dob:afterDob,exam:afterExam,result:afterResult,lab:afterLab,cert:afterCert,settings:afterSettings};
+  if(fns[curTab])fns[curTab]();
+  v.scrollTop=0;if(typeof window!=="undefined")window.scrollTo(0,0);
+}
+function downloadFile(name,text,mime){
+  const blob=new Blob([text],{type:mime||"text/plain;charset=utf-8"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);
+}
+function doPrint(html){
+  const pa=$("print-area");
+  pa.className=lang()==="ur"?"rtl":"";
+  pa.innerHTML='<div class="prt'+(lang()==="ur"?" rtl":"")+'">'+html+"</div>";
+  if(typeof window!=="undefined")window.print();
+}
+function schoolHead(title){
+  return '<div class="rc-head"><h2>'+esc(db().settings.schoolName||"—")+"</h2><div><b>"+esc(title)+"</b></div></div>";
+}
+/* ---- print builders (pure, node-testable) ---- */
+function admissionsPrintHTML(){
+  const rows=studentsOfAll().map(function(s,i){
+    return "<tr><td>"+(i+1)+"</td><td>"+esc(s.admNo)+"</td><td>"+esc(s.name)+"</td><td>"+esc(s.fatherName)+
+      "</td><td>"+fmtDate(s.dob)+"</td><td>"+esc(s.gender==="male"?t("male"):t("female"))+"</td><td>"+esc(s.cls)+
+      "</td><td>"+esc(s.section)+"</td><td>"+fmtDate(s.admDate)+"</td><td>"+esc(s.contact)+"</td><td>"+esc(s.address)+"</td></tr>";
+  }).join("");
+  return schoolHead(t("adm_title"))+'<table><tr><th>'+t("sno")+"</th><th>"+t("adm_no")+"</th><th>"+t("f_name")+
+    "</th><th>"+t("father_name")+"</th><th>"+t("dob")+"</th><th>"+t("gender")+"</th><th>"+t("cls")+"</th><th>"+
+    t("section")+"</th><th>"+t("adm_date")+"</th><th>"+t("contact")+"</th><th>"+t("address")+"</th></tr>"+rows+"</table>";
+}
+function dobPrintHTML(asOf){
+  const rows=studentsOfAll().map(function(s,i){
+    const a=calcAge(s.dob,asOf),b=db().settings.ageBands[s.cls];
+    const el=b?(inBand(a,b)?t("eligible"):t("not_eligible")):"—";
+    return "<tr><td>"+(i+1)+"</td><td>"+esc(s.admNo)+"</td><td>"+esc(s.name)+"</td><td>"+esc(clsLabel(s.cls,s.section))+
+      "</td><td>"+fmtDate(s.dob)+"</td><td>"+fmtAge(a)+"</td><td>"+el+"</td></tr>";
+  }).join("");
+  return schoolHead(t("dob_title")+" — "+t("as_of")+": "+fmtDate(asOf))+'<table><tr><th>'+t("sno")+"</th><th>"+
+    t("adm_no")+"</th><th>"+t("f_name")+"</th><th>"+t("cls")+"-"+t("section")+"</th><th>"+t("dob")+"</th><th>"+
+    t("age")+"</th><th>"+t("elig")+"</th></tr>"+rows+"</table>";
+}
+/* Broadsheet print: headers are BILINGUAL (Urdu + English together),
+   regardless of the UI toggle — it's an official document. */
+function broadsheetPrintHTML(examId){
+  const ex=db().exams.find(function(e){return e.id===examId;});if(!ex)return "";
+  const rows=computeResult(examId);
+  const head="<tr><th>"+esc(bl("bl_sno"))+"</th><th>"+esc(bl("bl_admno"))+"</th><th>"+esc(bl("bl_name"))+"</th>"+
+    ex.subjects.map(function(s){return "<th>"+esc(s.name)+"<br>("+s.max+")</th>";}).join("")+
+    "<th>"+esc(bl("bl_total"))+"</th><th>"+esc(bl("bl_pct"))+"</th><th>"+esc(bl("bl_grade"))+"</th><th>"+esc(bl("bl_division"))+
+    "</th><th>"+esc(bl("bl_position"))+"</th><th>"+esc(bl("bl_result"))+"</th></tr>";
+  const body=rows.map(function(r,i){
+    const cells=ex.subjects.map(function(sj){return "<td>"+(r.per[sj.name]==null?"—":r.per[sj.name])+"</td>";}).join("");
+    return "<tr><td>"+(i+1)+"</td><td>"+esc(r.student.admNo)+"</td><td>"+esc(r.student.name)+"</td>"+cells+
+      "<td>"+(r.complete?r.total:"—")+"</td><td>"+(r.pct==null?"—":r.pct.toFixed(1))+"</td><td>"+r.grade+"</td><td>"+
+      r.division+"</td><td>"+(r.position==null?"—":r.position)+"</td><td>"+(r.pass==null?"—":(r.pass?esc(bl("bl_pass")):esc(bl("bl_fail"))))+"</td></tr>";
+  }).join("");
+  return schoolHead(bl("bl_broadsheet")+" — "+ex.name+" ("+clsLabel(ex.cls,ex.section)+")")+"<table>"+head+body+"</table>";
+}
+/* ============ RESULT CARD SYSTEM ============
+   Part A (MVP): A4 result cards — single + whole-class batch, print-to-PDF.
+   Part B (cloud phase, NOT built): parent/student self-download portal.
+   Architecture ready now: per-student PIN (nullable), result records keyed
+   by student+exam, and resultPayload() — one clean standalone payload the
+   future portal will call. Nothing in Part B is built or exposed in UI. */
+/* Standalone card payload for ONE student in ONE exam.
+   Pure data, no HTML — the future self-download portal calls this. */
+function resultPayload(examId,studentId){
+  const ex=db().exams.find(function(e){return e.id===examId;});if(!ex)return null;
+  const st=db().students.find(function(s){return s.id===studentId;});if(!st)return null;
+  const rr=resultRowFor(examId,studentId);if(!rr)return null;
+  const r=rr.row;
+  return {
+    school:{name:db().settings.schoolName||"—",logoDataUrl:db().settings.logoDataUrl||""},
+    student:{name:st.name,fatherName:st.fatherName,display:displayName(st),admNo:st.admNo,
+      cls:st.cls,section:st.section,dob:st.dob,photo:st.photo||""},
+    exam:{id:ex.id,name:ex.name,year:ex.year||"",term:ex.term,termName:ex.term==="mid"?t("mid"):t("final")},
+    subjects:ex.subjects.map(function(sj){return {name:sj.name,max:sj.max,obtained:r.per[sj.name]};}),
+    total:r.complete?r.total:null,maxTotal:r.maxTotal,
+    pct:r.pct,grade:r.grade,division:r.division,position:r.position,
+    pass:r.pass,complete:r.complete,
+    remarks:r.complete?remarkFor(r.grade):""
+  };
+}
+/* One A4 card's HTML from a payload. Vector text throughout — print-to-PDF
+   keeps text selectable, never rasterized. BILINGUAL BY DEFAULT: every label
+   carries Urdu + English together, regardless of the UI language toggle. */
+function rcardHTML(p){
+  if(!p)return "";
+  const logo=p.school.logoDataUrl?'<img src="'+p.school.logoDataUrl+'" alt="">':"";
+  const termB=p.exam.term==="mid"?bl("bl_mid"):bl("bl_final");
+  const head='<div class="rc-head">'+logo+"<h2>"+esc(p.school.name)+"</h2><div><b>"+esc(bl("bl_card"))+
+    "</b> — "+esc(p.exam.name)+" ("+esc(p.exam.year)+", "+esc(termB)+")</div></div>";
+  const id='<div class="rc-id">'+studentPhotoHTML({name:p.student.name,photo:p.student.photo||""},48)+
+    "<span><b>"+esc(bl("bl_name"))+":</b> "+esc(p.student.display)+"</span><span><b>"+esc(bl("bl_admno"))+
+    ":</b> "+esc(p.student.admNo)+"</span><span><b>"+esc(bl("bl_class"))+":</b> "+esc(p.student.cls)+"-"+esc(p.student.section)+
+    "</span><span><b>"+esc(bl("bl_dob"))+":</b> "+fmtDate(p.student.dob)+"</span></div>";
+  const rows=p.subjects.map(function(s){
+    return "<tr><td>"+esc(s.name)+"</td><td>"+s.max+"</td><td>"+(s.obtained==null?"—":s.obtained)+"</td></tr>";
+  }).join("");
+  const tbl='<div class="twrap"><table class="grid"><tr><th>'+esc(bl("bl_subject"))+"</th><th class=\"num\">"+esc(bl("bl_max"))+
+    "</th><th class=\"num\">"+esc(bl("bl_obtained"))+"</th></tr>"+rows+
+    '<tr class="totalrow"><td>'+esc(bl("bl_total"))+'</td><td class="num">'+p.maxTotal+'</td><td class="num">'+(p.total==null?"—":p.total)+"</td></tr></table></div>";
+  const sum='<div class="rc-sum"><span class="chip">'+esc(bl("bl_pct"))+": "+(p.pct==null?"—":p.pct.toFixed(1)+"%")+"</span>"+
+    '<span class="chip">'+esc(bl("bl_grade"))+": "+p.grade+'</span><span class="chip">'+esc(bl("bl_division"))+": "+p.division+'</span>'+
+    '<span class="chip">'+esc(bl("bl_position"))+": "+(p.position==null?"—":p.position)+'</span>'+
+    '<span class="chip">'+esc(bl("bl_result"))+": "+(p.pass==null?"—":(p.pass?esc(bl("bl_pass")):esc(bl("bl_fail"))))+"</span></div>";
+  const sig='<div class="sign"><div>'+esc(bl("bl_sig_t"))+"</div><div>"+esc(bl("bl_sig_p"))+"</div><div>"+esc(bl("bl_sig_pr"))+"</div></div>";
+  return '<div class="rc-page"><div class="rcard">'+head+id+tbl+sum+
+    '<div style="margin:.4rem 0"><b>'+esc(bl("bl_remarks"))+":</b> "+esc(p.remarks)+"</div>"+sig+"</div></div>";
+}
+function reportCardHTML(examId,studentId){return rcardHTML(resultPayload(examId,studentId));}
+/* Whole-class batch: one .rc-page per student, each breaks to its own A4 page. */
+function reportCardsBatchHTML(examId){
+  const ex=db().exams.find(function(e){return e.id===examId;});if(!ex)return "";
+  return studentsOf(ex.cls,ex.section).map(function(st){return rcardHTML(resultPayload(examId,st.id));}).join("");
+}
+function labPrintHTML(){
+  const rows=db().labItems.map(function(it,i){
+    return "<tr><td>"+(i+1)+"</td><td>"+esc(it.name)+"</td><td>"+catName(it.category)+"</td><td>"+it.qty+"</td><td>"+
+      esc(it.unit)+"</td><td>"+condName(it.condition)+"</td><td>"+it.minStock+"</td><td>"+(it.nextService?fmtDate(it.nextService):"—")+"</td></tr>";
+  }).join("");
+  return schoolHead(t("inventory"))+'<table><tr><th>'+t("sno")+"</th><th>"+t("item_name")+"</th><th>"+t("category")+
+    "</th><th>"+t("qty")+"</th><th>"+t("unit")+"</th><th>"+t("condition")+"</th><th>"+t("min_stock")+"</th><th>"+t("next_service")+"</th></tr>"+rows+"</table>";
+}
+/* ---- home = student directory (front door) + dossier ---- */
+let dossierId=null,dirQ="",dirCls="",dirSec="",dirLimit=50;
+function directoryCardHTML(){
+  const al=labAlerts();
+  const kpis='<div class="kpis">'+
+    kpi(db().students.length,t("kpi_students"))+kpi(db().exams.length,t("kpi_exams"))+
+    kpi(db().labItems.length,t("kpi_lab"))+kpi(al.low.length+al.overdue.length,t("kpi_alerts"))+"</div>";
+  const classes=[],sections=[];
+  db().students.forEach(function(s){if(classes.indexOf(s.cls)<0)classes.push(s.cls);if(s.section&&sections.indexOf(s.section)<0)sections.push(s.section);});
+  classes.sort();sections.sort();
+  return '<div class="card"><h2>'+esc(t("directory"))+"</h2>"+kpis+
+    '<p class="muted">'+esc(t("tap_hint"))+'</p><div class="toolbar">'+
+    '<input class="search" id="dir-q" placeholder="'+esc(t("search"))+'" value="'+esc(dirQ)+'">'+
+    '<select id="dir-cls" style="min-height:44px;border:1px solid var(--line);border-radius:10px;padding:.5rem"><option value="">'+esc(t("filter_cls"))+": "+esc(t("all"))+"</option>"+
+    classes.map(function(c){return '<option value="'+esc(c)+'"'+(dirCls===c?" selected":"")+">"+esc(c)+"</option>";}).join("")+"</select>"+
+    '<select id="dir-sec" style="min-height:44px;border:1px solid var(--line);border-radius:10px;padding:.5rem"><option value="">'+esc(t("filter_sec"))+": "+esc(t("all"))+"</option>"+
+    sections.map(function(c){return '<option value="'+esc(c)+'"'+(dirSec===c?" selected":"")+">"+esc(c)+"</option>";}).join("")+"</select></div>"+
+    '<div id="dir-list"></div></div>';
+}
+function quickLinksHTML(){
+  const links=TABS.slice(1).map(function(x){
+    return '<button type="button" class="btn" data-go="'+x[0]+'">'+esc(t(x[1]))+"</button>";
+  }).join("");
+  return '<div class="card"><h3>'+esc(t("quick_links"))+'</h3><div class="toolbar">'+links+"</div></div>";
+}
+/* ---- home dashboard: totals, per class/section counts, reminders strip ---- */
+function dashStatsHTML(){
+  const groups={};
+  db().students.forEach(function(s){const k=clsLabel(s.cls,s.section);groups[k]=(groups[k]||0)+1;});
+  const keys=Object.keys(groups).sort();
+  let h='<div class="card"><h3>'+esc(t("dash_title"))+'</h3><div class="toolbar">'+
+    '<span class="chip">'+esc(t("kpi_students"))+": <b>"+db().students.length+"</b></span>"+
+    keys.map(function(k){
+      return '<button type="button" class="chip" data-clsgo="'+esc(k)+'" style="cursor:pointer">'+esc(k)+": <b>"+groups[k]+"</b></button>";
+    }).join("")+"</div>";
+  const al=labAlerts();
+  if(al.low.length||al.overdue.length){
+    h+='<button type="button" class="btn" data-go="lab" style="width:100%;text-align:start;background:#fff8e1;border-color:var(--warn)">'+
+      "⚠ "+esc(t("reminders"))+": "+
+      (al.low.length?esc(t("low_stock"))+" ("+al.low.length+")":"")+
+      ((al.low.length&&al.overdue.length)?" • ":"")+
+      (al.overdue.length?esc(t("overdue"))+" ("+al.overdue.length+")":"")+" →</button>";
+  }
+  h+="</div>";
+  return h;
+}
+/* ---- class promotion (new session) ---- */
+let promoteArm=null,promoteMsg=null;
+function promoteCardHTML(){
+  const classes=[],sections=[];
+  db().students.forEach(function(s){if(classes.indexOf(s.cls)<0)classes.push(s.cls);if(s.section&&sections.indexOf(s.section)<0)sections.push(s.section);});
+  classes.sort();sections.sort();
+  let h='<div class="card"><h3>'+esc(t("promote_title"))+'</h3><p class="muted">'+esc(t("promote_hint"))+"</p>";
+  if(promoteArm){
+    h+='<div class="msg warnm"><b>'+esc(t("promote_sure"))+"</b><br>"+
+      esc(promoteArm.count+" × "+t("kpi_students")+": "+promoteArm.from+" → "+promoteArm.to)+"</div>"+
+      '<div class="toolbar"><button type="button" class="btn btn-danger" id="p-go">'+esc(t("promote_yes"))+"</button> "+
+      '<button type="button" class="btn" id="p-cancel">'+esc(t("cancel"))+"</button></div>";
+  }else if(classes.length){
+    h+='<div class="grid2">'+
+      '<div class="field"><label>'+esc(t("promote_from"))+" "+esc(t("filter_cls"))+'</label><select id="p-fcls">'+
+      classes.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+"</option>";}).join("")+"</select></div>"+
+      '<div class="field"><label>'+esc(t("promote_from"))+" "+esc(t("filter_sec"))+'</label>'+(sections.length?'<select id="p-fsec">':"")+
+      sections.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+"</option>";}).join("")+(sections.length?"</select>":'<input type="hidden" id="p-fsec" value="">')+"</div>"+
+      '<div class="field"><label>'+esc(t("promote_to"))+" "+esc(t("filter_cls"))+'</label>'+
+      '<input id="p-tcls" inputmode="numeric" placeholder="7"></div>'+
+      '<div class="field"><label>'+esc(t("promote_to"))+" "+esc(t("filter_sec"))+'</label>'+
+      '<input id="p-tsec" placeholder="A"></div></div>'+
+      '<button type="button" class="btn btn-primary" id="p-arm">'+esc(t("promote_btn"))+"</button>";
+  }else{
+    h+='<p class="muted">'+esc(t("no_records"))+"</p>";
+  }
+  h+='<div id="p-msg">'+(promoteMsg?'<div class="msg okm">'+esc(promoteMsg)+"</div>":"")+"</div></div>";
+  promoteMsg=null;
+  return h;
+}
+function viewHome(){
+  /* desktop ≥900px: directory + dossier side by side (.dirpane);
+     phone: dossier takes full view, directory hides behind Back (.dossier-open) */
+  if(dossierId){
+    return '<div class="dirpane dossier-open"><div class="dircol">'+directoryCardHTML()+'</div>'+
+      '<div class="doscol">'+viewDossier(dossierId)+"</div></div>"+quickLinksHTML();
+  }
+  return dashStatsHTML()+promoteCardHTML()+directoryCardHTML()+quickLinksHTML();
+}
+function kpi(n,l){return '<div class="kpi"><div class="n">'+n+'</div><div class="l">'+esc(l)+"</div></div>";}
+function drawDir(){
+  const box=$("dir-list");if(!box)return;
+  const needle=norm(dirQ);
+  const list=studentsOfAll().filter(function(s){
+    if(dirCls&&s.cls!==dirCls)return false;
+    if(dirSec&&s.section!==dirSec)return false;
+    /* identity rule: search matches name + father's name together */
+    return !needle||norm(s.name).indexOf(needle)>=0||norm(s.fatherName).indexOf(needle)>=0||norm(s.admNo).indexOf(needle)>=0;
+  });
+  box.innerHTML=list.slice(0,dirLimit).map(function(s){
+    return '<button type="button" class="btn" style="display:block;width:100%;text-align:start;margin:.3rem 0" data-open="'+s.id+'">'+
+      '<span class="idrow">'+studentPhotoHTML(s,44)+"<span><b>"+esc(displayName(s))+"</b><br><span class=\"muted\">"+esc(s.admNo)+" • "+esc(clsLabel(s.cls,s.section))+
+      " • "+t("dob")+": "+fmtDate(s.dob)+"</span></span></span></button>";
+  }).join("")+(list.length>dirLimit?'<button type="button" class="btn" id="dir-more" style="width:100%;margin:.4rem 0">'+esc(t("show_more"))+" ("+list.length+")</button>":"")||'<p class="muted">'+esc(t("no_records"))+"</p>";
+  const dm=$("dir-more");if(dm)dm.onclick=function(){dirLimit+=50;drawDir();};
+  Array.prototype.forEach.call(box.querySelectorAll("[data-open]"),function(b){
+    b.onclick=function(){dossierId=b.getAttribute("data-open");render();};
+  });
+}
+function afterHome(){
+  drawDir();
+  if(dossierId)afterDossier();
+  $("dir-q").oninput=function(e){dirQ=e.target.value;dirLimit=50;drawDir();};
+  $("dir-cls").onchange=function(e){dirCls=e.target.value;dirLimit=50;drawDir();};
+  $("dir-sec").onchange=function(e){dirSec=e.target.value;dirLimit=50;drawDir();};
+  Array.prototype.forEach.call(document.querySelectorAll("[data-go]"),function(b){
+    b.onclick=function(){curTab=b.getAttribute("data-go");render();};
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-clsgo]"),function(b){
+    b.onclick=function(){
+      const k=b.getAttribute("data-clsgo").split("-");
+      dirCls=k[0]||"";dirSec=k.slice(1).join("-")||"";
+      const sc=$("dir-cls"),ss=$("dir-sec");
+      if(sc)sc.value=dirCls;if(ss)ss.value=dirSec;
+      drawDir();if(typeof window!=="undefined")window.scrollTo(0,0);
+    };
+  });
+  /* two-step promotion: arm → confirm → execute */
+  const pa=$("p-arm");
+  if(pa)pa.onclick=function(){
+    const fc=$("p-fcls").value,fs=$("p-fsec").value,tc=$("p-tcls").value.trim(),ts=$("p-tsec").value.trim();
+    const n=studentsOf(fc,fs).length;
+    if(!n){$("p-msg").innerHTML='<div class="msg err">'+esc(t("no_records"))+"</div>";return;}
+    if(!tc){$("p-msg").innerHTML='<div class="msg err">'+esc(t("req"))+"</div>";return;}
+    promoteArm={fc:fc,fs:fs,tc:tc,ts:ts,from:clsLabel(fc,fs),to:clsLabel(tc,ts),count:n};
+    render();
+  };
+  const pg=$("p-go");
+  if(pg)pg.onclick=function(){
+    const r=promoteClass(promoteArm.fc,promoteArm.fs,promoteArm.tc,promoteArm.ts);
+    promoteArm=null;
+    promoteMsg=r.ok?(r.count+" "+t("promote_done")):r.error;
+    render();
+  };
+  const pc=$("p-cancel");
+  if(pc)pc.onclick=function(){promoteArm=null;render();};
+}
+/* ---- unified student dossier ---- */
+function viewDossier(id){
+  const d=getDossier(id);if(!d)return '<div class="card"><p class="muted">'+esc(t("no_records"))+"</p></div>";
+  const st=d.student;
+  let h='<div class="card"><button type="button" class="btn btn-sm" id="dos-back">← '+esc(t("back"))+"</button> "+
+    '<button type="button" class="btn btn-sm" id="dos-print">'+esc(t("print_dossier"))+"</button> "+
+    '<label class="btn btn-sm">'+esc(st.photo?t("photo_change"):t("capture_photo"))+
+    '<input id="dos-photo" type="file" accept="image/*" style="display:none"></label>'+
+    '<div class="idrow" style="margin:.5rem 0">'+studentPhotoHTML(st,56)+"<h2 style=\"margin:0\">"+esc(displayName(st))+"</h2></div>"+
+    '<div class="toolbar"><span class="chip">'+esc(st.admNo)+'</span><span class="chip">'+esc(t("cls"))+" "+esc(st.cls)+"-"+esc(st.section)+
+    '</span><span class="chip">'+esc(t("dob"))+": "+fmtDate(st.dob)+'</span><span class="chip">'+esc(t("age"))+": "+fmtAge(d.age)+
+    '</span><span class="chip">'+esc(t("contact"))+": "+esc(st.contact||"—")+"</span></div></div>";
+  h+='<div class="card"><h3>'+esc(t("sec_admission"))+"</h3>"+
+    "<div>"+esc(t("adm_no"))+": <b>"+esc(st.admNo)+"</b> • "+esc(t("adm_date"))+": "+fmtDate(st.admDate)+
+    " • "+esc(t("address"))+": "+esc(st.address||"—")+"</div></div>";
+  const bandTxt=d.band?(d.band.minY+t("years")+d.band.minM+t("months")+" – "+d.band.maxY+t("years")+d.band.maxM+t("months")):"—";
+  h+='<div class="card"><h3>'+esc(t("sec_dob"))+"</h3><div>"+esc(t("dob"))+": "+fmtDate(st.dob)+" • "+esc(t("age"))+
+    " ("+esc(t("as_of"))+" "+fmtDate(d.asOf)+"): <b>"+fmtAge(d.age)+"</b> • "+esc(t("elig_band"))+": "+bandTxt+" • "+
+    (d.eligible==null?"—":'<span class="flag'+(d.eligible?" okf":"")+'">'+(d.eligible?esc(t("eligible")):esc(t("not_eligible")))+"</span>")+"</div></div>";
+  h+='<div class="card"><h3>'+esc(t("timeline"))+"</h3>";
+  if(!d.terms.length)h+='<p class="muted">'+esc(t("no_exams_yet"))+"</p>";
+  d.terms.forEach(function(tm){
+    const ex=tm.exam,r=tm.row;
+    h+="<h3>"+esc(ex.name)+" ("+esc(ex.year)+", "+esc(ex.term==="mid"?t("mid"):t("final"))+")</h3>";
+    if(!r||!r.complete&&!hasAnyMarks(ex.id,st.id)){h+='<p class="muted">'+esc(t("no_records"))+"</p>";return;}
+    h+='<div class="twrap"><table class="grid"><tr><th>'+t("subject_name")+"</th><th class=\"num\">"+t("max_marks")+
+      "</th><th class=\"num\">"+t("obtained")+"</th></tr>";
+    ex.subjects.forEach(function(sj){
+      h+="<tr><td>"+esc(sj.name)+"</td><td class=\"num\">"+sj.max+"</td><td class=\"num\">"+(r.per[sj.name]==null?"—":r.per[sj.name])+"</td></tr>";
+    });
+    h+='<tr class="totalrow"><td>'+esc(t("total"))+"</td><td class=\"num\">"+r.maxTotal+"</td><td class=\"num\">"+(r.complete?r.total:"—")+"</td></tr></table></div>";
+    h+='<div class="toolbar"><span class="chip">'+esc(t("percentage"))+": "+(r.pct==null?"—":r.pct.toFixed(1)+"%")+'</span>'+
+      '<span class="chip">'+esc(t("grade"))+": "+r.grade+'</span><span class="chip">'+esc(t("division"))+": "+r.division+'</span>'+
+      '<span class="chip">'+esc(t("position"))+": "+(r.position==null?"—":r.position)+'</span>'+
+      '<span class="chip">'+esc(t("result"))+": "+(r.pass==null?"—":(r.pass?t("pass"):t("fail")))+"</span>"+
+      (r.complete?'<button type="button" class="btn btn-sm" data-cardprint="'+ex.id+'">'+esc(t("print_one_card"))+"</button>":"")+"</div>";
+  });
+  h+="</div>";
+  h+=certDossierHTML(st);
+  h+='<div class="card"><h3>'+esc(t("history"))+'</h3><div class="hist">'+histHTML(st)+"</div></div>";
+  return h;
+}
+function hasAnyMarks(examId,studentId){const m=db().marks[examId];return !!(m&&m[studentId]);}
+function afterDossier(){
+  $("dos-back").onclick=function(){dossierId=null;render();};
+  $("dos-print").onclick=function(){doPrint(dossierPrintHTML(dossierId));};
+  const dp=$("dos-photo");
+  if(dp)dp.onchange=function(){
+    const f=dp.files[0];if(!f||!dossierId)return;
+    captureStudentPhoto(f,function(du){
+      if(!du){alert(t("photo_big"));return;}
+      const r=setStudentPhoto(dossierId,du);
+      if(!r.ok)alert(r.error);else render();
+    });
+  };
+  Array.prototype.forEach.call(document.querySelectorAll("[data-cardprint]"),function(b){
+    b.onclick=function(){doPrint(rcardHTML(resultPayload(b.getAttribute("data-cardprint"),dossierId)));};
+  });
+  const dic=$("dos-issuecert");
+  if(dic)dic.onclick=function(){certIssueFor=dossierId;curTab="cert";render();};
+  Array.prototype.forEach.call(document.querySelectorAll("[data-dcprint]"),function(b){
+    b.onclick=function(){doPrint(certPrintHTML(b.getAttribute("data-dcprint")));};});
+  Array.prototype.forEach.call(document.querySelectorAll("[data-dcvoid]"),function(b){
+    b.onclick=function(){
+      const c=getCertificate(b.getAttribute("data-dcvoid"));
+      if(c&&confirm(t("cert_void")+" "+c.serial+"?")){voidCertificate(c.id);render();}
+    };});
+}
+function dossierPrintHTML(studentId){
+  const d=getDossier(studentId);if(!d)return "";
+  const st=d.student;
+  let h=schoolHead(t("dossier"))+
+    '<div class="rc-info"><span><b>'+t("f_name")+":</b> "+esc(displayName(st))+"</span><span><b>"+t("adm_no")+
+    ":</b> "+esc(st.admNo)+"</span><span><b>"+t("cls")+":</b> "+esc(st.cls)+"-"+esc(st.section)+"</span><span><b>"+
+    t("dob")+":</b> "+fmtDate(st.dob)+" ("+fmtAge(d.age)+")</span><span><b>"+t("adm_date")+":</b> "+fmtDate(st.admDate)+
+    "</span><span><b>"+t("contact")+":</b> "+esc(st.contact||"—")+"</span></div>";
+  d.terms.forEach(function(tm){
+    const ex=tm.exam,r=tm.row;
+    if(!r||(!r.complete&&!hasAnyMarks(ex.id,st.id)))return;
+    h+="<h3>"+esc(ex.name)+" ("+esc(ex.year)+")</h3>"+
+      '<table><tr><th>'+t("subject_name")+"</th><th>"+t("max_marks")+"</th><th>"+t("obtained")+"</th></tr>"+
+      ex.subjects.map(function(sj){return "<tr><td>"+esc(sj.name)+"</td><td>"+sj.max+"</td><td>"+(r.per[sj.name]==null?"—":r.per[sj.name])+"</td></tr>";}).join("")+
+      "<tr><td><b>"+t("total")+"</b></td><td><b>"+r.maxTotal+"</b></td><td><b>"+(r.complete?r.total:"—")+"</b></td></tr></table>"+
+      "<div>"+t("percentage")+": "+(r.pct==null?"—":r.pct.toFixed(1)+"%")+" • "+t("grade")+": "+r.grade+" • "+
+      t("division")+": "+r.division+" • "+t("position")+": "+(r.position==null?"—":r.position)+" • "+
+      t("result")+": "+(r.pass==null?"—":(r.pass?t("pass"):t("fail")))+"</div>";
+  });
+  h+='<div class="sign"><div>'+t("sig_teacher")+"</div><div>"+t("sig_parent")+"</div><div>"+t("sig_principal")+"</div></div>";
+  return h;
+}
+
+/* ---- register photo helper: the paper page stays pinned beside the form,
+   so entries can be typed row by row without switching apps. Stored as a
+   data URL in settings (300 KB guard, same pattern as the logo upload). ---- */
+function regPhotoHTML(){
+  const ph=(db().settings&&db().settings.regPhotoDataUrl)||"";
+  let h='<div class="regphoto"><b>'+esc(t("reg_photo"))+'</b>';
+  if(ph)h+='<img class="regphoto-img" src="'+ph+'" alt="">';
+  h+='<div class="toolbar" style="margin:.4rem 0"><label class="btn btn-sm">'+esc(t("attach_photo"))+
+    '<input id="a-photo" type="file" accept="image/*" style="display:none"></label>'+
+    (ph?'<button type="button" class="btn btn-sm btn-danger" id="a-photodel">'+esc(t("photo_remove"))+"</button>":"")+"</div>"+
+    '<p class="muted" style="margin:.2rem 0">'+esc(t("photo_hint"))+"</p>"+
+    '<div class="tipbox"><div dir="rtl" lang="ur">'+esc(T.lens_tip.ur)+'</div>'+
+    '<div dir="ltr" lang="en" style="margin-top:.3rem">'+esc(T.lens_tip.en)+"</div></div></div>";
+  return h;
+}
+/* ---- scan UI: capture → review → commit (smart-review pattern) ---- */
+let scanState=null;
+function scanCardHTML(){
+  return '<div class="card"><h2>'+esc(t("scan_title"))+'</h2><p class="muted">'+esc(t("scan_hint"))+'</p>'+
+    '<div class="toolbar"><label class="btn btn-primary">'+esc(t("scan_btn"))+
+    '<input id="scan-file" type="file" accept="image/*" style="display:none"></label></div>'+
+    '<div class="field"><label>'+esc(t("scan_paste_title"))+'</label>'+
+    '<textarea id="scan-paste" class="scan-paste" placeholder="'+esc(t("scan_paste_ph"))+'"></textarea></div>'+
+    '<button type="button" class="btn" id="scan-pastebtn">'+esc(t("scan_paste_btn"))+'</button>'+
+    '<div id="scan-body"></div></div>';
+}
+function paintScan(){
+  const box=$("scan-body");if(!box||!scanState)return;
+  const S=scanState;
+  if(S.phase==="cleaning"){box.innerHTML='<p class="muted">🤖 '+esc(t("scan_cleaning"))+"</p>";return;}
+  if(S.phase==="reading"){box.innerHTML='<p class="muted">🤖 '+esc(t("scan_reading"))+"</p>";return;}
+  if(S.phase==="done"){box.innerHTML='<div class="msg okm">'+esc(S.doneMsg||"")+"</div>";return;}
+  if(S.phase==="error"){box.innerHTML='<div class="msg err">'+esc(S.error||"Error")+"</div>";return;}
+  if(S.phase==="noengine"){
+    box.innerHTML='<div class="msg warnm">'+esc(t("scan_no_engine"))+"</div>"+
+      (S.cleaned?'<img class="regphoto-img" src="'+S.cleaned+'" alt="">':"")+
+      '<div class="toolbar"><button type="button" class="btn btn-sm" id="scan-pin">'+esc(t("scan_pin"))+"</button></div>";
+    const sp=$("scan-pin");
+    if(sp)sp.onclick=function(){
+      const du=S.cleaned||"";
+      if(du.length>410000){alert(t("photo_big"));return;} /* ~300KB guard on bytes */
+      db().settings.regPhotoDataUrl=du;Store.save();render();
+    };
+    return;
+  }
+  if(S.phase==="review"){paintScanReview();}
+}
+function scanVal(i,f,fb){const e=scanState.edits[i];return (e&&e[f]!==undefined)?e[f]:fb;}
+function scanFieldEd(i,f,labelKey,fldV,kind){
+  const cur=scanVal(i,f,fldV.v);
+  const E=scanState.edits[i]||{};
+  const bad=fldV.conf!=="high";
+  if(!bad&&!E[f+"_open"]){
+    return '<div class="field"><label>'+esc(t(labelKey))+'</label>'+
+      '<div class="rev-val" data-sf="'+i+":"+f+'">'+esc(cur||"—")+' <span class="flag okf">✓</span> <span>✏️</span></div></div>';
+  }
+  let inp;
+  if(kind==="date")inp='<input data-si="'+i+":"+f+'" type="date" value="'+esc(cur)+'"'+(bad?' class="amber"':"")+">";
+  else if(kind==="gender")inp='<select data-si="'+i+":"+f+'"'+(bad?' class="amber"':"")+"><option value=\"\">—</option>"+
+    '<option value="male"'+(cur==="male"?" selected":"")+'>'+esc(t("male"))+'</option>'+
+    '<option value="female"'+(cur==="female"?" selected":"")+'>'+esc(t("female"))+"</option></select>";
+  else inp='<input data-si="'+i+":"+f+'" value="'+esc(cur)+'"'+(bad?' class="amber"':"")+">";
+  return '<div class="field"><label>'+esc(t(labelKey))+(bad?' <span class="flag">!</span>':"")+"</label>"+inp+"</div>";
+}
+function scanUnreadHTML(P){
+  if(!P.unread.length)return "";
+  return '<div class="tipbox"><b>'+esc(t("scan_unread"))+"</b><br>"+
+    P.unread.map(function(u){return "• "+esc(u.line);}).join("<br>")+"</div>";
+}
+function paintScanReview(){
+  const box=$("scan-body");if(!box)return;
+  const S=scanState,P=S.parsed;
+  let h="";
+  if(!P.rows.length){
+    h='<div class="msg warnm">'+esc(t("scan_none"))+"</div>"+scanUnreadHTML(P);
+  }else{
+    h='<p><b>'+P.rows.length+'</b> '+esc(t("scan_rows_found"))+" — "+esc(t("scan_review"))+"</p>";
+    h+='<div class="field"><label>'+esc(t("adm_date"))+" ("+esc(t("scan_batch"))+")</label>"+
+       '<input type="date" id="scan-admdate" value="'+esc(S.admDate||todayISO())+'"></div>';
+    P.rows.forEach(function(r,i){
+      h+='<div class="regphoto"><b>#'+(i+1)+'</b><div class="grid2">'+
+        scanFieldEd(i,"name","f_name",r.name)+
+        scanFieldEd(i,"fatherName","father_name",r.fatherName)+
+        scanFieldEd(i,"dob","dob",r.dob,"date")+
+        scanFieldEd(i,"gender","gender",r.gender,"gender")+
+        scanFieldEd(i,"cls","cls",r.cls)+
+        scanFieldEd(i,"section","section",r.section)+
+        "</div></div>";
+    });
+    h+=scanUnreadHTML(P);
+    h+='<button type="button" class="btn btn-primary" id="scan-saveall">'+esc(t("scan_save_all"))+'</button> <span id="scan-smsg"></span>';
+  }
+  box.innerHTML=h;
+  bindScanReview();
+}
+function bindScanReview(){
+  const box=$("scan-body");if(!box)return;
+  const sa=$("scan-admdate");
+  if(sa)sa.onchange=function(){scanState.admDate=sa.value;};
+  Array.prototype.forEach.call(box.querySelectorAll("[data-sf]"),function(el){
+    el.onclick=function(){
+      const p=el.getAttribute("data-sf").split(":");
+      const i=+p[0],f=p[1];
+      scanState.edits[i]=scanState.edits[i]||{};
+      scanState.edits[i][f+"_open"]=true;
+      paintScan();
+    };
+  });
+  Array.prototype.forEach.call(box.querySelectorAll("[data-si]"),function(inp){
+    inp.oninput=function(){
+      const p=inp.getAttribute("data-si").split(":");
+      const i=+p[0],f=p[1];
+      scanState.edits[i]=scanState.edits[i]||{};
+      scanState.edits[i][f]=inp.value;
+    };
+  });
+  const sv=$("scan-saveall");
+  if(sv)sv.onclick=commitScanReview;
+}
+function commitScanReview(){
+  const S=scanState,P=S.parsed;
+  const rows=P.rows.map(function(r,i){
+    function gv(f){return scanVal(i,f,r[f].v);}
+    return {name:gv("name"),fatherName:gv("fatherName"),dob:gv("dob"),gender:gv("gender"),
+      cls:gv("cls"),section:gv("section"),admDate:S.admDate||todayISO(),contact:"",address:""};
+  });
+  const res=commitScanRows(rows);
+  if(res.ok){
+    S.phase="done";S.doneMsg=res.count+" "+t("scan_saved")+".";
+    S.parsed={rows:[],unread:[]};S.edits={};
+    paintScan();
+  }else{
+    const m2=$("scan-smsg");
+    if(m2)m2.innerHTML='<div class="msg err">'+res.errors.map(function(e){return "• "+esc(e);}).join("<br>")+"</div>";
+  }
+}
+/* round 3: paste copied text (e.g. from Google Lens) straight into the
+   existing scan chain: parseRegisterLines → smart review → commitScanRows.
+   No new parser — pure wiring. */
+function scanFromText(text){
+  const P=parseRegisterLines(String(text==null?"":text));
+  return {ok:true,parsed:P};
+}
+function bindScan(){
+  const fi=$("scan-file");
+  if(fi)fi.onchange=function(){
+    const f=fi.files[0];if(!f)return;
+    scanState={phase:"cleaning",photo:"",cleaned:"",ocrText:"",
+      parsed:{rows:[],unread:[]},edits:{},admDate:todayISO()};
+    paintScan();
+    runScanFlow(f);
+  };
+  /* round 3: paste copied text (Google Lens) into the existing review chain */
+  const pb=$("scan-pastebtn");
+  if(pb)pb.onclick=function(){
+    const tx=$("scan-paste").value;
+    if(!String(tx).trim()){alert(t("scan_paste_empty"));return;}
+    scanState={phase:"review",photo:"",cleaned:"",ocrText:String(tx),
+      parsed:scanFromText(tx).parsed,edits:{},admDate:todayISO()};
+    paintScan();
+  };
+  if(scanState)paintScan(); /* restore in-progress review after re-render */
+}
+async function runScanFlow(file){
+  try{
+    const orig=await fileToDataURLScan(file);
+    scanState.photo=orig;
+    const cleaned=await preprocessForOCR(orig);
+    scanState.cleaned=cleaned;
+    if(!ocrEngine()){scanState.phase="noengine";paintScan();return;}
+    scanState.phase="reading";paintScan();
+    const text=await ocrRecognize(cleaned);
+    scanState.ocrText=text;
+    scanState.parsed=parseRegisterLines(text);
+    scanState.phase="review";paintScan();
+  }catch(e){
+    scanState.phase="error";scanState.error=String((e&&e.message)||e);paintScan();
+  }
+}
+
+/* admission form photo capture (round 3): staged in admPhotoPending for a
+   new student until the record is saved; applied immediately when editing */
+function studentPhotoCardHTML(st){
+  const cur=(st&&st.photo)||admPhotoPending||"";
+  return '<div class="card"><h3>'+esc(t("photo"))+'</h3><div class="photocard">'+
+    studentPhotoHTML({name:(st&&st.name)||"?",photo:cur},64)+
+    '<div><label class="btn btn-sm">'+esc(cur?t("photo_change"):t("capture_photo"))+
+    '<input id="a-stuphoto" type="file" accept="image/*" style="display:none"></label> '+
+    (cur?'<button type="button" class="btn btn-sm btn-danger" id="a-stuphotodel">'+esc(t("photo_remove"))+"</button>":"")+
+    "</div></div>"+
+    '<p class="muted" style="margin:.2rem 0">'+esc(t("photo_hint2"))+"</p></div>";
+}
+/* ================= MODULE 1: admissions ================= */
+function viewAdm(){
+  const st=admEditId?db().students.find(function(s){return s.id===admEditId;}):null;
+  const f=st||Object.assign({name:"",fatherName:"",dob:"",gender:"male",cls:"",section:"",admDate:todayISO(),contact:"",address:"",pin:""},admDraft||{});
+  let h=scanCardHTML();
+  h+='<div class="card"><h2>'+esc(t("adm_title"))+'</h2><p class="muted">'+esc(t("adm_auto"))+'</p><div id="adm-msg">'+
+    (admFlash?'<div class="msg okm">'+esc(admFlash)+'</div>':"")+"</div>";
+  admFlash=null;
+  h+=regPhotoHTML();
+  h+=studentPhotoCardHTML(st);
+  h+='<div class="grid2">'+
+    fld("f_name",micField("a-name",'<input id="a-name" value="'+esc(f.name)+'">'))+
+    fld("father_name",micField("a-father",'<input id="a-father" value="'+esc(f.fatherName)+'">'))+
+    fld("dob",'<input id="a-dob" type="date" max="'+todayISO()+'" value="'+esc(f.dob)+'">')+
+    fld("gender",'<select id="a-gender"><option value="male"'+(f.gender==="male"?" selected":"")+'>'+esc(t("male"))+'</option><option value="female"'+(f.gender==="female"?" selected":"")+'>'+esc(t("female"))+'</option></select>')+
+    fld("cls",'<input id="a-cls" value="'+esc(f.cls)+'">')+
+    fld("section",'<input id="a-sec" value="'+esc(f.section)+'">',1)+
+    fld("adm_date",'<input id="a-admdate" type="date" value="'+esc(f.admDate)+'">')+
+    fld("contact",'<input id="a-contact" inputmode="tel" value="'+esc(f.contact)+'">')+
+    fld("pin",'<input id="a-pin" type="password" inputmode="numeric" value="'+esc(f.pin||"")+'" placeholder="'+esc(t("pin_ph"))+'">')+
+    "</div>"+
+    fld("address",micField("a-address",'<input id="a-address" value="'+esc(f.address)+'">'))+
+    micNoteHTML()+
+    '<button type="button" class="btn btn-primary" id="a-save">'+esc(st?t("save"):t("add_student"))+"</button> "+
+    (st?'<button type="button" class="btn" id="a-cancel">'+esc(t("cancel"))+"</button> ":"")+
+    "</div>";
+  h+='<div class="card"><h3>'+esc(t("imp_title"))+'</h3><p class="muted">'+esc(t("fast_entry"))+'</p>'+
+    '<div class="toolbar"><button type="button" class="btn btn-sm" id="a-template">'+esc(t("dl_template"))+'</button>'+
+    '<label class="btn btn-sm">'+esc(t("import_csv"))+'<input id="a-import" type="file" accept=".csv,text/csv" style="display:none"></label></div>'+
+    '<div id="a-imsg"></div></div>';
+  h+='<div class="card"><div class="toolbar"><input class="search" id="a-q" placeholder="'+esc(t("search"))+'">'+
+    '<button type="button" class="btn btn-sm" id="a-csv">'+esc(t("export_csv"))+'</button>'+
+    '<button type="button" class="btn btn-sm" id="a-print">'+esc(t("print"))+"</button></div>"+
+    '<div class="twrap"><table class="grid"><tr><th>'+t("sno")+"</th><th>"+t("adm_no")+"</th><th>"+t("f_name")+
+    "</th><th>"+t("father_name")+"</th><th>"+t("dob")+"</th><th>"+t("cls")+"-"+t("section")+"</th><th>"+t("contact")+
+    "</th><th>"+t("actions")+"</th></tr><tbody id=\"a-rows\"></tbody></table></div></div>";
+  return h;
+}
+function fld(labelKey,inner,opt){return '<div class="field"><label>'+esc(t(labelKey))+(opt?' <span class="muted" style="font-weight:400">('+esc(t("optional"))+')</span>':"")+"</label>"+inner+"</div>";}
+function afterAdm(){
+  const q=$("a-q");
+  const draw=function(){
+    const needle=norm(q.value);
+    const list=studentsOfAll().filter(function(s){
+      return !needle||norm(s.name).indexOf(needle)>=0||norm(s.admNo).indexOf(needle)>=0||norm(s.fatherName).indexOf(needle)>=0;
+    });
+    $("a-rows").innerHTML=list.map(function(s,i){
+      return "<tr><td class=\"num\">"+(i+1)+"</td><td>"+esc(s.admNo)+"</td><td>"+esc(s.name)+"</td><td>"+esc(s.fatherName)+
+        "</td><td>"+fmtDate(s.dob)+"</td><td class=\"num\">"+esc(s.cls)+"-"+esc(s.section)+"</td><td>"+esc(s.contact)+"</td>"+
+        '<td><button type="button" class="btn btn-sm" data-ed="'+s.id+'">'+esc(t("edit"))+'</button> '+
+        '<button type="button" class="btn btn-sm btn-danger" data-del="'+s.id+'">'+esc(t("del"))+'</button> '+
+        '<button type="button" class="btn btn-sm" data-hist="'+s.id+'">'+esc(t("history"))+"</button></td></tr>"+
+        '<tr id="hist-'+s.id+'" style="display:none"><td colspan="8"><div class="hist">'+histHTML(s)+"</div></td></tr>";
+    }).join("")||'<tr><td colspan="8" class="muted">'+esc(t("no_records"))+"</td></tr>";
+    bindRows();
+  };
+  const bindRows=function(){
+    Array.prototype.forEach.call(document.querySelectorAll("[data-ed]"),function(b){b.onclick=function(){admEditId=b.getAttribute("data-ed");admPhotoPending="";render();};});
+    Array.prototype.forEach.call(document.querySelectorAll("[data-del]"),function(b){b.onclick=function(){
+      if(confirm(t("confirm_del"))){deleteStudent(b.getAttribute("data-del"));render();}};});
+    Array.prototype.forEach.call(document.querySelectorAll("[data-hist]"),function(b){b.onclick=function(){
+      const r=$("hist-"+b.getAttribute("data-hist"));r.style.display=r.style.display==="none"?"":"none";};});
+  };
+  q.oninput=draw;
+  function readAdmForm(){return {name:$("a-name").value,fatherName:$("a-father").value,dob:$("a-dob").value,gender:$("a-gender").value,
+      cls:$("a-cls").value,section:$("a-sec").value,admDate:$("a-admdate").value,contact:$("a-contact").value,address:$("a-address").value,pin:$("a-pin").value};}
+  $("a-save").onclick=function(){
+    const d=readAdmForm();
+    const isNew=!admEditId;
+    const r=admEditId?updateStudent(admEditId,d):addStudent(d);
+    if(!r.ok){$("adm-msg").innerHTML='<div class="msg err">'+esc(r.error)+"</div>";
+      const idmap={name:"a-name",fatherName:"a-father",dob:"a-dob",gender:"a-gender",cls:"a-cls",section:"a-sec",admDate:"a-admdate"};
+      (r.missing||[]).forEach(function(k){const el=$(idmap[k]);if(el){el.classList.add("err-input");el.addEventListener("input",function h(){el.classList.remove("err-input");el.removeEventListener("input",h);});}});
+      const f0=r.missing&&r.missing[0]&&$(idmap[r.missing[0]]);
+      if(f0){try{f0.scrollIntoView({block:"center"});}catch(e){}try{f0.focus({preventScroll:true});}catch(e2){}}
+      return;}
+    /* round 3: attach the staged photo to the new record */
+    if(isNew&&admPhotoPending){setStudentPhoto(r.student.id,admPhotoPending);admPhotoPending="";}
+    if(!isNew)admPhotoPending="";
+    /* fast entry: form stays open with the register photo pinned, ready for the next row */
+    if(isNew){admFlash=t("next_student");admKeepOpen=true;}
+    admEditId=null;admDraft=null;render();
+  };
+  /* keep an unsaved admission draft across tab switches */
+  if(!admEditId){
+    ["a-name","a-father","a-dob","a-gender","a-cls","a-sec","a-admdate","a-contact","a-address","a-pin"].forEach(function(id){
+      const el=$(id);if(el){el.addEventListener("input",function(){admDraft=readAdmForm();});el.addEventListener("change",function(){admDraft=readAdmForm();});}
+    });
+  }else{admDraft=null;}
+  const cc=$("a-cancel");if(cc)cc.onclick=function(){admEditId=null;admDraft=null;admPhotoPending="";render();};
+  const spf=$("a-stuphoto");
+  if(spf)spf.onchange=function(){
+    const f=spf.files[0];if(!f)return;
+    captureStudentPhoto(f,function(du){
+      if(!du){alert(t("photo_big"));return;}
+      if(admEditId){
+        const r2=setStudentPhoto(admEditId,du);
+        if(!r2.ok){alert(r2.error);return;}
+      }else admPhotoPending=du;
+      render();
+    });
+  };
+  const spd=$("a-stuphotodel");
+  if(spd)spd.onclick=function(){
+    if(admEditId)setStudentPhoto(admEditId,"");
+    admPhotoPending="";render();
+  };
+  $("a-csv").onclick=function(){downloadFile("admissions.csv",exportCSV("students"),"text/csv;charset=utf-8");};
+  $("a-print").onclick=function(){doPrint(admissionsPrintHTML());};
+  $("a-template").onclick=function(){downloadFile("students-template.csv",csvTemplateText(),"text/csv;charset=utf-8");};
+  const imp=$("a-import");
+  if(imp)imp.onchange=function(){
+    const f=imp.files[0];if(!f)return;
+    const rd=new FileReader();
+    rd.onload=function(){
+      const r=importStudentsCSV(rd.result);
+      if(r.ok){admFlash=r.count+" "+t("imp_ok")+".";render();}
+      else{$("a-imsg").innerHTML='<div class="msg err">'+esc(t("imp_none"))+"<br>"+
+        r.errors.map(function(e){return "• "+esc(e);}).join("<br>")+"</div>";}
+    };
+    rd.readAsText(f);
+  };
+  const apf=$("a-photo");
+  if(apf)apf.onchange=function(){
+    const f=apf.files[0];if(!f)return;
+    if(f.size>300*1024){alert(t("photo_big"));return;}
+    const rd=new FileReader();
+    rd.onload=function(){db().settings.regPhotoDataUrl=rd.result;Store.save();render();};
+    rd.readAsDataURL(f);
+  };
+  const apd=$("a-photodel");
+  if(apd)apd.onclick=function(){db().settings.regPhotoDataUrl="";Store.save();render();};
+  draw();
+  bindScan();
+  bindMic();
+  if(admKeepOpen){admKeepOpen=false;const nn=$("a-name");if(nn)nn.focus();}
+}
+function histHTML(rec){
+  if(!rec.history||!rec.history.length)return '<span class="muted">—</span>';
+  return rec.history.map(function(h){return "<div>"+fmtDate(h.ts.slice(0,10))+" "+h.ts.slice(11,16)+" — <b>"+esc(h.action)+"</b>: "+esc(h.summary)+"</div>";}).join("");
+}
+
+/* ================= MODULE 2: DOB records ================= */
+function viewDob(){
+  let h='<div class="card"><h2>'+esc(t("dob_title"))+'</h2>'+
+    '<div class="toolbar"><div class="field" style="margin:0"><label>'+esc(t("as_of"))+'</label>'+
+    '<input id="d-asof" type="date" value="'+esc(dobAsOf)+'"></div>'+
+    '<button type="button" class="btn btn-sm" id="d-today">'+esc(t("today"))+'</button>'+
+    '<button type="button" class="btn btn-sm" id="d-mar31">'+esc(t("mar31"))+'</button>'+
+    '<button type="button" class="btn btn-sm" id="d-csv">'+esc(t("export_csv"))+'</button>'+
+    '<button type="button" class="btn btn-sm" id="d-print">'+esc(t("print"))+"</button></div>"+
+    '<div class="twrap"><table class="grid"><tr><th>'+t("sno")+"</th><th>"+t("adm_no")+"</th><th>"+t("f_name")+
+    "</th><th>"+t("cls")+"-"+t("section")+"</th><th>"+t("dob")+"</th><th>"+t("age")+"</th><th>"+t("elig_band")+
+    "</th><th>"+t("elig")+"</th></tr><tbody id=\"d-rows\"></tbody></table></div></div>";
+  return h;
+}
+function afterDob(){
+  const draw=function(){
+    const asOf=$("d-asof").value||todayISO();dobAsOf=asOf;
+    $("d-rows").innerHTML=studentsOfAll().map(function(s,i){
+      const a=calcAge(s.dob,asOf),b=db().settings.ageBands[s.cls];
+      const bandTxt=b?(b.minY+t("years")+b.minM+t("months")+" – "+b.maxY+t("years")+b.maxM+t("months")):"—";
+      const el=b?('<span class="flag'+(inBand(a,b)?" okf":"")+'">'+(inBand(a,b)?esc(t("eligible")):esc(t("not_eligible")))+"</span>"):"—";
+      return "<tr><td class=\"num\">"+(i+1)+"</td><td>"+esc(s.admNo)+"</td><td>"+esc(s.name)+"</td><td class=\"num\">"+
+        esc(clsLabel(s.cls,s.section))+"</td><td>"+fmtDate(s.dob)+"</td><td class=\"num\">"+fmtAge(a)+"</td><td class=\"num\">"+
+        bandTxt+"</td><td class=\"num\">"+el+"</td></tr>";
+    }).join("")||'<tr><td colspan="8" class="muted">'+esc(t("no_records"))+"</td></tr>";
+  };
+  $("d-asof").onchange=draw;
+  $("d-today").onclick=function(){$("d-asof").value=todayISO();draw();};
+  $("d-mar31").onclick=function(){const y=String($("d-asof").value||todayISO()).slice(0,4);$("d-asof").value=y+"-03-31";draw();};
+  $("d-csv").onclick=function(){downloadFile("dob-register.csv",exportCSV("dob",dobAsOf),"text/csv;charset=utf-8");};
+  $("d-print").onclick=function(){doPrint(dobPrintHTML(dobAsOf));};
+  draw();
+}
+
+/* ================= MODULE 3: exams & marks ================= */
+let examSubjects=[{name:"",max:""}];
+function viewExam(){
+  let h='<div class="card"><h2>'+esc(t("exam_title"))+'</h2><div id="e-msg"></div><div class="grid2">'+
+    fld("year",'<input id="e-year" inputmode="numeric" value="'+new Date().getFullYear()+'">')+
+    fld("term",'<select id="e-term"><option value="mid">'+esc(t("mid"))+'</option><option value="final">'+esc(t("final"))+'</option></select>')+
+    fld("cls",'<input id="e-cls">')+fld("section",'<input id="e-sec">',1)+"</div>"+
+    '<p class="muted" id="e-boardnote" style="display:none">🏛 '+esc(t("board_note"))+'</p>'+
+    '<h3>'+esc(t("subjects"))+'</h3><div id="e-subs"></div>'+
+    '<button type="button" class="btn btn-sm" id="e-addsub">+ '+esc(t("add_subject"))+'</button> '+
+    '<button type="button" class="btn btn-primary" id="e-create">'+esc(t("add_exam"))+"</button></div>";
+  h+='<div class="card"><div class="toolbar"><div class="field" style="margin:0;min-width:200px"><label>'+esc(t("select_exam"))+'</label>'+
+    '<select id="e-pick">'+db().exams.map(function(ex){
+      return '<option value="'+ex.id+'"'+(curExamId===ex.id?" selected":"")+'>'+esc(ex.name+" ("+(ex.year||"")+", "+clsLabel(ex.cls,ex.section)+")")+"</option>";
+    }).join("")+'</select></div>'+
+    '<button type="button" class="btn btn-sm btn-danger" id="e-delexam">'+esc(t("del"))+'</button>'+
+    '<button type="button" class="btn btn-sm" id="e-csv">'+esc(t("export_csv"))+'</button>'+
+    '<button type="button" class="btn btn-sm" id="e-award">'+esc(t("award_list"))+"</button></div>"+
+    '<div id="e-grid"></div><div id="e-awardbox" style="margin-top:1rem"></div></div>';
+  return h;
+}
+function drawExamSubs(){
+  $("e-subs").innerHTML=examSubjects.map(function(s,i){
+    return '<div class="toolbar"><input class="search" data-sn="'+i+'" placeholder="'+esc(t("subject_name"))+'" value="'+esc(s.name)+'">'+
+      '<input data-sm="'+i+'" inputmode="numeric" placeholder="'+esc(t("max_marks"))+'" value="'+esc(s.max)+'" style="width:110px;padding:.6rem;min-height:44px;border:1px solid var(--line);border-radius:8px">'+
+      (examSubjects.length>1?'<button type="button" class="btn btn-sm btn-danger" data-sdel="'+i+'">×</button>':"")+"</div>";
+  }).join("");
+  Array.prototype.forEach.call(document.querySelectorAll("[data-sn]"),function(inp){
+    inp.oninput=function(){examSubjects[+inp.getAttribute("data-sn")].name=inp.value;};});
+  Array.prototype.forEach.call(document.querySelectorAll("[data-sm]"),function(inp){
+    inp.oninput=function(){examSubjects[+inp.getAttribute("data-sm")].max=inp.value;};});
+  Array.prototype.forEach.call(document.querySelectorAll("[data-sdel]"),function(b){
+    b.onclick=function(){examSubjects.splice(+b.getAttribute("data-sdel"),1);drawExamSubs();};});
+}
+function afterExam(){
+  if(!curExamId&&db().exams.length)curExamId=db().exams[0].id;
+  drawExamSubs();
+  const paintTerms=function(){
+    const bc=isBoardClass($("e-cls").value);
+    $("e-term").innerHTML='<option value="mid">'+esc(t("mid"))+'</option>'+(bc?"":'<option value="final">'+esc(t("final"))+'</option>');
+    if(bc)$("e-term").value="mid";
+    const bn=$("e-boardnote");if(bn)bn.style.display=bc?"":"none";
+  };
+  $("e-cls").addEventListener("input",paintTerms);paintTerms();
+  $("e-addsub").onclick=function(){examSubjects.push({name:"",max:""});drawExamSubs();};
+  $("e-create").onclick=function(){
+    const r=addExam({name:"",year:$("e-year").value,term:$("e-term").value,cls:$("e-cls").value,section:$("e-sec").value,subjects:examSubjects});
+    if(!r.ok){$("e-msg").innerHTML='<div class="msg err">'+esc(r.error)+"</div>";return;}
+    examSubjects=[{name:"",max:""}];curExamId=r.exam.id;render();
+  };
+  const pk=$("e-pick");
+  pk.onchange=function(){curExamId=pk.value;render();};
+  $("e-delexam").onclick=function(){if(curExamId&&confirm(t("confirm_del"))){deleteExam(curExamId);curExamId=null;render();}};
+  $("e-csv").onclick=function(){if(curExamId)downloadFile("marks.csv",exportCSV("marks",curExamId),"text/csv;charset=utf-8");};
+  $("e-award").onclick=function(){
+    if(!curExamId)return;
+    $("e-awardbox").innerHTML=awardSheetHTML(curExamId)+
+      '<div class="toolbar"><button type="button" class="btn btn-sm" id="e-awardprint">'+esc(t("print"))+'</button> '+
+      '<button type="button" class="btn btn-sm" id="e-awardcsv">'+esc(t("export_csv"))+"</button></div>";
+    $("e-awardprint").onclick=function(){doPrint(awardListPrintHTML(curExamId));};
+    $("e-awardcsv").onclick=function(){downloadFile("award-list.csv",exportCSV("award",curExamId),"text/csv;charset=utf-8");};
+  };
+  drawGrid();
+}
+function drawGrid(){
+  const box=$("e-grid");if(!box)return;
+  const ex=db().exams.find(function(e){return e.id===curExamId;});
+  if(!ex){box.innerHTML='<p class="muted">'+esc(t("no_records"))+"</p>";return;}
+  const studs=studentsOf(ex.cls,ex.section);
+  if(!studs.length){box.innerHTML='<p class="muted">'+esc(t("no_records"))+"</p>";return;}
+  const saved=db().marks[ex.id]||{};
+  let h='<div id="e-gmsg"></div><h3>'+esc(ex.name)+'</h3><div class="twrap"><table class="grid"><tr><th>'+t("sno")+"</th><th>"+
+    t("f_name")+"</th>"+ex.subjects.map(function(s){return '<th class="num">'+esc(s.name)+"<br>("+s.max+")</th>";}).join("")+
+    '<th class="num">'+t("total")+"</th></tr>";
+  studs.forEach(function(st,i){
+    const m=saved[st.id]||{};
+    h+="<tr><td class=\"num\">"+(i+1)+"</td><td><div class=\"idrow\">"+studentPhotoHTML(st,36)+
+      "<span><b>"+esc(displayName(st))+"</b><br><span class=\"muted\">"+esc(st.admNo)+"</span></span></div></td>";
+    ex.subjects.forEach(function(sj,j){
+      const v=m[sj.name];h+='<td class="num"><input class="cell" data-st="'+st.id+'" data-sj="'+esc(sj.name)+'" data-max="'+sj.max+
+        '" data-r="'+i+'" data-c="'+j+'" inputmode="numeric" value="'+(v==null?"":v)+'"></td>';
+    });
+    h+='<td class="num" data-rowtot="'+st.id+'">—</td></tr>';
+  });
+  h+='<tr class="totalrow"><td></td><td>'+esc(t("col_total"))+"</td>"+
+    ex.subjects.map(function(sj){return '<td class="num" data-coltot="'+esc(sj.name)+'">—</td>';}).join("")+"<td></td></tr></table></div>"+
+    '<button type="button" class="btn btn-primary" id="e-save">'+esc(t("save"))+"</button>";
+  box.innerHTML=h;
+  const cells=Array.prototype.slice.call(box.querySelectorAll("input.cell"));
+  const live=function(){
+    const rt={},ct={};
+    cells.forEach(function(c){
+      const v=Number(c.value);
+      if(c.value!==""&&isFinite(v)){rt[c.getAttribute("data-st")]=(rt[c.getAttribute("data-st")]||0)+v;
+        ct[c.getAttribute("data-sj")]=(ct[c.getAttribute("data-sj")]||0)+v;}
+    });
+    Array.prototype.forEach.call(box.querySelectorAll("[data-rowtot]"),function(td){
+      td.textContent=rt[td.getAttribute("data-rowtot")]||"—";});
+    Array.prototype.forEach.call(box.querySelectorAll("[data-coltot]"),function(td){
+      td.textContent=ct[td.getAttribute("data-coltot")]||"—";});
+  };
+  cells.forEach(function(c){c.oninput=function(){c.classList.remove("bad");live();};});
+  live();
+  /* keyboard: Tab moves across (native), Enter moves down one row, same subject */
+  box.addEventListener("keydown",function(e){
+    if(e.key!=="Enter")return;
+    const tg=e.target;
+    if(!tg.classList||!tg.classList.contains("cell"))return;
+    e.preventDefault();
+    const nx=box.querySelector('input.cell[data-r="'+(+tg.getAttribute("data-r")+1)+'"][data-c="'+tg.getAttribute("data-c")+'"]');
+    if(nx)nx.focus();else{const sv=$("e-save");if(sv)sv.focus();}
+  });
+  $("e-save").onclick=function(){
+    /* two-pass: validate everything first, save nothing until all valid */
+    const errs=[];
+    cells.forEach(function(c){
+      const r=String(c.value).trim(),mx=Number(c.getAttribute("data-max"));
+      let e=null;
+      if(r==="")e=t("v_required");
+      else{const v=Number(r);if(!isFinite(v))e=t("v_number");else if(v<0||v>mx)e=t("v_range")+" "+mx+".";}
+      if(e){errs.push(e);c.classList.add("bad");}
+    });
+    if(errs.length){$("e-gmsg").innerHTML='<div class="msg err">'+esc(t("v_fix"))+" ("+errs.length+")</div>";return;}
+    cells.forEach(function(c){setMark(ex.id,c.getAttribute("data-st"),c.getAttribute("data-sj"),c.value);});
+    Store.save();
+    const ex2=db().exams.find(function(e){return e.id===ex.id;});
+    audit("save-marks",ex2.name+": "+cells.length+" cells");
+    $("e-gmsg").innerHTML='<div class="msg okm">'+esc(t("v_saved"))+"</div>";
+  };
+}
+
+/* ================= i18n additions: student-centric dossier ================= */
+Object.assign(T,{
+dossier:{en:"Student dossier",ur:"طالب علم کا مکمل ریکارڈ"},
+directory:{en:"Student directory",ur:"طلبہ کی فہرست"},
+open_dossier:{en:"Open full record",ur:"مکمل ریکارڈ کھولیں"},
+back:{en:"Back to list",ur:"فہرست پر واپس"},
+timeline:{en:"Exams & results timeline",ur:"امتحانات و نتائج کی ترتیب"},
+year:{en:"Year",ur:"سال"},
+no_exams_yet:{en:"No exams recorded for this student yet.",ur:"اس طالب علم کا ابھی کوئی امتحان درج نہیں۔"},
+filter_cls:{en:"Class",ur:"جماعت"},
+filter_sec:{en:"Section",ur:"سیکشن"},
+all:{en:"All",ur:"تمام"},
+print_dossier:{en:"Print full record",ur:"مکمل ریکارڈ پرنٹ کریں"},
+sec_admission:{en:"Admission",ur:"داخلہ"},
+sec_profile:{en:"Profile",ur:"کوائف"},
+sec_dob:{en:"Date of birth",ur:"تاریخ پیدائش"},
+tap_hint:{en:"Tap a student to open their complete record.",ur:"مکمل ریکارڈ کھولنے کے لیے طالب علم پر ٹیپ کریں۔"},
+print_all_cards:{en:"Print all cards (batch)",ur:"تمام کارڈ پرنٹ کریں"},
+print_one_card:{en:"Print result card",ur:"رزلٹ کارڈ پرنٹ کریں"},
+logo:{en:"School logo (optional)",ur:"اسکول کا لوگو (اختیاری)"},
+upload_logo:{en:"Upload logo",ur:"لوگو اپ لوڈ کریں"},
+remove_logo:{en:"Remove logo",ur:"لوگو ہٹائیں"},
+logo_big:{en:"Logo too large — please use an image under 300 KB.",ur:"لوگو بہت بڑا ہے — 300 KB سے چھوٹی تصویر استعمال کریں۔"},
+pin:{en:"Result PIN (optional, for future parent portal)",ur:"رزلٹ کا خفیہ نمبر (اختیاری)"},
+pin_ph:{en:"Leave blank for none",ur:"خالی چھوڑیں"},
+});
+
+/* ================= i18n additions: bilingual print + bulk import ================= */
+Object.assign(T,{
+/* bilingual print labels (Urdu + English together on cards & broadsheet) */
+bl_name:{en:"Name",ur:"نام"},
+bl_father:{en:"Father's Name",ur:"ولدیت"},
+bl_admno:{en:"Adm. No",ur:"داخلہ نمبر"},
+bl_class:{en:"Class",ur:"جماعت"},
+bl_dob:{en:"Date of Birth",ur:"تاریخ پیدائش"},
+bl_subject:{en:"Subject",ur:"مضمون"},
+bl_max:{en:"Max Marks",ur:"کل نمبرات"},
+bl_obtained:{en:"Obtained",ur:"حاصل کردہ"},
+bl_total:{en:"Total",ur:"کل میزان"},
+bl_pct:{en:"Percentage",ur:"فیصد"},
+bl_grade:{en:"Grade",ur:"گریڈ"},
+bl_division:{en:"Division",ur:"ڈویژن"},
+bl_position:{en:"Position",ur:"پوزیشن"},
+bl_result:{en:"Result",ur:"نتیجہ"},
+bl_pass:{en:"Pass",ur:"پاس"},
+bl_fail:{en:"Fail",ur:"فیل"},
+bl_remarks:{en:"Remarks",ur:"ریمارکس"},
+bl_card:{en:"Report Card",ur:"رزلٹ کارڈ"},
+bl_broadsheet:{en:"Broadsheet",ur:"براڈ شیٹ"},
+bl_sno:{en:"S.No",ur:"نمبر شمار"},
+bl_sig_t:{en:"Class Teacher",ur:"جماعت کے استاد"},
+bl_sig_p:{en:"Parent",ur:"والدین"},
+bl_sig_pr:{en:"Principal",ur:"پرنسپل"},
+bl_mid:{en:"Mid-Term",ur:"مڈ ٹرم"},
+bl_final:{en:"Final-Term",ur:"فائنل ٹرم"},
+/* bulk CSV import + register photo helper */
+imp_title:{en:"Bulk import from register",ur:"رجسٹر سے اکٹھا اندراج"},
+dl_template:{en:"Download template",ur:"نمونے والی فائل ڈاؤن لوڈ کریں"},
+import_csv:{en:"Import CSV",ur:"CSV درآمد کریں"},
+imp_bad_date:{en:"bad date (use YYYY-MM-DD)",ur:"تاریخ غلط ہے (YYYY-MM-DD لکھیں)"},
+imp_bad_gender:{en:"gender must be Boy or Girl",ur:"صنف صرف لڑکا یا لڑکی ہو"},
+imp_dup_in_file:{en:"duplicate of another row in this file",ur:"اسی فائل کی ایک اور قطار سے ملتا ہے"},
+imp_row:{en:"row",ur:"قطار"},
+imp_ok:{en:"students imported from CSV",ur:"طلبہ CSV سے داخل ہو گئے"},
+imp_none:{en:"No rows imported — fix the errors below and try again.",ur:"کوئی اندراج نہیں ہوا — نیچے دی گئی غلطیاں درست کر کے دوبارہ کوشش کریں۔"},
+reg_photo:{en:"Register page photo",ur:"رجسٹر کے صفحے کی تصویر"},
+attach_photo:{en:"Attach register page photo",ur:"رجسٹر کے صفحے کی تصویر لگائیں"},
+photo_hint:{en:"The photo stays pinned here — read the register and type each row without switching apps.",ur:"تصویر یہیں لگی رہے گی — رجسٹر دیکھیں اور ہر قطار یہیں درج کریں، ایپ بدلنے کی ضرورت نہیں۔"},
+photo_big:{en:"Photo too large — please use an image under 300 KB.",ur:"تصویر بہت بڑی ہے — 300 KB سے چھوٹی تصویر استعمال کریں۔"},
+photo_remove:{en:"Remove photo",ur:"تصویر ہٹائیں"},
+lens_tip:{en:"Tip: open the photo in Google Lens (or your phone camera's text-copy) to copy text from the page, then paste it into these fields.",ur:"مشورہ: تصویر Google Lens میں کھولیں (یا اپنے فون کے کیمرے سے متن کاپی کریں)، صفحے کا متن کاپی کر کے ان خانوں میں پیسٹ کر دیں۔"},
+next_student:{en:"Saved. Enter the next student from the register.",ur:"محفوظ ہو گیا۔ رجسٹر سے اگلا طالب علم درج کریں۔"},
+fast_entry:{en:"Fast entry: after saving, the form stays open with your photo pinned.",ur:"تیز اندراج: محفوظ کرنے کے بعد فارم کھلا رہے گا اور تصویر لگی رہے گی۔"},
+});
+
+/* ================= i18n additions: scan register page ================= */
+Object.assign(T,{
+scan_title:{en:"Scan register page",ur:"رجسٹر کا صفحہ اسکین کریں"},
+scan_btn:{en:"Scan register page",ur:"رجسٹر کا صفحہ اسکین کریں"},
+scan_hint:{en:"Take a clear photo of the register page in good light. Text is read on your phone — nothing is uploaded.",ur:"اچھی روشنی میں رجسٹر کے صفحے کی واضح تصویر لیں۔ متن آپ کے فون پر ہی پڑھا جاتا ہے — کچھ بھی اپ لوڈ نہیں ہوتا۔"},
+scan_cleaning:{en:"Cleaning image…",ur:"تصویر صاف کی جا رہی ہے…"},
+scan_reading:{en:"Reading text…",ur:"متن پڑھا جا رہا ہے…"},
+scan_no_engine:{en:"Offline text reading isn't bundled in this file yet. The enhanced photo is below — pin it for fast entry, or copy text with Google Lens.",ur:"آف لائن متن پڑھنے والا انجن اس فائل میں شامل نہیں ہے۔ بہتر کی گئی تصویر نیچے ہے — تیز اندراج کے لیے لگائیں یا Google Lens سے متن کاپی کریں۔"},
+scan_pin:{en:"Pin photo for fast entry",ur:"تیز اندراج کے لیے تصویر لگائیں"},
+scan_review:{en:"Review — tap amber fields to correct",ur:"جائزہ — پیلے خانوں پر ٹیپ کر کے درست کریں"},
+scan_rows_found:{en:"rows read",ur:"قطاریں پڑھی گئیں"},
+scan_batch:{en:"for all rows",ur:"تمام قطاروں کے لیے"},
+scan_unread:{en:"Could not read — type these manually",ur:"پڑھا نہ جا سکا — انہیں خود درج کریں"},
+scan_save_all:{en:"Save all to records",ur:"تمام ریکارڈ محفوظ کریں"},
+scan_none:{en:"No text rows found. Try better light or a closer photo.",ur:"کوئی متن نہ ملا۔ بہتر روشنی یا قریب سے تصویر آزمائیں۔"},
+scan_saved:{en:"students saved from scan",ur:"طلبہ اسکین سے محفوظ ہو گئے"},
+});
+
+/* ================= i18n additions: voice entry ================= */
+Object.assign(T,{
+mic_hint:{en:"Voice typing — tap and speak",ur:"آواز سے لکھیں — ٹیپ کریں اور بولیں"},
+mic_nosupport:{en:"Voice typing isn't supported in this browser. Please type instead.",ur:"اس براؤزر میں آواز سے لکھنا ممکن نہیں۔ براہ کرم خود لکھیں۔"},
+mic_listening:{en:"Listening… speak now",ur:"سن رہے ہیں… بولیں"},
+mic_err_perm:{en:"Microphone is blocked. Allow microphone permission for this page, then tap the mic again.",ur:"مائیکروفون بند ہے۔ اس صفحے کے لیے مائیکروفون کی اجازت دیں، پھر مائیک پر دوبارہ ٹیپ کریں۔"},
+mic_err_nospeech:{en:"Didn't hear anything. Tap the mic and speak clearly.",ur:"کچھ سنائی نہیں دیا۔ مائیک پر ٹیپ کریں اور صاف بولیں۔"},
+mic_err_net:{en:"Voice typing needs internet while you speak. Check your connection and try again.",ur:"آواز سے لکھنے کے لیے بولتے وقت انٹرنیٹ چاہیے۔ کنکشن چیک کر کے دوبارہ کوشش کریں۔"},
+mic_err:{en:"Voice typing had a problem. Please try again or type.",ur:"آواز سے لکھنے میں مسئلہ ہوا۔ دوبارہ کوشش کریں یا خود لکھیں۔"},
+merge:{en:"Receive from another phone",ur:"دوسرے فون سے ڈیٹا لیں"},
+merge_hint:{en:"Safe merge: adds new records and fills empty fields. Never deletes or overwrites your data.",ur:"محفوظ انضمام: نیا ریکارڈ شامل کرتا ہے اور خالی خانے بھرتا ہے۔ آپ کا ڈیٹا کبھی حذف یا تبدیل نہیں ہوتا۔"},
+merge_bad:{en:"This file is not a valid school backup.",ur:"یہ فائل درست اسکول بیک اپ نہیں ہے۔"},
+merge_report:{en:"Merge complete",ur:"انضمام مکمل"},
+mg_students:{en:"new students",ur:"نئے طلبہ"},
+mg_exams:{en:"new exams",ur:"نئے امتحانات"},
+mg_marks:{en:"marks filled",ur:"نمبر بھرے گئے"},
+mg_certs:{en:"new certificates",ur:"نئے سرٹیفکیٹ"},
+mg_lab:{en:"new lab items",ur:"نئی لیب اشیاء"},
+mg_filled:{en:"empty fields filled",ur:"خالی خانے بھرے گئے"},
+mg_newadm:{en:"students received new admission numbers (their old numbers already existed here)",ur:"طلبہ کو نئے داخلہ نمبر ملے (ان کے پرانے نمبر یہاں پہلے سے موجود تھے)"},
+mg_conflicts:{en:"not merged",ur:"ضم نہیں ہوئے"},
+sum_appeared:{en:"Appeared",ur:"حاضر ہوئے"},
+sum_passed:{en:"Passed",ur:"کامیاب"},
+sum_failed:{en:"Failed",ur:"ناکام"},
+sum_passpct:{en:"Pass %",ur:"پاس فیصد"},
+sum_pending:{en:"Marks pending",ur:"نمبر باقی"},
+show_more:{en:"Show more",ur:"مزید دکھائیں"},
+today:{en:"Today",ur:"آج"},
+mar31:{en:"31 March",ur:"31 مارچ"},
+board_term_err:{en:"Classes 8th–10th take only the mid-term exam in school — their final exam is the board exam.",ur:"8ویں تا 10ویں جماعت کا اسکول میں صرف ششماہی امتحان ہوتا ہے — سالانہ امتحان بورڈ کا ہوتا ہے۔"},
+board_note:{en:"Board class: only the mid-term (ششماہی) exam is held in school; the final exam is taken by the board.",ur:"بورڈ جماعت: اسکول میں صرف ششماہی امتحان ہوتا ہے؛ سالانہ امتحان بورڈ لیتا ہے۔"},
+restore_warn:{en:"Replace ALL data on this phone with the backup file? Your current entries will be lost. To combine two phones safely, use 'Receive from another phone' instead.",ur:"کیا اس فون کا تمام ڈیٹا بیک اپ فائل سے بدل دیں؟ آپ کی موجودہ اندراجات ختم ہو جائیں گی۔ دو فونز کو محفوظ طریقے سے ملانے کے لیے 'دوسرے فون سے ڈیٹا لیں' استعمال کریں۔"},
+device_name:{en:"This phone's name",ur:"اس فون کا نام"},
+device_ph:{en:"e.g. Jumran's phone",ur:"مثلاً جمراں کا فون"},
+snapshots:{en:"Safety copies",ur:"حفاظتی کاپیاں"},
+snap_hint:{en:"Automatic backup copies of all your data, kept inside this app. One is saved every day, plus one before any restore, merge or erase.",ur:"آپ کے تمام ڈیٹا کی خودکار حفاظتی کاپیاں، اسی ایپ میں محفوظ۔ روزانہ ایک کاپی، اور بحالی، انضمام یا صفائی سے پہلے ایک کاپی بنتی ہے۔"},
+snap_r_auto:{en:"Automatic daily copy",ur:"خودکار روزانہ کاپی"},
+snap_r_brestore:{en:"Before full restore",ur:"مکمل بحالی سے پہلے"},
+snap_r_bmerge:{en:"Before phone merge",ur:"فون انضمام سے پہلے"},
+snap_r_bwipe:{en:"Before erase",ur:"صاف کرنے سے پہلے"},
+snap_restore_confirm:{en:"Restore this safety copy? Current data will be replaced (a copy of it is saved first).",ur:"کیا یہ حفاظتی کاپی بحال کریں؟ موجودہ ڈیٹا بدل جائے گا (اس کی کاپی پہلے محفوظ ہو جائے گی)۔"},
+mic_note:{en:"Note: voice typing uses your phone's speech service and needs internet while you speak. Everything else in this app works fully offline.",ur:"نوٹ: آواز سے لکھنا آپ کے فون کی اسپیچ سروس استعمال کرتا ہے اور بولتے وقت انٹرنیٹ چاہیے۔ ایپ کی باقی تمام چیزیں مکمل آف لائن چلتی ہیں۔"},
+});
+
+/* ================= i18n additions: promotion + dashboard ================= */
+Object.assign(T,{
+promote_title:{en:"Promote class (new session)",ur:"جماعت ترقی دیں (نیا سیشن)"},
+promote_hint:{en:"Move every student of a class/section to the next class in one tap. Admission numbers never change; each record keeps a promotion entry in its history.",ur:"ایک ٹیپ میں پوری جماعت/سیکشن کے طلبہ اگلی جماعت میں منتقل کریں۔ داخلہ نمبر نہیں بدلیں گے؛ ہر ریکارڈ کی ہسٹری میں ترقی کا اندراج ہوگا۔"},
+promote_from:{en:"From",ur:"از"},
+promote_to:{en:"To",ur:"تک"},
+promote_btn:{en:"Promote class",ur:"جماعت ترقی دیں"},
+promote_sure:{en:"Confirm promotion?",ur:"ترقی کی تصدیق کریں؟"},
+promote_yes:{en:"Yes, promote",ur:"جی ہاں، ترقی دیں"},
+promote_done:{en:"students promoted",ur:"طلبہ ترقی پا گئے"},
+promoted:{en:"promoted",ur:"ترقی"},
+});
+
+/* ================= i18n additions: certificates ================= */
+Object.assign(T,{
+nav_cert:{en:"Certificates",ur:"سرٹیفکیٹس"},
+cert_title:{en:"Certificates Register",ur:"سرٹیفکیٹ رجسٹر"},
+cert_slc:{en:"School Leaving Certificate",ur:"اسکول لیونگ سرٹیفکیٹ"},
+cert_prov:{en:"Provisional Certificate",ur:"عارضی سرٹیفکیٹ"},
+cert_issue:{en:"Issue certificate",ur:"سرٹیفکیٹ جاری کریں"},
+cert_type:{en:"Certificate type",ur:"سرٹیفکیٹ کی قسم"},
+cert_issue_date:{en:"Issue date",ur:"تاریخ اجراء"},
+cert_reason:{en:"Reason for leaving",ur:"اسکول چھوڑنے کی وجہ"},
+cert_reason_ph:{en:"e.g. Family moved to another city",ur:"مثلاً خاندان دوسرے شہر منتقل ہو گیا"},
+cert_remarks:{en:"Conduct / character remarks",ur:"چال چلن کے بارے میں"},
+cert_serial:{en:"Serial no",ur:"سیریل نمبر"},
+cert_void:{en:"Void",ur:"منسوخ کریں"},
+cert_voided:{en:"Voided",ur:"منسوخ شدہ"},
+cert_status:{en:"Status",ur:"حیثیت"},
+cert_issued:{en:"Issued",ur:"جاری شدہ"},
+cert_reprint:{en:"Reprint",ur:"دوبارہ پرنٹ"},
+cert_student_certs:{en:"Issued certificates",ur:"جاری شدہ سرٹیفکیٹس"},
+cert_issued_ok:{en:"Certificate issued",ur:"سرٹیفکیٹ جاری ہو گیا"},
+cert_last_class:{en:"Class last attended",ur:"آخری جماعت"},
+bl_cert:{en:"Certificate",ur:"سرٹیفکیٹ"},
+bl_slc:{en:"School Leaving Certificate",ur:"اسکول لیونگ سرٹیفکیٹ"},
+bl_prov:{en:"Provisional Certificate",ur:"عارضی سرٹیفکیٹ"},
+bl_issue_date:{en:"Issue Date",ur:"تاریخ اجراء"},
+bl_admdate:{en:"Date of Admission",ur:"تاریخ داخلہ"},
+bl_reason:{en:"Reason for Leaving",ur:"جانے کی وجہ"},
+bl_serial:{en:"Serial No",ur:"سیریل نمبر"},
+bl_age:{en:"Age",ur:"عمر"},
+});
+
+/* ================= i18n additions: award list + photos + scan paste (round 3) ================= */
+Object.assign(T,{
+award_list:{en:"Award list",ur:"انعامی فہرست"},
+pass_marks:{en:"Pass marks",ur:"پاس نمبر"},
+photo:{en:"Photo",ur:"تصویر"},
+capture_photo:{en:"Capture photo",ur:"تصویر بنائیں"},
+photo_change:{en:"Change photo",ur:"تصویر تبدیل کریں"},
+photo_saved:{en:"Photo saved.",ur:"تصویر محفوظ ہو گئی۔"},
+photo_quota:{en:"Storage full — photo not saved. Remove some photos or take a JSON backup first.",ur:"اسٹوریج بھر گئی — تصویر محفوظ نہیں ہوئی۔ کچھ تصاویر ہٹائیں یا پہلے JSON بیک اپ لے لیں۔"},
+photo_hint2:{en:"Teachers can capture each student's photo on the phone — it helps recognize students, especially those with the same name.",ur:"اساتذہ ہر طالب علم کی تصویر فون سے بنا سکتے ہیں — اس سے طلبہ پہچاننے میں آسانی ہوتی ہے، خاص طور پر ایک جیسے نام والوں کی۔"},
+storage_title:{en:"Storage usage",ur:"اسٹوریج کا استعمال"},
+storage_note:{en:"Photos are stored inside this app on your phone. If storage fills up, remove photos or take a JSON backup first.",ur:"تصاویر اس ایپ کے اندر آپ کے فون پر محفوظ ہوتی ہیں۔ اسٹوریج بھر جائے تو تصاویر ہٹائیں یا پہلے JSON بیک اپ لے لیں۔"},
+scan_paste_title:{en:"Or paste copied text",ur:"یا کاپی شدہ متن پیسٹ کریں"},
+scan_paste_ph:{en:"Copy text from the register photo with Google Lens, then paste it here…",ur:"رجسٹر کی تصویر کا متن Google Lens سے کاپی کر کے یہاں پیسٹ کریں…"},
+scan_paste_btn:{en:"Read pasted text",ur:"پیسٹ شدہ متن پڑھیں"},
+scan_paste_empty:{en:"Paste the copied text first.",ur:"پہلے کاپی شدہ متن پیسٹ کریں۔"},
+bl_award:{en:"Award List",ur:"انعامی فہرست"},
+bl_passmarks:{en:"Pass marks",ur:"پاس نمبر"},
+bl_remarks:{en:"Remarks",ur:"ریمارکس"},
+bl_sig_prepared:{en:"Prepared by",ur:"تیار کنندہ"},
+bl_sig_checked:{en:"Checked by",ur:"تصدیق کنندہ"},
+});
+
+/* ================= IDENTITY RULE =================
+   Student recognition ALWAYS uses name + father's name TOGETHER.
+   displayName() is the single helper for every identity surface:
+   directory rows, search results, dossier headers, marks grid labels.
+   The admission number stays the unique key underneath. */
+function displayName(st){return st.name+" — "+st.fatherName;}
+
+/* ================= MODULE 4: result register ================= */
+function viewResult(){
+  let h='<div class="card"><h2>'+esc(t("res_title"))+'</h2><div class="toolbar">'+
+    '<div class="field" style="margin:0;min-width:200px"><label>'+esc(t("select_exam"))+'</label>'+
+    '<select id="r-pick">'+db().exams.map(function(ex){
+      return '<option value="'+ex.id+'"'+(curResExamId===ex.id?" selected":"")+'>'+esc(ex.name+" ("+(ex.year||"")+", "+clsLabel(ex.cls,ex.section)+")")+"</option>";
+    }).join("")+'</select></div>'+
+    '<button type="button" class="btn btn-sm" id="r-csv">'+esc(t("export_csv"))+'</button>'+
+    '<button type="button" class="btn btn-sm" id="r-print">'+esc(t("print"))+'</button>'+
+    '<button type="button" class="btn btn-sm" id="r-award">'+esc(t("award_list"))+'</button>'+
+    '<button type="button" class="btn btn-sm btn-primary" id="r-batch">'+esc(t("print_all_cards"))+"</button></div>"+
+    '<div id="r-sheet"></div><div id="r-awardbox" style="margin-top:1rem"></div></div>';
+  h+='<div class="card"><h3>'+esc(t("report_card"))+'</h3><div class="toolbar">'+
+    '<div class="field" style="margin:0;min-width:200px"><label>'+esc(t("f_name"))+'</label><select id="r-stu"></select></div>'+
+    '<button type="button" class="btn btn-sm btn-primary" id="r-card">'+esc(t("view"))+'</button></div>'+
+    '<div id="r-cardbox"></div></div>';
+  return h;
+}
+function afterResult(){
+  if(!curResExamId&&db().exams.length)curResExamId=db().exams[0].id;
+  const pk=$("r-pick");
+  const drawSheet=function(){
+    const ex=db().exams.find(function(e){return e.id===curResExamId;});
+    const box=$("r-sheet");
+    if(!ex){box.innerHTML='<p class="muted">'+esc(t("no_records"))+"</p>";return;}
+    const rows=computeResult(ex.id);
+    const done=rows.filter(function(r){return r.complete;});
+    const passed=done.filter(function(r){return r.pass;}).length;
+    const failed=done.length-passed;
+    const passPct=done.length?Math.round(passed/done.length*100):0;
+    let h='<h3>'+esc(ex.name)+'</h3>'+
+      '<p class="muted">'+esc(t("sum_appeared"))+": <b>"+done.length+"</b> • "+
+      esc(t("sum_passed"))+": <b>"+passed+"</b> • "+esc(t("sum_failed"))+": <b>"+failed+"</b> • "+
+      esc(t("sum_passpct"))+": <b>"+passPct+"%</b>"+
+      (rows.length>done.length?" • "+esc(t("sum_pending"))+": <b>"+(rows.length-done.length)+"</b>":"")+"</p>"+
+      '<div class="twrap"><table class="grid"><tr><th>'+t("sno")+"</th><th>"+t("f_name")+
+      "</th>"+ex.subjects.map(function(s){return '<th class="num">'+esc(s.name)+"</th>";}).join("")+
+      '<th class="num">'+t("total")+'</th><th class="num">'+t("percentage")+'</th><th class="num">'+t("grade")+
+      '</th><th class="num">'+t("division")+'</th><th class="num">'+t("position")+'</th><th class="num">'+t("result")+"</th></tr>";
+    rows.forEach(function(r,i){
+      h+="<tr><td class=\"num\">"+(i+1)+"</td><td><b>"+esc(displayName(r.student))+"</b><br><span class=\"muted\">"+esc(r.student.admNo)+"</span></td>";
+      ex.subjects.forEach(function(sj){h+='<td class="num">'+(r.per[sj.name]==null?"—":r.per[sj.name])+"</td>";});
+      h+='<td class="num"><b>'+(r.complete?r.total:"—")+'</b></td><td class="num">'+(r.pct==null?"—":r.pct.toFixed(1)+"%")+
+        '</td><td class="num">'+r.grade+'</td><td class="num">'+r.division+'</td><td class="num">'+(r.position==null?"—":r.position)+
+        '</td><td class="num">'+(r.pass==null?"—":(r.pass?esc(t("pass")):esc(t("fail"))))+"</td></tr>";
+    });
+    box.innerHTML=h+"</table></div>";
+    const incomplete=rows.filter(function(r){return !r.complete;}).length;
+    if(incomplete)box.innerHTML+='<p class="muted">⚠ '+incomplete+" / "+rows.length+"</p>";
+    const st=$("r-stu");
+    st.innerHTML=rows.map(function(r){return '<option value="'+r.student.id+'">'+esc(displayName(r.student)+" ("+r.student.admNo+")")+"</option>";}).join("");
+  };
+  pk.onchange=function(){curResExamId=pk.value;drawSheet();};
+  $("r-csv").onclick=function(){if(curResExamId)downloadFile("results.csv",exportCSV("results",curResExamId),"text/csv;charset=utf-8");};
+  $("r-print").onclick=function(){if(curResExamId)doPrint(broadsheetPrintHTML(curResExamId));};
+  $("r-award").onclick=function(){
+    if(!curResExamId)return;
+    $("r-awardbox").innerHTML=awardSheetHTML(curResExamId)+
+      '<div class="toolbar"><button type="button" class="btn btn-sm" id="r-awardprint">'+esc(t("print"))+'</button> '+
+      '<button type="button" class="btn btn-sm" id="r-awardcsv">'+esc(t("export_csv"))+"</button></div>";
+    $("r-awardprint").onclick=function(){doPrint(awardListPrintHTML(curResExamId));};
+    $("r-awardcsv").onclick=function(){downloadFile("award-list.csv",exportCSV("award",curResExamId),"text/csv;charset=utf-8");};
+  };
+  $("r-batch").onclick=function(){if(curResExamId)doPrint(reportCardsBatchHTML(curResExamId));};
+  $("r-card").onclick=function(){
+    const sid=$("r-stu").value;
+    $("r-cardbox").innerHTML=reportCardHTML(curResExamId,sid)+
+      '<div class="toolbar"><button type="button" class="btn btn-sm" id="r-cardprint">'+esc(t("print"))+"</button></div>";
+    $("r-cardprint").onclick=function(){doPrint(reportCardHTML(curResExamId,sid));};
+  };
+  drawSheet();
+}
+
+/* ================= MODULE 5: science lab ================= */
+const CATS=["equipment","chemical","glassware","other"];
+const CONDS=["good","fair","repair","dead"];
+function viewLab(){
+  let h='<div class="card"><h2>'+esc(t("reminders"))+"</h2><div id=\"lab-alerts\"></div></div>";
+  h+='<div class="card"><h2>'+esc(t("inventory"))+'</h2><div id="lab-msg"></div><div class="grid2">'+
+    fld("item_name",micField("l-name",'<input id="l-name">'))+
+    fld("category",'<select id="l-cat">'+CATS.map(function(c){return '<option value="'+c+'">'+esc(catName(c))+"</option>";}).join("")+"</select>")+
+    fld("qty",'<input id="l-qty" inputmode="numeric" value="0">')+
+    fld("unit",micField("l-unit",'<input id="l-unit" placeholder="pcs / kg / L">'))+
+    fld("condition",'<select id="l-cond">'+CONDS.map(function(c){return '<option value="'+c+'">'+esc(condName(c))+"</option>";}).join("")+"</select>")+
+    fld("min_stock",'<input id="l-min" inputmode="numeric" value="0">')+
+    fld("next_service",'<input id="l-ns" type="date">')+"</div>"+
+    '<button type="button" class="btn btn-primary" id="l-save">'+esc(t("add_item"))+"</button> "+
+    '<span id="l-editwrap" style="display:none"><button type="button" class="btn" id="l-cancel">'+esc(t("cancel"))+"</button></span>"+
+    micNoteHTML()+"</div>";
+  h+='<div class="card"><div class="toolbar">'+
+    '<button type="button" class="btn btn-sm" id="l-csv">'+esc(t("export_csv"))+'</button>'+
+    '<button type="button" class="btn btn-sm" id="l-print">'+esc(t("print"))+"</button></div>"+
+    '<div class="twrap"><table class="grid"><tr><th>'+t("sno")+"</th><th>"+t("item_name")+"</th><th>"+t("category")+
+    "</th><th class=\"num\">"+t("qty")+"</th><th>"+t("unit")+"</th><th>"+t("condition")+"</th><th class=\"num\">"+t("min_stock")+
+    "</th><th>"+t("next_service")+"</th><th>"+t("actions")+"</th></tr><tbody id=\"l-rows\"></tbody></table></div></div>";
+  h+='<div class="card"><h2>'+esc(t("maint_title"))+'</h2><div class="toolbar"><div class="field" style="margin:0;min-width:180px"><label>'+esc(t("item_name"))+'</label>'+
+    '<select id="m-item">'+db().labItems.map(function(it){return '<option value="'+it.id+'">'+esc(it.name)+"</option>";}).join("")+"</select></div>"+
+    '<div class="field" style="margin:0"><label>'+esc(t("maintenance"))+" — "+esc(t("dob"))+'</label><input id="m-date" type="date" value="'+todayISO()+'"></div></div>'+
+    '<div class="grid2">'+fld("issue",micField("m-issue",'<input id="m-issue">'))+fld("action_taken",micField("m-action",'<input id="m-action">'))+
+    fld("cost",'<input id="m-cost" inputmode="numeric" value="0">')+"</div>"+
+    '<button type="button" class="btn btn-primary" id="m-save">'+esc(t("add_maint"))+"</button> "+
+    '<button type="button" class="btn btn-sm" id="m-csv">'+esc(t("export_csv"))+"</button></div>";
+  h+='<div class="card"><h3>'+esc(t("total_cost"))+': Rs '+maintTotal()+'</h3><div class="twrap"><table class="grid"><tr><th>'+
+    t("sno")+"</th><th>"+t("maintenance")+"</th><th>"+t("item_name")+"</th><th>"+t("issue")+"</th><th>"+t("action_taken")+
+    "</th><th class=\"num\">"+t("cost")+"</th><th>"+t("actions")+"</th></tr><tbody id=\"m-rows\"></tbody></table></div></div>";
+  return h;
+}
+function afterLab(){
+  const drawAlerts=function(){
+    const al=labAlerts();
+    $("lab-alerts").innerHTML=
+      (al.low.length?'<div class="msg warnm"><b>'+esc(t("low_stock"))+":</b> "+al.low.map(function(it){return esc(it.name)+" ("+it.qty+" ≤ "+it.minStock+")";}).join(", ")+"</div>":"")+
+      (al.overdue.length?'<div class="msg err"><b>'+esc(t("overdue"))+":</b> "+al.overdue.map(function(it){return esc(it.name)+" ("+fmtDate(it.nextService)+")";}).join(", ")+"</div>":"")+
+      (!al.low.length&&!al.overdue.length?'<p class="muted">✓</p>':"");
+  };
+  const drawItems=function(){
+    $("l-rows").innerHTML=db().labItems.map(function(it,i){
+      const low=Number(it.qty)<=Number(it.minStock);
+      const od=it.nextService&&it.nextService<todayISO();
+      return "<tr><td class=\"num\">"+(i+1)+"</td><td>"+esc(it.name)+"</td><td>"+esc(catName(it.category))+
+        '</td><td class="num">'+(low?'<span class="flag">'+it.qty+"</span>":it.qty)+"</td><td>"+esc(it.unit)+"</td><td>"+esc(condName(it.condition))+
+        '</td><td class="num">'+it.minStock+"</td><td>"+(od?'<span class="flag">'+fmtDate(it.nextService)+"</span>":(it.nextService?fmtDate(it.nextService):"—"))+"</td>"+
+        '<td><button type="button" class="btn btn-sm" data-led="'+it.id+'">'+esc(t("edit"))+'</button> '+
+        '<button type="button" class="btn btn-sm btn-danger" data-ldel="'+it.id+'">'+esc(t("del"))+"</button></td></tr>";
+    }).join("")||'<tr><td colspan="9" class="muted">'+esc(t("no_records"))+"</td></tr>";
+    Array.prototype.forEach.call(document.querySelectorAll("[data-led]"),function(b){b.onclick=function(){labEditId=b.getAttribute("data-led");
+      const it=db().labItems.find(function(x){return x.id===labEditId;});
+      $("l-name").value=it.name;$("l-cat").value=it.category;$("l-qty").value=it.qty;$("l-unit").value=it.unit;
+      $("l-cond").value=it.condition;$("l-min").value=it.minStock;$("l-ns").value=it.nextService||"";
+      $("l-save").textContent=t("save");$("l-editwrap").style.display="";window.scrollTo(0,0);};});
+    Array.prototype.forEach.call(document.querySelectorAll("[data-ldel]"),function(b){b.onclick=function(){
+      if(confirm(t("confirm_del"))){deleteLabItem(b.getAttribute("data-ldel"));render();}};});
+  };
+  const drawMaint=function(){
+    $("m-rows").innerHTML=db().labMaint.slice().sort(function(a,b){return a.date<b.date?1:-1;}).map(function(mn,i){
+      const it=db().labItems.find(function(x){return x.id===mn.itemId;});
+      return "<tr><td class=\"num\">"+(i+1)+"</td><td>"+fmtDate(mn.date)+"</td><td>"+esc(it?it.name:"?")+"</td><td>"+esc(mn.issue)+
+        "</td><td>"+esc(mn.action)+'</td><td class="num">'+mn.cost+"</td>"+
+        '<td><button type="button" class="btn btn-sm btn-danger" data-mdel="'+mn.id+'">'+esc(t("del"))+"</button></td></tr>";
+    }).join("")||'<tr><td colspan="7" class="muted">'+esc(t("no_records"))+"</td></tr>";
+    Array.prototype.forEach.call(document.querySelectorAll("[data-mdel]"),function(b){b.onclick=function(){
+      const ix=db().labMaint.findIndex(function(x){return x.id===b.getAttribute("data-mdel");});
+      if(ix>=0){const mn=db().labMaint[ix];db().labMaint.splice(ix,1);audit("delete",mn.date+" ("+t("maintenance")+")");Store.save();render();}};});
+  };
+  $("l-save").onclick=function(){
+    const d={name:$("l-name").value,category:$("l-cat").value,qty:$("l-qty").value,unit:$("l-unit").value,
+      condition:$("l-cond").value,minStock:$("l-min").value,nextService:$("l-ns").value};
+    const r=labEditId?updateLabItem(labEditId,d):addLabItem(d);
+    if(!r.ok){$("lab-msg").innerHTML='<div class="msg err">'+esc(r.error)+"</div>";return;}
+    labEditId=null;render();
+  };
+  const lc=$("l-cancel");if(lc)lc.onclick=function(){labEditId=null;render();};
+  $("m-save").onclick=function(){
+    const r=addMaint({itemId:$("m-item").value,date:$("m-date").value,issue:$("m-issue").value,action:$("m-action").value,cost:$("m-cost").value});
+    if(!r.ok){alert(r.error);return;}
+    render();
+  };
+  $("l-csv").onclick=function(){downloadFile("lab-inventory.csv",exportCSV("lab"),"text/csv;charset=utf-8");};
+  $("m-csv").onclick=function(){downloadFile("lab-maintenance.csv",exportCSV("maintenance"),"text/csv;charset=utf-8");};
+  $("l-print").onclick=function(){doPrint(labPrintHTML());};
+  drawAlerts();drawItems();drawMaint();
+  bindMic();
+}
+
+/* ================= MODULE 6: certificates =================
+   School Leaving + Provisional certificates.
+   - Serials: separate forward-only sequences per type (SLC-YYYY-NNNN,
+     PROV-YYYY-NNNN). Voided/deleted numbers are NEVER reused — same rule
+     as admission numbers.
+   - Frozen snapshot: the certificate stores the student's details AS
+     ISSUED; later edits to the student record never change it.
+   - Identity rule: joint "Name — Father's Name" everywhere. */
+function nextCertSerial(type,issueDateISO){
+  const key=type==="slc"?"slc":"prov";
+  const yr=String(issueDateISO||todayISO()).slice(0,4);
+  db().seq.cert=db().seq.cert||{};
+  db().seq.cert[key]=db().seq.cert[key]||{};
+  const n=db().seq.cert[key][yr]||1;
+  db().seq.cert[key][yr]=n+1;
+  return (key==="slc"?"SLC-":"PROV-")+yr+"-"+String(n).padStart(4,"0");
+}
+function certTypeName(type){return type==="slc"?t("cert_slc"):t("cert_prov");}
+function issueCertificate(studentId,type,d){
+  const st=db().students.find(function(s){return s.id===studentId;});
+  if(!st)return {ok:false,error:t("no_records")};
+  if(type!=="slc"&&type!=="prov")return {ok:false,error:t("req")};
+  d=d||{};
+  const issueDate=d.issueDate||todayISO();
+  if(!validISODate(issueDate))return {ok:false,error:t("imp_bad_date")+": "+issueDate};
+  const serial=nextCertSerial(type,issueDate);
+  const cert={id:uid("ct"),serial:serial,type:type,studentId:st.id,issuedAt:issueDate,
+    snapshot:{name:st.name,fatherName:st.fatherName,display:displayName(st),admNo:st.admNo,
+      dob:st.dob,age:calcAge(st.dob,issueDate),admDate:st.admDate,cls:st.cls,section:st.section},
+    reason:String(d.reason||"").trim(),remarks:String(d.remarks||"").trim(),
+    status:"issued",history:[]};
+  db().certificates=db().certificates||[];
+  db().certificates.push(cert);
+  logHist(cert,"issue",serial+" — "+cert.snapshot.display+" ["+cert.snapshot.admNo+"]");
+  audit("issue-certificate",serial+" ("+certTypeName(type)+")");
+  Store.save();
+  return {ok:true,cert:cert};
+}
+function voidCertificate(id){
+  const c=getCertificate(id);
+  if(!c||c.status==="void")return {ok:false};
+  c.status="void";
+  logHist(c,"void",c.serial+" ("+t("cert_voided")+")");
+  Store.save();
+  return {ok:true};
+}
+function getCertificate(id){return (db().certificates||[]).find(function(c){return c.id===id;})||null;}
+function certsOfStudent(studentId){
+  return (db().certificates||[]).filter(function(c){return c.studentId===studentId;})
+    .sort(function(a,b){return a.issuedAt<b.issuedAt?1:-1;});
+}
+/* A4 certificate print — bilingual labels (Urdu + English together),
+   school name/logo header, vector text, same print pattern as result cards. */
+function certPrintHTML(certId){
+  const c=getCertificate(certId);if(!c)return "";
+  const s=c.snapshot;
+  const typeB=c.type==="slc"?bl("bl_slc"):bl("bl_prov");
+  const logo=(db().settings&&db().settings.logoDataUrl)?'<img src="'+db().settings.logoDataUrl+'" alt="" style="height:50px">':"";
+  let h='<div class="rc-page"><div class="rcard">';
+  h+='<div class="rc-head">'+logo+"<h2>"+esc(db().settings.schoolName||"—")+"</h2>"+
+     "<div><b>"+esc(typeB)+"</b></div>"+
+     "<div>"+esc(bl("bl_serial"))+": <b>"+esc(c.serial)+"</b></div></div>";
+  h+='<div class="rc-id">'+
+    "<div><b>"+esc(bl("bl_name"))+":</b> "+esc(s.display)+"</div>"+
+    "<div><b>"+esc(bl("bl_admno"))+":</b> "+esc(s.admNo)+"</div>"+
+    "<div><b>"+esc(bl("bl_dob"))+":</b> "+fmtDate(s.dob)+"</div>"+
+    "<div><b>"+esc(bl("bl_age"))+":</b> "+fmtAge(s.age)+"</div>"+
+    "<div><b>"+esc(bl("bl_admdate"))+":</b> "+fmtDate(s.admDate)+"</div>"+
+    "<div><b>"+esc(bl("bl_class"))+":</b> "+esc(s.cls)+"-"+esc(s.section)+"</div>"+
+    "<div><b>"+esc(bl("bl_issue_date"))+":</b> "+fmtDate(c.issuedAt)+"</div></div>";
+  const paraEn="This is to certify that "+s.display+" (Adm. No "+s.admNo+"), born "+fmtDate(s.dob)+
+    ", was admitted to this school on "+fmtDate(s.admDate)+" and last attended class "+clsLabel(s.cls,s.section)+".";
+  const paraUr="تصدیق کی جاتی ہے کہ "+s.display+" (داخلہ نمبر "+s.admNo+")، تاریخ پیدائش "+fmtDate(s.dob)+
+    "، اس اسکول میں "+fmtDate(s.admDate)+" کو داخل ہوا اور آخری جماعت "+clsLabel(s.cls,s.section)+" میں زیر تعلیم رہا۔";
+  h+='<p dir="ltr">'+esc(paraEn)+'</p><p dir="rtl" lang="ur">'+esc(paraUr)+"</p>";
+  if(c.reason)h+="<p><b>"+esc(bl("bl_reason"))+":</b> "+esc(c.reason)+"</p>";
+  if(c.remarks)h+="<p><b>"+esc(bl("bl_remarks"))+":</b> "+esc(c.remarks)+"</p>";
+  if(c.status==="void")h+='<p><b>'+esc(t("cert_voided"))+":</b> "+esc(c.serial)+"</p>";
+  h+='<div class="sign"><div>'+esc(bl("bl_sig_t"))+"</div><div></div><div>"+esc(bl("bl_sig_pr"))+"</div></div>";
+  h+="</div></div>";
+  return h;
+}
+/* ---- certificates register UI ---- */
+let certIssueFor=null,certQ="";
+function viewCert(){
+  let h='<div class="card"><h2>'+esc(t("cert_issue"))+'</h2><div id="c-msg"></div><div class="grid2">'+
+    '<div class="field"><label>'+esc(t("f_name"))+'</label><select id="c-stu">'+
+    studentsOfAll().map(function(s){
+      return '<option value="'+s.id+'"'+(certIssueFor===s.id?" selected":"")+'>'+esc(displayName(s)+" ("+s.admNo+")")+"</option>";
+    }).join("")+"</select></div>"+
+    '<div class="field"><label>'+esc(t("cert_type"))+'</label><select id="c-type"><option value="slc">'+esc(t("cert_slc"))+
+    '</option><option value="prov">'+esc(t("cert_prov"))+"</option></select></div>"+
+    '<div class="field"><label>'+esc(t("cert_issue_date"))+'</label><input id="c-date" type="date" value="'+todayISO()+'"></div>'+
+    "</div>"+
+    '<div class="field"><label>'+esc(t("cert_reason"))+'</label><input id="c-reason" placeholder="'+esc(t("cert_reason_ph"))+'"></div>'+
+    '<div class="field"><label>'+esc(t("cert_remarks"))+'</label><input id="c-remarks"></div>'+
+    '<div id="c-prefill" class="muted" style="margin:.4rem 0"></div>'+
+    '<button type="button" class="btn btn-primary" id="c-issue">'+esc(t("cert_issue"))+"</button></div>";
+  h+='<div class="card"><h2>'+esc(t("cert_title"))+'</h2><div class="toolbar"><input class="search" id="c-q" placeholder="'+
+    esc(t("search"))+'" value="'+esc(certQ)+'"></div>'+
+    '<div class="twrap"><table class="grid"><tr><th>'+t("cert_serial")+"</th><th>"+t("cert_type")+"</th><th>"+t("f_name")+
+    "</th><th>"+t("cert_issue_date")+"</th><th>"+t("cert_status")+"</th><th>"+t("actions")+"</th></tr>"+
+    '<tbody id="c-rows"></tbody></table></div></div>';
+  return h;
+}
+function afterCert(){
+  const drawPrefill=function(){
+    const st=db().students.find(function(s){return s.id===$("c-stu").value;});
+    if(!st){$("c-prefill").innerHTML="";return;}
+    const age=calcAge(st.dob,$("c-date").value||todayISO());
+    $("c-prefill").innerHTML=esc(displayName(st))+" • "+esc(st.admNo)+" • "+esc(t("dob"))+": "+fmtDate(st.dob)+
+      " ("+fmtAge(age)+") • "+esc(t("adm_date"))+": "+fmtDate(st.admDate)+" • "+esc(t("cls"))+": "+esc(st.cls)+"-"+esc(st.section);
+  };
+  $("c-stu").onchange=drawPrefill;
+  $("c-date").onchange=drawPrefill;
+  drawPrefill();
+  $("c-issue").onclick=function(){
+    const r=issueCertificate($("c-stu").value,$("c-type").value,
+      {issueDate:$("c-date").value,reason:$("c-reason").value,remarks:$("c-remarks").value});
+    if(!r.ok){$("c-msg").innerHTML='<div class="msg err">'+esc(r.error)+"</div>";return;}
+    certIssueFor=null;
+    $("c-msg").innerHTML='<div class="msg okm">'+esc(t("cert_issued_ok"))+": <b>"+esc(r.cert.serial)+"</b></div>";
+    drawRows();
+  };
+  const drawRows=function(){
+    const needle=norm($("c-q").value);
+    const list=(db().certificates||[]).slice().sort(function(a,b){
+      return a.issuedAt<b.issuedAt?1:(a.issuedAt>b.issuedAt?-1:(a.serial<b.serial?-1:1));
+    }).filter(function(c){
+      if(!needle)return true;
+      return norm(c.serial).indexOf(needle)>=0||norm(c.snapshot.display).indexOf(needle)>=0||
+        norm(c.type).indexOf(needle)>=0||norm(c.issuedAt).indexOf(needle)>=0;
+    });
+    $("c-rows").innerHTML=list.map(function(c){
+      return "<tr><td><b>"+esc(c.serial)+"</b></td><td>"+esc(certTypeName(c.type))+"</td><td>"+esc(c.snapshot.display)+
+        '<br><span class="muted">'+esc(c.snapshot.admNo)+"</span></td><td>"+fmtDate(c.issuedAt)+"</td><td>"+
+        (c.status==="void"?'<span class="flag">'+esc(t("cert_voided"))+'</span>':'<span class="flag okf">'+esc(t("cert_issued"))+"</span>")+"</td>"+
+        '<td><button type="button" class="btn btn-sm" data-cprint="'+c.id+'">'+esc(t("cert_reprint"))+"</button> "+
+        (c.status==="void"?"":'<button type="button" class="btn btn-sm btn-danger" data-cvoid="'+c.id+'">'+esc(t("cert_void"))+"</button>")+
+        ' <button type="button" class="btn btn-sm" data-chist="'+c.id+'">'+esc(t("history"))+"</button></td></tr>"+
+        '<tr id="chist-'+c.id+'" style="display:none"><td colspan="6"><div class="hist">'+histHTML(c)+"</div></td></tr>";
+    }).join("")||'<tr><td colspan="6" class="muted">'+esc(t("no_records"))+"</td></tr>";
+    Array.prototype.forEach.call(document.querySelectorAll("[data-cprint]"),function(b){
+      b.onclick=function(){doPrint(certPrintHTML(b.getAttribute("data-cprint")));};});
+    Array.prototype.forEach.call(document.querySelectorAll("[data-cvoid]"),function(b){
+      b.onclick=function(){
+        const c=getCertificate(b.getAttribute("data-cvoid"));
+        if(c&&confirm(t("cert_void")+" "+c.serial+"?")){voidCertificate(c.id);render();}
+      };});
+    Array.prototype.forEach.call(document.querySelectorAll("[data-chist]"),function(b){
+      b.onclick=function(){const r=$("chist-"+b.getAttribute("data-chist"));r.style.display=r.style.display==="none"?"":"none";};});
+  };
+  $("c-q").oninput=function(){certQ=$("c-q").value;drawRows();};
+  drawRows();
+}
+/* ---- dossier: student's certificates ---- */
+function certDossierHTML(st){
+  const list=certsOfStudent(st.id);
+  let h='<div class="card"><h3>'+esc(t("cert_student_certs"))+"</h3>";
+  if(!list.length)h+='<p class="muted">'+esc(t("no_records"))+"</p>";
+  list.forEach(function(c){
+    h+='<div class="toolbar" style="border-bottom:1px dotted var(--line);padding:.3rem 0"><span><b>'+esc(c.serial)+
+      "</b> • "+esc(certTypeName(c.type))+" • "+fmtDate(c.issuedAt)+"</span>"+
+      (c.status==="void"?' <span class="flag">'+esc(t("cert_voided"))+"</span>":"")+
+      ' <button type="button" class="btn btn-sm" data-dcprint="'+c.id+'">'+esc(t("cert_reprint"))+"</button>"+
+      (c.status==="void"?"":' <button type="button" class="btn btn-sm btn-danger" data-dcvoid="'+c.id+'">'+esc(t("cert_void"))+"</button>")+"</div>";
+  });
+  h+='<button type="button" class="btn btn-sm btn-primary" id="dos-issuecert" style="margin-top:.5rem">'+esc(t("cert_issue"))+"</button></div>";
+  return h;
+}
+
+/* ================= settings ================= */
+function snapshotsCardHTML(){
+  if(typeof localStorage==="undefined")return "";
+  const list=snapshotsList();
+  let h='<div class="card"><h3>📦 '+esc(t("snapshots"))+'</h3><p class="muted">'+esc(t("snap_hint"))+'</p>';
+  if(!list.length){h+='<p class="muted">'+esc(t("no_records"))+'</p>';}
+  for(let i=list.length-1;i>=0;i--){
+    const s=list[i];
+    h+='<div class="toolbar" style="margin:.35rem 0"><span>📦 '+esc(s.date)+' • '+esc(snapReasonName(s.reason))+' • '+
+      esc(s.counts.students)+" "+esc(t("kpi_students"))+", "+esc(s.counts.exams)+" "+esc(t("mg_exams"))+'</span>'+
+      '<button type="button" class="btn btn-sm" data-snap="'+i+'">'+esc(t("restore"))+'</button></div>';
+  }
+  return h+"</div>";
+}
+function viewSettings(){
+  const s=db().settings;
+  let h='<div class="card"><h2>'+esc(t("set_title"))+"</h2>"+
+    fld("school_name",'<input id="s-name" value="'+esc(s.schoolName)+'" placeholder="'+esc(t("school_ph"))+'">')+
+    fld("device_name",'<input id="s-device" value="'+esc(s.deviceName||"")+'" placeholder="'+esc(t("device_ph"))+'">')+
+    '<div class="field"><label>'+esc(t("logo"))+'</label>'+
+    (s.logoDataUrl?'<img src="'+s.logoDataUrl+'" style="height:54px;display:block;margin-bottom:.4rem" alt="">':"")+
+    '<input id="s-logo" type="file" accept="image/*" style="margin-bottom:.4rem">'+
+    (s.logoDataUrl?'<button type="button" class="btn btn-sm btn-danger" id="s-logodel">'+esc(t("remove_logo"))+"</button> ":"")+
+    '<div class="hint">'+esc(t("logo")).split("(")[0]+'— 300 KB max</div></div>'+
+    fld("def_lang",'<select id="s-lang"><option value="ur"'+(s.lang==="ur"?" selected":"")+'>اردو</option><option value="en"'+(s.lang==="en"?" selected":"")+'>English</option></select>')+
+    fld("pass_pct",'<input id="s-pass" inputmode="numeric" value="'+s.passPct+'">')+
+    '<button type="button" class="btn btn-primary" id="s-save">'+esc(t("save"))+"</button></div>";
+  h+='<div class="card"><h3>'+esc(t("grade_scale"))+'</h3><div class="grid2">'+
+    s.gradeScale.filter(function(g){return g.g!=="F";}).map(function(g,i){
+      return '<div class="field"><label>'+esc(t("grade"))+" "+g.g+" ≥ %</label>"+
+        '<input data-gs="'+i+'" inputmode="numeric" value="'+g.min+'"></div>';
+    }).join("")+"</div>"+
+    "<h3>"+esc(t("div_scale"))+'</h3><div class="grid2">'+
+    s.divisions.filter(function(x){return x.d!=="Fail";}).map(function(x,i){
+      return '<div class="field"><label>'+esc(t("division"))+" "+x.d+" ≥ %</label>"+
+        '<input data-dv="'+i+'" inputmode="numeric" value="'+x.min+'"></div>';
+    }).join("")+"</div>"+
+    '<button type="button" class="btn btn-primary" id="s-save2">'+esc(t("save"))+"</button></div>";
+  h+='<div class="card"><h3>'+esc(t("age_bands"))+'</h3><div class="twrap"><table class="grid"><tr><th>'+t("cls")+
+    "</th><th>"+t("band_min")+" ("+t("years")+")</th><th>"+t("band_min")+" ("+t("months")+")</th><th>"+
+    t("band_max")+" ("+t("years")+")</th><th>"+t("band_max")+" ("+t("months")+")</th></tr>"+
+    Object.keys(s.ageBands).sort(function(a,b){return Number(a)-Number(b);}).map(function(c){
+      const b=s.ageBands[c];
+      return "<tr><td class=\"num\">"+esc(c)+'</td><td class="num"><input class="cell" data-ab="'+c+'" data-k="minY" inputmode="numeric" value="'+b.minY+'"></td>'+
+        '<td class="num"><input class="cell" data-ab="'+c+'" data-k="minM" inputmode="numeric" value="'+b.minM+'"></td>'+
+        '<td class="num"><input class="cell" data-ab="'+c+'" data-k="maxY" inputmode="numeric" value="'+b.maxY+'"></td>'+
+        '<td class="num"><input class="cell" data-ab="'+c+'" data-k="maxM" inputmode="numeric" value="'+b.maxM+'"></td></tr>';
+    }).join("")+"</table></div>"+
+    '<button type="button" class="btn btn-primary" id="s-save3" style="margin-top:.6rem">'+esc(t("save"))+"</button></div>";
+  h+='<div class="card"><h3>'+esc(t("backup"))+" / "+esc(t("restore"))+"</h3><div class=\"toolbar\">"+
+    '<button type="button" class="btn" id="s-backup">'+esc(t("backup"))+"</button>"+
+    '<label class="btn">'+esc(t("restore"))+'<input id="s-restore" type="file" accept=".json,application/json" style="display:none"></label>'+
+    '<label class="btn btn-primary">'+esc(t("merge"))+'<input id="s-merge" type="file" accept=".json,application/json" style="display:none"></label>'+
+    '<button type="button" class="btn" id="s-demo">'+esc(t("seed_demo"))+"</button>"+
+    '<button type="button" class="btn btn-danger" id="s-wipe">'+esc(t("wipe"))+"</button></div>"+
+    '<p class="muted">📲 '+esc(t("merge_hint"))+"</p>"+
+    '<p class="muted">'+esc(t("seed_warn"))+"</p><div id=\"s-msg\"></div></div>";
+  h+=snapshotsCardHTML();
+  h+=storageMeterHTML();
+  h+='<div class="card"><h3>'+esc(t("audit"))+"</h3><div class=\"hist\" style=\"max-height:300px;overflow:auto\">"+
+    (db().audit.map(function(a){return "<div>"+a.ts.slice(0,16).replace("T"," ")+" — <b>"+esc(a.action)+"</b>: "+esc(a.summary)+"</div>";}).join("")||'<span class="muted">—</span>')+"</div></div>";
+  return h;
+}
+function afterSettings(){
+  $("s-save").onclick=function(){
+    const s=db().settings;
+    s.schoolName=$("s-name").value.trim();s.deviceName=$("s-device").value.trim();s.lang=$("s-lang").value;s.passPct=Number($("s-pass").value)||33;
+    Store.save();render();
+  };
+  const lg=$("s-logo");
+  if(lg)lg.onchange=function(){
+    const f=lg.files[0];if(!f)return;
+    if(f.size>300*1024){alert(t("logo_big"));return;}
+    const rd=new FileReader();
+    rd.onload=function(){db().settings.logoDataUrl=rd.result;Store.save();render();};
+    rd.readAsDataURL(f);
+  };
+  const ld=$("s-logodel");if(ld)ld.onclick=function(){db().settings.logoDataUrl="";Store.save();render();};
+  $("s-save2").onclick=function(){
+    const s=db().settings;
+    Array.prototype.forEach.call(document.querySelectorAll("[data-gs]"),function(inp){
+      s.gradeScale[+inp.getAttribute("data-gs")].min=Number(inp.value)||0;});
+    Array.prototype.forEach.call(document.querySelectorAll("[data-dv]"),function(inp){
+      s.divisions[+inp.getAttribute("data-dv")].min=Number(inp.value)||0;});
+    Store.save();render();
+  };
+  $("s-save3").onclick=function(){
+    const s=db().settings;
+    Array.prototype.forEach.call(document.querySelectorAll("[data-ab]"),function(inp){
+      s.ageBands[inp.getAttribute("data-ab")][inp.getAttribute("data-k")]=Number(inp.value)||0;});
+    Store.save();render();
+  };
+  $("s-backup").onclick=function(){downloadFile("srs-backup-"+fileSafe(db().settings.deviceName)+"-"+todayISO()+".json",exportJSON(),"application/json");};
+  $("s-restore").onchange=function(e){
+    const f=e.target.files[0];if(!f)return;
+    if(!confirm(t("restore_warn"))){e.target.value="";return;}
+    const rd=new FileReader();
+    rd.onload=function(){const r=importJSON(rd.result);
+      $("s-msg").innerHTML=r.ok?'<div class="msg okm">'+esc(t("saved_ok"))+'</div>':'<div class="msg err">'+esc(r.error)+"</div>";
+      if(r.ok)render();};
+    rd.readAsText(f);
+    e.target.value="";
+  };
+  Array.prototype.forEach.call(document.querySelectorAll("[data-snap]"),function(b){
+    b.onclick=function(){
+      if(!confirm(t("snap_restore_confirm")))return;
+      const r=restoreSnapshot(+b.getAttribute("data-snap"));
+      $("s-msg").innerHTML=r.ok?'<div class="msg okm">'+esc(t("saved_ok"))+'</div>':'<div class="msg err">'+esc(r.error||t("merge_bad"))+"</div>";
+      if(r.ok)render();
+    };
+  });
+  $("s-merge").onchange=function(e){
+    const f=e.target.files[0];if(!f)return;
+    const rd=new FileReader();
+    rd.onload=function(){
+      const r=mergeJSON(rd.result);
+      if(!r.ok){$("s-msg").innerHTML='<div class="msg err">'+esc(r.error)+"</div>";e.target.value="";return;}
+      const p=r.rep;
+      let h='<div class="msg okm"><b>'+esc(t("merge_report"))+"</b><br>"+
+        esc(p.students)+" "+esc(t("mg_students"))+" • "+esc(p.exams)+" "+esc(t("mg_exams"))+" • "+
+        esc(p.marks)+" "+esc(t("mg_marks"))+" • "+esc(p.certs)+" "+esc(t("mg_certs"))+" • "+
+        esc(p.lab)+" "+esc(t("mg_lab"))+" • "+esc(p.filled)+" "+esc(t("mg_filled"));
+      if(p.newAdmNos.length)h+="<br>⚠ "+esc(t("mg_newadm"))+": "+esc(p.newAdmNos.join("; "));
+      if(p.conflicts.length)h+="<br>⛔ "+esc(t("mg_conflicts"))+": "+esc(p.conflicts.join("; "));
+      h+="</div>";
+      $("s-msg").innerHTML=h;
+      render();
+    };
+    rd.readAsText(f);
+    e.target.value="";
+  };
+  $("s-demo").onclick=function(){if(confirm(t("seed_warn"))){seedDemo();render();}};
+  $("s-wipe").onclick=function(){const v=prompt(t("wipe_confirm"));if(v==="ERASE"){takeSnapshot("before-wipe");DB=defaultDB();Store.save();render();}};
+}
+
+/* ================= demo seed ================= */
+function isoPlus(days){const d=new Date();d.setDate(d.getDate()+days);return d.toISOString().slice(0,10);}
+function seedDemo(){
+  DB=defaultDB();
+  const S=[
+    ["Ahmed Khan","Muhammad Khan","2015-03-15","male","6","A","2026-04-01","0300-1111111","House 1, Street 2",[85,78,92,88,95]],
+    ["Bilal Ahmed","Rashid Ahmed","2014-12-20","male","6","A","2026-04-01","0300-2222222","House 3, Street 4",[45,52,28,61,49]],
+    ["Usman Tariq","Tariq Mehmood","2016-02-29","male","6","A","2026-04-02","0300-3333333","House 5, Street 6",[90,85,78,92,88]],
+    ["Danish Ali","Ali Raza","2015-07-10","male","6","A","2026-04-02","0300-4444444","House 7, Street 8",[88,78,92,88,92]],
+    ["Fahad Iqbal","Iqbal Hussain","2012-01-10","male","6","A","2026-04-03","0300-5555555","House 9, Street 10",[70,65,72,68,75]],
+    ["Hamza Sheikh","Sheikh Imran","2018-06-01","male","6","A","2026-04-03","0300-6666666","House 11, Street 12",[55,60,58,62,59]],
+    ["Ahmed Khan","Muhammad Khan","2017-02-10","male","6","A","2026-04-04","0300-7777777","House 13, Street 14",[80,82,79,81,78]],
+    ["Kamran Shah","Shah Nawaz","2015-05-18","male","6","B","2026-04-01","0300-8888888","House 15, Street 16",[95,90,93,91,94]],
+    ["Noman Akram","Akram Ullah","2014-08-25","male","6","B","2026-04-02","0300-9999999","House 17, Street 18",[60,55,62,58,61]],
+    ["Saqib Javed","Javed Akhtar","2015-09-30","male","6","B","2026-04-02","0300-1010101","House 19, Street 20",[72,70,75,71,74]],
+    ["Waqas Anwar","Anwar Hussain","2016-01-05","male","6","B","2026-04-03","0300-1212121","House 21, Street 22",[66,64,68,65,67]],
+    ["Yasir Mehmood","Mehmood Alam","2015-02-14","male","6","B","2026-04-03","0300-1313131","House 23, Street 24",[84,86,83,85,82]],
+    ["Zubair Farooq","Farooq Azam","2014-05-09","male","6","B","2026-04-04","0300-1414141","House 25, Street 26",[50,52,48,51,49]],
+    ["Imran Yousaf","Yousaf Raza","2015-12-12","male","6","B","2026-04-04","0300-1515151","House 27, Street 28",[77,75,79,76,78]]
+  ];
+  const SUBS=[["Urdu",100],["English",100],["Math",100],["Science",100],["Islamiat",100]];
+  const DELTA=[4,-3,5,-2,3];
+  const ids=[];
+  S.forEach(function(r){
+    const res=addStudent({name:r[0],fatherName:r[1],dob:r[2],gender:r[3],cls:r[4],section:r[5],admDate:r[6],contact:r[7],address:r[8],pin:null});
+    ids.push({id:res.student.id,marks:r[9],cls:r[4],section:r[5]});
+  });
+  [["Mid-Term","mid","A"],["Mid-Term","mid","B"],["Final-Term","final","A"],["Final-Term","final","B"]].forEach(function(e){
+    const ex=addExam({name:e[0]+" 2026",year:"2026",term:e[1],cls:"6",section:e[2],
+      subjects:SUBS.map(function(s){return {name:s[0],max:s[1]};})}).exam;
+    ids.filter(function(x){return x.section===e[2];}).forEach(function(x){
+      SUBS.forEach(function(sj,si){
+        let v=x.marks[si];
+        if(e[1]==="final")v=Math.max(0,Math.min(100,v+DELTA[si]));
+        setMark(ex.id,x.id,sj[0],v);
+      });
+    });
+  });
+  const L=[
+    ["Microscope","equipment",5,"pcs","good",6,isoPlus(30)],
+    ["Test tubes","glassware",200,"pcs","good",50,isoPlus(60)],
+    ["Bunsen burner","equipment",8,"pcs","fair",4,isoPlus(-10)],
+    ["Hydrochloric acid","chemical",2,"bottles","good",3,isoPlus(45)],
+    ["Beakers 500ml","glassware",30,"pcs","repair",10,isoPlus(-5)],
+    ["Thermometer","equipment",12,"pcs","good",5,""],
+    ["Copper sulphate","chemical",1,"kg","fair",2,isoPlus(90)],
+    ["Tripod stand","equipment",0,"pcs","dead",2,isoPlus(-20)]
+  ];
+  const lids=L.map(function(r){return addLabItem({name:r[0],category:r[1],qty:r[2],unit:r[3],condition:r[4],minStock:r[5],nextService:r[6]}).item.id;});
+  addMaint({itemId:lids[2],date:isoPlus(-20),issue:"Nozzle blocked",action:"Cleaned and tested",cost:500});
+  addMaint({itemId:lids[4],date:isoPlus(-15),issue:"3 beakers cracked",action:"Replaced with new",cost:1200});
+  addMaint({itemId:lids[0],date:isoPlus(-5),issue:"Lens dusty",action:"Cleaned lenses",cost:0});
+  addMaint({itemId:lids[7],date:isoPlus(-40),issue:"Leg broken",action:"Welded leg",cost:800});
+  audit("seed","demo data loaded");
+  Store.save();
+}
+/* ================= public API + bootstrap ================= */
+const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,
+  calcAge:calcAge,fmtAge:fmtAge,inBand:inBand,displayName:displayName,
+  addStudent:addStudent,updateStudent:updateStudent,deleteStudent:deleteStudent,
+  findDuplicateStudent:findDuplicateStudent,studentsOf:studentsOf,studentsOfAll:studentsOfAll,
+  addExam:addExam,deleteExam:deleteExam,setMark:setMark,
+  computeResult:computeResult,resultRowFor:resultRowFor,getDossier:getDossier,
+  gradeFor:gradeFor,divisionFor:divisionFor,remarkFor:remarkFor,
+  addLabItem:addLabItem,updateLabItem:updateLabItem,deleteLabItem:deleteLabItem,
+  addMaint:addMaint,labAlerts:labAlerts,maintTotal:maintTotal,
+  exportCSV:exportCSV,exportJSON:exportJSON,importJSON:importJSON,mergeJSON:mergeJSON,seedDemo:seedDemo,
+  takeSnapshot:takeSnapshot,snapshotsList:snapshotsList,restoreSnapshot:restoreSnapshot,
+  csvTemplateText:csvTemplateText,importStudentsCSV:importStudentsCSV,parseCSV:parseCSV,regPhotoHTML:regPhotoHTML,
+  normUrduDigits:normUrduDigits,parseRegisterLine:parseRegisterLine,parseRegisterLines:parseRegisterLines,
+  validateScanRows:validateScanRows,commitScanRows:commitScanRows,ocrEngine:ocrEngine,
+  speechLang:speechLang,speechSupported:speechSupported,micField:micField,
+  promoteClass:promoteClass,dashStatsHTML:dashStatsHTML,promoteCardHTML:promoteCardHTML,
+  issueCertificate:issueCertificate,voidCertificate:voidCertificate,getCertificate:getCertificate,
+  certsOfStudent:certsOfStudent,certPrintHTML:certPrintHTML,certTypeName:certTypeName,
+  resultPayload:resultPayload,rcardHTML:rcardHTML,reportCardHTML:reportCardHTML,
+  reportCardsBatchHTML:reportCardsBatchHTML,dossierPrintHTML:dossierPrintHTML,
+  broadsheetPrintHTML:broadsheetPrintHTML,admissionsPrintHTML:admissionsPrintHTML,
+  dobPrintHTML:dobPrintHTML,labPrintHTML:labPrintHTML,
+  awardListData:awardListData,awardRemark:awardRemark,awardSubjectPass:awardSubjectPass,
+  awardSheetHTML:awardSheetHTML,awardListPrintHTML:awardListPrintHTML,
+  studentPhotoHTML:studentPhotoHTML,setStudentPhoto:setStudentPhoto,
+  captureStudentPhoto:captureStudentPhoto,storageBytes:storageBytes,storageMeterHTML:storageMeterHTML,
+  scanFromText:scanFromText,
+  viewDossier:viewDossier};
+function initApp(){db();takeSnapshot("auto");applyLang();render();var lt=$("lang-toggle");if(lt&&!lt._wired){lt._wired=true;lt.onclick=function(){db().settings.lang=(lang()==="ur")?"en":"ur";Store.save();render();};}}
+if(typeof document!=="undefined"&&typeof window!=="undefined"){
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",initApp);
+  else initApp();
+}
+</script>
+</body>
+</html>
