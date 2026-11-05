@@ -400,15 +400,207 @@ const Store={
     try{ls.setItem(LS_KEY,JSON.stringify(DB));return true;}
     catch(e){return false;}
   },
-  save:function(){this.trySave();}
+  save:function(){this.trySave();if(typeof Cloud!=="undefined")Cloud.onLocalSave();}
 };
 let DB=null;
 function db(){if(!DB)DB=Store.load();return DB;}
-/* SyncAdapter stub — cloud sync can slot in later without rewrite */
+/* ================= CLOUD SYNC (Firebase — free) =================
+   Shared live database + teacher logins. How it works:
+   - FIREBASE_CONFIG null (the plain file)  -> exactly as before: local-only, no login.
+   - FIREBASE_CONFIG set (the hosted version) -> teachers sign in; every entry syncs
+     live to all signed-in devices; offline entries sit in localStorage and sync back.
+   - Sync-OUT is diff-based, hooked into Store.save(): only changed docs are written.
+   - Sync-IN uses Firestore real-time listeners: a teacher's entry appears on every
+     other device instantly, no merge button, no refresh.
+   - First sign-in: records that exist only on this phone upload automatically; for a
+     record that exists in both places, the cloud copy wins.
+   - Admission numbers stay unique: the doc id is the record id, so two teachers can
+     never overwrite each other; a rare same-second number clash is repaired on sync-in
+     (the later record gets a fresh number, same rule as the phone merge).
+   Security lives in Firestore rules: only signed-in users listed in /teachers can
+   read or write; only the admin can manage the teachers list. */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBOF_sxTFSWO53MTB5vHqPCmXe2wGHi44o",
+  authDomain: "school-record-system-b6599.firebaseapp.com",
+  projectId: "school-record-system-b6599",
+  storageBucket: "school-record-system-b6599.firebasestorage.app",
+  messagingSenderId: "1076473689985",
+  appId: "1:1076473689985:web:b39b88b27bb572196a9a80"
+};
+const FB_SDK = "https://www.gstatic.com/firebasejs/10.12.2/";
+function loadScript(src){return new Promise(function(res,rej){const s=document.createElement("script");s.src=src;s.async=true;s.onload=function(){res();};s.onerror=function(){rej(new Error("sdk-load"));};document.head.appendChild(s);});}
+const Cloud = {
+  enabled: !!FIREBASE_CONFIG,
+  ready: false, authResolved: false, user: null, teacher: null, authError: "",
+  fb: null, fs: null, auth: null,
+  applyingRemote: false, lastSyncedJSON: "", localBeforeSync: "", unsubs: [],
+  firstSeen: {}, firstDone: false, seedChecked: false, cloudFirst: {},
+  statusText: function(){return !this.enabled?"local-only":(!this.user?"signed-out":(this.ready?"live":"connecting"));},
+  init: function(){
+    if(!this.enabled||typeof document==="undefined")return;
+    const self=this;
+    Promise.all([loadScript(FB_SDK+"firebase-app-compat.js"),loadScript(FB_SDK+"firebase-auth-compat.js"),loadScript(FB_SDK+"firebase-firestore-compat.js")]).then(function(){
+      try{
+        self.fb=firebase; /* global from compat SDK */
+        self.fb.initializeApp(FIREBASE_CONFIG);
+        self.auth=self.fb.auth();
+        self.fs=self.fb.firestore();
+        try{self.fs.enablePersistence({synchronizeTabs:true});}catch(e){}
+        try{self.auth.setPersistence(self.fb.auth.Auth.Persistence.LOCAL);}catch(e){}
+        self.auth.onAuthStateChanged(function(u){self.onAuth(u);});
+      }catch(e){self.authResolved=true;render();}
+    }).catch(function(){self.authResolved=true;render();});
+  },
+  onAuth: function(u){
+    const self=this;
+    self.user=u||null;self.teacher=null;
+    if(!u){self.authResolved=true;self.ready=false;self.stopListeners();render();return;}
+    self.fs.collection("teachers").doc(u.uid).get().then(function(snap){
+      if(!snap.exists){self.authError="not_allowed";try{self.auth.signOut();}catch(e){}self.authResolved=true;render();return;}
+      self.teacher=snap.data()||{};self.authResolved=true;self.ready=true;
+      self.localBeforeSync=JSON.stringify(db());
+      self.startListeners();
+      render();
+    }).catch(function(){self.authResolved=true;render();});
+  },
+  signIn: function(email,pass){
+    const self=this;
+    return self.auth.signInWithEmailAndPassword(email,pass).then(function(){return {ok:true};}).catch(function(e){
+      return {ok:false,error:t("login_fail")};
+    });
+  },
+  signOut: function(){const self=this;self.stopListeners();self.user=null;self.teacher=null;self.ready=false;try{self.auth.signOut();}catch(e){}render();},
+  changePassword: function(np){
+    const self=this;
+    return self.user.updatePassword(np).then(function(){return {ok:true};}).catch(function(e){return {ok:false,error:(e&&e.code==="auth/requires-recent-login")?t("login_reauth"):t("login_fail")};});
+  },
+  stopListeners: function(){this.unsubs.forEach(function(u){try{u();}catch(e){}});this.unsubs=[];this.firstSeen={};this.firstDone=false;this.seedChecked=false;this.cloudFirst={};},
+  startListeners: function(){
+    const self=this;self.stopListeners();
+    const colls=["students","exams","marks","labItems","labMaint","certificates","settings"];
+    colls.forEach(function(c){
+      const un=self.fs.collection(c).onSnapshot(function(snap){
+        self.applyChanges(c,snap.docChanges());
+        if(!self.firstSeen[c]){self.firstSeen[c]=true;
+          if(Object.keys(self.firstSeen).length>=colls.length&&!self.seedChecked){self.seedChecked=true;self.firstDone=true;self.seedCheck();}
+        }
+      },function(){});
+      self.unsubs.push(un);
+    });
+    setTimeout(function(){if(!self.seedChecked){self.seedChecked=true;self.firstDone=true;self.seedCheck();}},8000);
+  },
+  applyChanges: function(coll,changes){
+    if(!changes||!changes.length)return;
+    const self=this;self.applyingRemote=true;
+    try{
+      changes.forEach(function(ch){
+        const id=ch.doc.id,d=ch.doc.data()||{};
+        if(!self.firstDone){
+          if(!self.cloudFirst[coll])self.cloudFirst[coll]={};
+          if(ch.type==="removed")delete self.cloudFirst[coll][id];else self.cloudFirst[coll][id]=true;
+        }
+        if(ch.type==="removed"){self.removeLocal(coll,id);return;}
+        self.upsertLocal(coll,id,d);
+      });
+      Store.trySave();
+      self.lastSyncedJSON=JSON.stringify(db());
+    }catch(e){}
+    self.applyingRemote=false;
+    if(typeof document!=="undefined")render();
+  },
+  upsertLocal: function(coll,id,d){
+    const D=db();
+    if(coll==="marks"){
+      const ex=d.examId,st=d.studentId;if(!ex||!st)return;
+      if(!D.marks[ex])D.marks[ex]={};
+      D.marks[ex][st]=Object.assign({},d.subjects||{});
+      return;
+    }
+    if(coll==="settings"){if(d.settings)D.settings=Object.assign({},D.settings,d.settings);if(d.seq)D.seq=Object.assign({},D.seq,d.seq);return;}
+    const arr={students:D.students,exams:D.exams,labItems:D.labItems,labMaint:D.labMaint,certificates:D.certificates}[coll];
+    if(!arr)return;
+    const rec=Object.assign({},d,{id:id});
+    const ix=arr.findIndex(function(x){return x.id===id;});
+    if(coll==="students"&&ix<0){
+      /* repair a same-second admission-number clash, same rule as the phone merge */
+      const clash=arr.find(function(x){return x.admNo===rec.admNo;});
+      if(clash){rec.admNo=nextAdmNo((rec.admDate||todayISO()).slice(0,4));this.pushDoc("students",id,rec);}
+    }
+    if(ix>=0)arr[ix]=rec;else arr.push(rec);
+  },
+  removeLocal: function(coll,id){
+    const D=db();
+    if(coll==="marks"){const p=String(id).split("__");if(p.length===2&&D.marks[p[0]])delete D.marks[p[0]][p[1]];return;}
+    if(coll==="settings")return;
+    const arr={students:D.students,exams:D.exams,labItems:D.labItems,labMaint:D.labMaint,certificates:D.certificates}[coll];
+    if(!arr)return;
+    const ix=arr.findIndex(function(x){return x.id===id;});
+    if(ix>=0)arr.splice(ix,1);
+  },
+  flatten: function(d){
+    const f={students:{},exams:{},marks:{},labItems:{},labMaint:{},certificates:{},settings:{}};
+    (d.students||[]).forEach(function(s){f.students[s.id]=s;});
+    (d.exams||[]).forEach(function(e){f.exams[e.id]=e;});
+    Object.keys(d.marks||{}).forEach(function(ex){Object.keys(d.marks[ex]||{}).forEach(function(st){
+      f.marks[ex+"__"+st]={examId:ex,studentId:st,subjects:d.marks[ex][st]};
+    });});
+    (d.labItems||[]).forEach(function(x){f.labItems[x.id]=x;});
+    (d.labMaint||[]).forEach(function(x){f.labMaint[x.id]=x;});
+    (d.certificates||[]).forEach(function(c){f.certificates[c.id]=c;});
+    f.settings.main={settings:d.settings,seq:d.seq};
+    return f;
+  },
+  pushDoc: function(coll,id,data){
+    if(!this.ready||!this.fs)return;
+    try{this.fs.collection(coll).doc(id).set(JSON.parse(JSON.stringify(data)));}catch(e){}
+  },
+  deleteDoc: function(coll,id){
+    if(!this.ready||!this.fs)return;
+    try{this.fs.collection(coll).doc(id).delete();}catch(e){}
+  },
+  onLocalSave: function(){
+    if(!this.enabled||!this.ready||!this.user||this.applyingRemote||!this.firstDone||!this.fs)return;
+    try{
+      const cur=db(),prev=this.lastSyncedJSON?JSON.parse(this.lastSyncedJSON):null;
+      if(!prev){this.lastSyncedJSON=JSON.stringify(cur);return;}
+      const a=this.flatten(prev),b=this.flatten(cur);
+      const batch=this.fs.batch();let n=0;
+      const self=this;
+      Object.keys(b).forEach(function(coll){
+        Object.keys(b[coll]).forEach(function(id){
+          if(JSON.stringify(a[coll][id]||null)!==JSON.stringify(b[coll][id])){batch.set(self.fs.collection(coll).doc(id),JSON.parse(JSON.stringify(b[coll][id])));n++;}
+        });
+        Object.keys(a[coll]).forEach(function(id){
+          if(!b[coll][id]){batch.delete(self.fs.collection(coll).doc(id));n++;}
+        });
+      });
+      if(n>0)batch.commit().catch(function(){});
+      this.lastSyncedJSON=JSON.stringify(cur);
+    }catch(e){}
+  },
+  seedCheck: function(){
+    /* first sign-in: upload every record that exists only on this phone; records that
+       exist in both places already took the cloud copy (applied by the listeners). */
+    try{
+      const local=this.localBeforeSync?JSON.parse(this.localBeforeSync):null;
+      if(!local){this.lastSyncedJSON=JSON.stringify(db());return;}
+      const lf=this.flatten(local),cf=this.cloudFirst;
+      const batch=this.fs.batch();let n=0;
+      const self=this;
+      Object.keys(lf).forEach(function(coll){
+        Object.keys(lf[coll]).forEach(function(id){
+          if(!cf[coll]||!cf[coll][id]){batch.set(self.fs.collection(coll).doc(id),JSON.parse(JSON.stringify(lf[coll][id])));n++;}
+        });
+      });
+      if(n>0)batch.commit().catch(function(){});
+      this.lastSyncedJSON=JSON.stringify(db());
+    }catch(e){}
+  }
+};
 const SyncAdapter={
-  status:function(){return "local-only";},
-  push:function(){return {ok:false,reason:"not-configured"};},
-  pull:function(){return {ok:false,reason:"not-configured"};}
+  status:function(){return Cloud.statusText();},
+  push:function(){Cloud.onLocalSave();return {ok:Cloud.ready};},
+  pull:function(){return {ok:Cloud.ready,reason:Cloud.ready?undefined:"not-configured"};}
 };
 /* ================= history & audit ================= */
 function audit(action,summary){
@@ -1378,7 +1570,36 @@ function renderTabs(){
     b.onclick=function(){curTab=b.getAttribute("data-tab");render();};
   });
 }
-function render(){applyLang();renderTabs();const v=$("view");
+function renderLogin(){
+  applyLang();
+  $("tabs").innerHTML="";
+  const err=Cloud.authError;
+  const msg=err==="not_allowed"?'<div class="msg err">'+esc(t("login_notallowed"))+'</div>':"";
+  if(err)Cloud.authError="";
+  $("view").innerHTML='<div class="card" style="max-width:420px;margin:2rem auto"><h2>🔐 '+esc(t("login_title"))+'</h2>'+
+    '<p class="muted">'+esc(t("login_hint"))+'</p>'+
+    '<div class="field"><label>'+esc(t("login_email"))+'</label><input id="lg-email" type="email" autocomplete="username"></div>'+
+    '<div class="field"><label>'+esc(t("login_pass"))+'</label><input id="lg-pass" type="password" autocomplete="current-password"></div>'+
+    '<div id="lg-msg">'+msg+'</div>'+
+    '<button type="button" class="btn btn-primary" id="lg-go" style="width:100%">'+esc(t("login_go"))+'</button></div>';
+  $("lg-go").onclick=function(){
+    const em=$("lg-email").value.trim(),pw=$("lg-pass").value;
+    if(!em||!pw){$("lg-msg").innerHTML='<div class="msg err">'+esc(t("req"))+'</div>';return;}
+    $("lg-go").disabled=true;
+    Cloud.signIn(em,pw).then(function(r){
+      $("lg-go").disabled=false;
+      if(!r.ok)$("lg-msg").innerHTML='<div class="msg err">'+esc(r.error||t("login_fail"))+'</div>';
+    });
+  };
+  $("lg-pass").addEventListener("keydown",function(e){if(e.key==="Enter")$("lg-go").click();});
+}
+function render(){
+  applyLang();
+  if(typeof Cloud!=="undefined"&&Cloud.enabled){
+    if(!Cloud.authResolved){$("tabs").innerHTML="";$("view").innerHTML='<div class="card"><p class="muted">⏳ '+esc(t("connecting"))+'</p></div>';return;}
+    if(!Cloud.user){renderLogin();return;}
+  }
+  renderTabs();const v=$("view");
   v.innerHTML = curTab==="home"?viewHome():curTab==="adm"?viewAdm():curTab==="dob"?viewDob():
     curTab==="exam"?viewExam():curTab==="result"?viewResult():curTab==="lab"?viewLab():
     curTab==="cert"?viewCert():viewSettings();
@@ -2079,7 +2300,6 @@ function viewDob(){
     '<div class="toolbar"><div class="field" style="margin:0"><label>'+esc(t("as_of"))+'</label>'+
     '<input id="d-asof" type="date" value="'+esc(dobAsOf)+'"></div>'+
     '<button type="button" class="btn btn-sm" id="d-today">'+esc(t("today"))+'</button>'+
-    '<button type="button" class="btn btn-sm" id="d-mar31">'+esc(t("mar31"))+'</button>'+
     '<button type="button" class="btn btn-sm" id="d-csv">'+esc(t("export_csv"))+'</button>'+
     '<button type="button" class="btn btn-sm" id="d-print">'+esc(t("print"))+"</button></div>"+
     '<div class="twrap"><table class="grid"><tr><th>'+t("sno")+"</th><th>"+t("adm_no")+"</th><th>"+t("f_name")+
@@ -2101,7 +2321,6 @@ function afterDob(){
   };
   $("d-asof").onchange=draw;
   $("d-today").onclick=function(){$("d-asof").value=todayISO();draw();};
-  $("d-mar31").onclick=function(){const y=String($("d-asof").value||todayISO()).slice(0,4);$("d-asof").value=y+"-03-31";draw();};
   $("d-csv").onclick=function(){downloadFile("dob-register.csv",exportCSV("dob",dobAsOf),"text/csv;charset=utf-8");};
   $("d-print").onclick=function(){doPrint(dobPrintHTML(dobAsOf));};
   draw();
@@ -2209,6 +2428,14 @@ function drawGrid(){
       td.textContent=ct[td.getAttribute("data-coltot")]||"—";});
   };
   cells.forEach(function(c){c.oninput=function(){c.classList.remove("bad");live();};});
+  /* auto-save: a valid mark saves the moment the teacher leaves the cell — no Save tap to forget */
+  cells.forEach(function(c){c.onchange=function(){
+    const r=String(c.value).trim();if(r==="")return;
+    const v=Number(r),mx=Number(c.getAttribute("data-max"));
+    if(!isFinite(v)||v<0||v>mx){c.classList.add("bad");return;}
+    const res=setMark(ex.id,c.getAttribute("data-st"),c.getAttribute("data-sj"),c.value);
+    if(res.ok)Store.save();
+  };});
   live();
   /* keyboard: Tab moves across (native), Enter moves down one row, same subject */
   box.addEventListener("keydown",function(e){
@@ -2359,9 +2586,25 @@ sum_passpct:{en:"Pass %",ur:"پاس فیصد"},
 sum_pending:{en:"Marks pending",ur:"نمبر باقی"},
 show_more:{en:"Show more",ur:"مزید دکھائیں"},
 today:{en:"Today",ur:"آج"},
-mar31:{en:"31 March",ur:"31 مارچ"},
 board_term_err:{en:"Classes 8th–10th take only the mid-term exam in school — their final exam is the board exam.",ur:"8ویں تا 10ویں جماعت کا اسکول میں صرف ششماہی امتحان ہوتا ہے — سالانہ امتحان بورڈ کا ہوتا ہے۔"},
 board_note:{en:"Board class: only the mid-term (ششماہی) exam is held in school; the final exam is taken by the board.",ur:"بورڈ جماعت: اسکول میں صرف ششماہی امتحان ہوتا ہے؛ سالانہ امتحان بورڈ لیتا ہے۔"},
+login_title:{en:"Teacher sign-in",ur:"استاد سائن ان"},
+login_hint:{en:"Only allowed teachers can open this tool. Sign in with your teacher email and password.",ur:"صرف مجاز اساتذہ یہ ٹول کھول سکتے ہیں۔ اپنے استاد ای میل اور پاس ورڈ سے سائن ان کریں۔"},
+login_email:{en:"Email",ur:"ای میل"},
+login_pass:{en:"Password",ur:"پاس ورڈ"},
+login_go:{en:"Sign in",ur:"سائن ان کریں"},
+login_fail:{en:"Wrong email or password.",ur:"غلط ای میل یا پاس ورڈ۔"},
+login_notallowed:{en:"This account is not an allowed teacher. Ask the school admin to add it.",ur:"یہ اکاؤنٹ مجاز استاد نہیں ہے۔ اسکول ایڈمن سے اسے شامل کرنے کو کہیں۔"},
+login_reauth:{en:"For safety, sign out and sign in again, then try.",ur:"حفاظت کے لیے سائن آؤٹ کر کے دوبارہ سائن ان کریں، پھر کوشش کریں۔"},
+connecting:{en:"Connecting to the school's shared data…",ur:"اسکول کے مشترکہ ڈیٹا سے جڑ رہے ہیں…"},
+signed_in_as:{en:"Signed in as",ur:"سائن ان بطور"},
+sign_out:{en:"Sign out",ur:"سائن آؤٹ"},
+change_pass:{en:"Change password",ur:"پاس ورڈ تبدیل کریں"},
+new_pass:{en:"New password",ur:"نیا پاس ورڈ"},
+pass_changed:{en:"Password changed.",ur:"پاس ورڈ تبدیل ہو گیا۔"},
+sync_on:{en:"Live sync: ON — every entry reaches all teachers instantly",ur:"لائیو مطابقت: آن — ہر اندراج فوراً تمام اساتذہ تک پہنچتا ہے"},
+sync_off:{en:"Saved on this phone only (not connected)",ur:"صرف اس فون پر محفوظ ہے (جڑا ہوا نہیں)"},
+account:{en:"Teacher account",ur:"استاد اکاؤنٹ"},
 restore_warn:{en:"Replace ALL data on this phone with the backup file? Your current entries will be lost. To combine two phones safely, use 'Receive from another phone' instead.",ur:"کیا اس فون کا تمام ڈیٹا بیک اپ فائل سے بدل دیں؟ آپ کی موجودہ اندراجات ختم ہو جائیں گی۔ دو فونز کو محفوظ طریقے سے ملانے کے لیے 'دوسرے فون سے ڈیٹا لیں' استعمال کریں۔"},
 device_name:{en:"This phone's name",ur:"اس فون کا نام"},
 device_ph:{en:"e.g. Jumran's phone",ur:"مثلاً جمراں کا فون"},
@@ -2785,6 +3028,21 @@ function certDossierHTML(st){
 }
 
 /* ================= settings ================= */
+function accountCardHTML(){
+  if(typeof Cloud==="undefined"||!Cloud.enabled)return "";
+  let h='<div class="card"><h3>👤 '+esc(t("account"))+'</h3>';
+  if(Cloud.user&&Cloud.teacher){
+    h+='<p>'+esc(t("signed_in_as"))+": <b>"+esc(Cloud.teacher.name||Cloud.user.email)+"</b> • "+esc(Cloud.user.email)+
+      (Cloud.teacher.role==="admin"?" • 👑 Admin":"")+"</p>"+
+      '<p class="muted">🟢 '+esc(t("sync_on"))+'</p>'+
+      '<div class="toolbar"><input id="s-newpass" type="password" placeholder="'+esc(t("new_pass"))+'" style="min-height:44px;border:1px solid var(--line);border-radius:10px;padding:.5rem">'+
+      '<button type="button" class="btn btn-sm" id="s-chpass">'+esc(t("change_pass"))+'</button>'+
+      '<button type="button" class="btn btn-sm" id="s-signout">'+esc(t("sign_out"))+'</button></div><div id="s-accmsg"></div>';
+  }else{
+    h+='<p class="muted">🔴 '+esc(t("sync_off"))+'</p>';
+  }
+  return h+"</div>";
+}
 function snapshotsCardHTML(){
   if(typeof localStorage==="undefined")return "";
   const list=snapshotsList();
@@ -2842,6 +3100,7 @@ function viewSettings(){
     '<p class="muted">📲 '+esc(t("merge_hint"))+"</p>"+
     '<p class="muted">'+esc(t("seed_warn"))+"</p><div id=\"s-msg\"></div></div>";
   h+=snapshotsCardHTML();
+  h+=accountCardHTML();
   h+=storageMeterHTML();
   h+='<div class="card"><h3>'+esc(t("audit"))+"</h3><div class=\"hist\" style=\"max-height:300px;overflow:auto\">"+
     (db().audit.map(function(a){return "<div>"+a.ts.slice(0,16).replace("T"," ")+" — <b>"+esc(a.action)+"</b>: "+esc(a.summary)+"</div>";}).join("")||'<span class="muted">—</span>')+"</div></div>";
@@ -2895,6 +3154,15 @@ function afterSettings(){
       if(r.ok)render();
     };
   });
+  const so=$("s-signout");if(so)so.onclick=function(){if(typeof Cloud!=="undefined")Cloud.signOut();};
+  const cp=$("s-chpass");if(cp)cp.onclick=function(){
+    const np=$("s-newpass").value;
+    if(!np||np.length<6){$("s-accmsg").innerHTML='<div class="msg err">'+esc(t("req"))+'</div>';return;}
+    Cloud.changePassword(np).then(function(r){
+      $("s-accmsg").innerHTML=r.ok?'<div class="msg okm">'+esc(t("pass_changed"))+'</div>':'<div class="msg err">'+esc(r.error||t("login_fail"))+"</div>";
+      if(r.ok)$("s-newpass").value="";
+    });
+  };
   $("s-merge").onchange=function(e){
     const f=e.target.files[0];if(!f)return;
     const rd=new FileReader();
@@ -3004,7 +3272,7 @@ const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,
   captureStudentPhoto:captureStudentPhoto,storageBytes:storageBytes,storageMeterHTML:storageMeterHTML,
   scanFromText:scanFromText,
   viewDossier:viewDossier};
-function initApp(){db();takeSnapshot("auto");applyLang();render();var lt=$("lang-toggle");if(lt&&!lt._wired){lt._wired=true;lt.onclick=function(){db().settings.lang=(lang()==="ur")?"en":"ur";Store.save();render();};}}
+function initApp(){db();takeSnapshot("auto");applyLang();if(typeof Cloud!=="undefined")Cloud.init();render();var lt=$("lang-toggle");if(lt&&!lt._wired){lt._wired=true;lt.onclick=function(){db().settings.lang=(lang()==="ur")?"en":"ur";Store.save();render();};}}
 if(typeof document!=="undefined"&&typeof window!=="undefined"){
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",initApp);
   else initApp();
