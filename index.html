@@ -1021,7 +1021,7 @@ function boardEligible(st){
 function defaultDB(){return {
   v:1,
   seq:{adm:{},cert:{}},
-  students:[],exams:[],marks:{},remarks:{},labItems:[],labMaint:[],certificates:[],timetable:{},attendance:{},feeHeads:[],feeRecords:[],
+  students:[],exams:[],marks:{},remarks:{},labItems:[],labMaint:[],certificates:[],timetable:{},attendance:{},feeHeads:[],feeRecords:[],subPayments:[],
   settings:{
     schoolName:"",deviceName:"",schoolPhone:"",feesEnabled:true,attEnabled:true,ttEnabled:true,labEnabled:true,certEnabled:true,bankTitle:"",bankAccount:"",bankIBAN:"",jazzcashNo:"",easypaisaNo:"",country:"PK",lang:"ur",passPct:33,regPhotoDataUrl:"",
     gradeScale:[{min:90,g:"A+"},{min:80,g:"A"},{min:70,g:"B"},{min:60,g:"C"},{min:50,g:"D"},{min:0,g:"F"}],
@@ -1140,7 +1140,7 @@ const Cloud = {
   stopListeners: function(){this.unsubs.forEach(function(u){try{u();}catch(e){}});this.unsubs=[];this.firstSeen={};this.firstDone=false;this.seedChecked=false;this.cloudFirst={};},
   startListeners: function(){
     const self=this;self.stopListeners();
-    const colls=["students","exams","marks","remarks","labItems","labMaint","certificates","settings","timetable","attendance","feeHeads","feeRecords"];
+    const colls=["students","exams","marks","remarks","labItems","labMaint","certificates","settings","timetable","attendance","feeHeads","feeRecords","subPayments"];
     colls.forEach(function(c){
       const un=self.coll(c).onSnapshot(function(snap){
         self.applyChanges(c,snap.docChanges());
@@ -1183,7 +1183,7 @@ const Cloud = {
     if(coll==="timetable"){D.timetable[id]=d.grid||{};return;}
     if(coll==="attendance"){D.attendance[id]=d.recs||{};return;}
     if(coll==="remarks"){D.remarks[id]=d.recs||{};return;}
-    const arr={students:D.students,exams:D.exams,labItems:D.labItems,labMaint:D.labMaint,certificates:D.certificates,feeHeads:D.feeHeads,feeRecords:D.feeRecords}[coll];
+    const arr={students:D.students,exams:D.exams,labItems:D.labItems,labMaint:D.labMaint,certificates:D.certificates,feeHeads:D.feeHeads,feeRecords:D.feeRecords,subPayments:D.subPayments}[coll];
     if(!arr)return;
     const rec=Object.assign({},d,{id:id});
     const ix=arr.findIndex(function(x){return x.id===id;});
@@ -1201,13 +1201,13 @@ const Cloud = {
     if(coll==="timetable"){delete D.timetable[id];return;}
     if(coll==="attendance"){delete D.attendance[id];return;}
     if(coll==="remarks"){delete D.remarks[id];return;}
-    const arr={students:D.students,exams:D.exams,labItems:D.labItems,labMaint:D.labMaint,certificates:D.certificates,feeHeads:D.feeHeads,feeRecords:D.feeRecords}[coll];
+    const arr={students:D.students,exams:D.exams,labItems:D.labItems,labMaint:D.labMaint,certificates:D.certificates,feeHeads:D.feeHeads,feeRecords:D.feeRecords,subPayments:D.subPayments}[coll];
     if(!arr)return;
     const ix=arr.findIndex(function(x){return x.id===id;});
     if(ix>=0)arr.splice(ix,1);
   },
   flatten: function(d){
-    const f={students:{},exams:{},marks:{},remarks:{},labItems:{},labMaint:{},certificates:{},settings:{},timetable:{},attendance:{},feeHeads:{},feeRecords:{}};
+    const f={students:{},exams:{},marks:{},remarks:{},labItems:{},labMaint:{},certificates:{},settings:{},timetable:{},attendance:{},feeHeads:{},feeRecords:{},subPayments:{}};
     (d.students||[]).forEach(function(s){f.students[s.id]=s;});
     (d.exams||[]).forEach(function(e){f.exams[e.id]=e;});
     Object.keys(d.marks||{}).forEach(function(ex){Object.keys(d.marks[ex]||{}).forEach(function(st){
@@ -1221,6 +1221,7 @@ const Cloud = {
     Object.keys(d.remarks||{}).forEach(function(k){f.remarks[k]={examId:k,recs:d.remarks[k]};});
     (d.feeHeads||[]).forEach(function(x){f.feeHeads[x.id]=x;});
     (d.feeRecords||[]).forEach(function(x){f.feeRecords[x.id]=x;});
+    (d.subPayments||[]).forEach(function(x){f.subPayments[x.id]=x;});
     f.settings.main={settings:d.settings,seq:d.seq};
     return f;
   },
@@ -1251,6 +1252,58 @@ const Cloud = {
         .then(function(d){return d.exists?d.data():null;})
         .catch(function(){return null;});
     }catch(e){return Promise.resolve(null);}
+  },
+  /* Platform admin only: every school, for the renewals dashboard. */
+  listSchools: function(){
+    const self=this;
+    if(!self.fs||!self.isSuperAdmin)return Promise.resolve([]);
+    try{
+      return self.fs.collection("schools").get().then(function(snap){
+        const out=[];
+        snap.forEach(function(d){out.push(Object.assign({id:d.id},d.data()||{}));});
+        return out;
+      }).catch(function(){return [];});
+    }catch(e){return Promise.resolve([]);}
+  },
+  getSubPayments: function(schoolId){
+    const self=this;
+    if(!self.fs||!schoolId)return Promise.resolve([]);
+    try{
+      return self.fs.collection("schools").doc(schoolId).collection("subPayments").get().then(function(snap){
+        const out=[];
+        snap.forEach(function(d){out.push(Object.assign({id:d.id},d.data()||{}));});
+        out.sort(function(a,b){return String(b.at||"").localeCompare(String(a.at||""));});
+        return out;
+      }).catch(function(){return [];});
+    }catch(e){return Promise.resolve([]);}
+  },
+  /* Platform admin only. Confirms a reported payment and extends the
+     school's paidUntil by the payment's months, from today or the current
+     paidUntil, whichever is later. */
+  confirmSubPayment: function(schoolId,payId){
+    const self=this;
+    if(!self.fs||!self.isSuperAdmin||!schoolId||!payId)return Promise.resolve({ok:false,error:t("req")});
+    try{
+      const payRef=self.fs.collection("schools").doc(schoolId).collection("subPayments").doc(payId);
+      const schRef=self.fs.collection("schools").doc(schoolId);
+      return payRef.get().then(function(psnap){
+        if(!psnap.exists)return {ok:false,error:t("req")};
+        const pay=psnap.data()||{};
+        if(pay.status!=="reported")return {ok:false,error:t("req")};
+        return schRef.get().then(function(ssnap){
+          const sch=ssnap.exists?ssnap.data():{};
+          const cur=String(sch.paidUntil||"").slice(0,10);
+          const base=(cur&&cur>todayISO())?cur:todayISO();
+          const until=addMonthsISO(base,pay.months||1);
+          return schRef.set(Object.assign({},sch,{paidUntil:until,plan:"paid",billing:pay.cycle||"monthly",status:"active"}),{merge:true}).then(function(){
+            return payRef.set(Object.assign({},pay,{status:"confirmed",confirmedAt:tsNow(),confirmedBy:self.user?self.user.uid:""}),{merge:true}).then(function(){
+              if(schoolId===self.schoolId)self.school=Object.assign({},self.school,{paidUntil:until,plan:"paid",billing:pay.cycle||"monthly",status:"active"});
+              return {ok:true,until:until};
+            });
+          });
+        });
+      }).catch(function(){return {ok:false,error:t("req")};});
+    }catch(e){return Promise.resolve({ok:false,error:t("req")});}
   },
   getVerifyDoc: function(schoolId,code){
     const self=this;
@@ -2098,6 +2151,62 @@ function feeDefaulters(month){
 /* Fees on/off (Round 19): true unless the school explicitly turned fees off.
    Old data has no feesEnabled field, so it defaults to on. */
 function feesOn(){return (db().settings||{}).feesEnabled!==false;}
+/* ---- subscription billing (Round 23) ----
+   Annual plan = 12 months for the price of 10.8 (10% off the annual total).
+   ANNUAL_DISC is the one number that changes the discount. */
+const ANNUAL_DISC=0.10;
+function annualPrice(pack){return Math.round((pack.price||0)*12*(1-ANNUAL_DISC));}
+function annualSave(pack){return (pack.price||0)*12-annualPrice(pack);}
+function subAmountFor(pack,cycle){return cycle==="annual"?annualPrice(pack):(pack.price||0);}
+function subCycleMonths(cycle){return cycle==="annual"?12:1;}
+/* Add months to a YYYY-MM-DD date, clamping the day (31 Jan + 1 mo = 28 Feb). */
+function addMonthsISO(iso,months){
+  const p=String(iso||"").split("-");if(p.length<3)return todayISO();
+  let y=+p[0],m=+p[1]-1+months,d=+p[2];
+  y+=Math.floor(m/12);m=((m%12)+12)%12;
+  const last=new Date(y,m+1,0).getDate();
+  if(d>last)d=last;
+  return y+"-"+String(m+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");
+}
+/* Renewal state of a school doc: {days, state} — "overdue" | "due_soon" (<=7d) | "active". */
+function subDue(school){
+  const until=(school&&(school.paidUntil||school.trialEndsAt))||"";
+  if(!until)return {days:null,state:"active"};
+  const t=new Date(todayISO()+"T00:00:00"),u=new Date(String(until).slice(0,10)+"T00:00:00");
+  const days=Math.round((u-t)/86400000);
+  return {days:days,state:days<0?"overdue":days<=7?"due_soon":"active"};
+}
+/* Teacher reports a subscription payment. It stays "reported" until the
+   platform admin confirms it — only the confirm extends paidUntil. */
+function reportSubPayment(d){
+  const cycle=d.cycle==="annual"?"annual":"monthly";
+  const amt=Number(d.amount);
+  if(!(amt>0))return {ok:false,error:t("req")};
+  if(["Cash","JazzCash","EasyPaisa","Bank"].indexOf(d.method)<0)return {ok:false,error:t("req")};
+  const p={id:uid("sp"),at:tsNow(),amount:amt,method:d.method,txnId:String(d.txnId||"").trim(),cycle:cycle,months:subCycleMonths(cycle),status:"reported",reportedBy:(typeof Cloud!=="undefined"&&Cloud.user?Cloud.user.email:"")};
+  db().subPayments.push(p);
+  audit("sub-report",p.cycle+" "+p.amount+" "+p.method+" "+(p.txnId||"—"));
+  Store.save();
+  return {ok:true,payment:p};
+}
+function subPaymentsList(){return (db().subPayments||[]).slice().reverse().sort(function(a,b){return String(b.at).localeCompare(String(a.at));});}
+/* Phone -> WhatsApp number (03… -> 92…), same rule as the attendance alerts. */
+function waNumber(phone){
+  const digits=String(phone||"").replace(/\D/g,"");
+  if(digits.length<7)return "";
+  if(digits.length===11&&digits[0]==="0")return "92"+digits.slice(1);
+  return digits;
+}
+/* The renewal reminder message for one school, with its own price and cycle. */
+function subReminderMsg(school){
+  const pk=countryPack(school.country||"PK");
+  const cycle=school.billing==="annual"?"annual":"monthly";
+  return t("sub_remind_msg")
+    .replace("{school}",school.name||"—")
+    .replace("{cycle}",cycle==="annual"?t("sub_annual"):t("sub_monthly"))
+    .replace("{until}",String(school.paidUntil||school.trialEndsAt||"").slice(0,10))
+    .replace("{amount}",pk.cur+" "+fmtNum(subAmountFor(pk,cycle)));
+}
 /* Module toggles (Round 22): a module is on unless the school explicitly
    turned it off in Settings. Old data has no field, so it defaults to on. */
 function attOn(){return (db().settings||{}).attEnabled!==false;}
@@ -2393,9 +2502,9 @@ function countryPriceText(code){
 function pricingHTML(){
   let h='<div class="card" style="max-width:640px;margin:2rem auto"><h2>💰 '+esc(t("pricing_title"))+'</h2>'+
     '<p class="muted">'+esc(t("pricing_hint"))+"</p>"+
-    '<div class="twrap"><table class="grid"><tr><th>'+esc(t("country"))+'</th><th>'+esc(t("sub_price"))+'</th><th>'+esc(t("sub_rails"))+'</th><th>'+esc(t("pricing_board"))+"</th></tr>"+
+    '<div class="twrap"><table class="grid"><tr><th>'+esc(t("country"))+'</th><th>'+esc(t("sub_price"))+'</th><th>'+esc(t("pricing_annual"))+'</th><th>'+esc(t("sub_rails"))+'</th><th>'+esc(t("pricing_board"))+"</th></tr>"+
     COUNTRY_PACKS.map(function(p){
-      return "<tr><td>"+esc(p.name)+"</td><td><b>"+esc(p.cur+" "+fmtNum(p.price))+"</b> "+esc(t("pricing_per_month"))+(p.note?"<br><span class=\"muted\">"+esc(p.note)+"</span>":"")+"</td><td>"+esc(p.rails)+"</td><td>"+esc(p.board)+"</td></tr>";
+      return "<tr><td>"+esc(p.name)+"</td><td><b>"+esc(p.cur+" "+fmtNum(p.price))+"</b> "+esc(t("pricing_per_month"))+(p.note?"<br><span class=\"muted\">"+esc(p.note)+"</span>":"")+"</td><td><b>"+esc(p.cur+" "+fmtNum(annualPrice(p)))+"</b> "+esc(t("pricing_per_year"))+"<br><span class=\"muted\">"+esc(t("pricing_save"))+" "+esc(p.cur+" "+fmtNum(annualSave(p)))+"</span></td><td>"+esc(p.rails)+"</td><td>"+esc(p.board)+"</td></tr>";
     }).join("")+"</table></div>"+
     '<div style="margin-top:1rem"><button type="button" class="btn btn-sm" id="pr-back">← '+esc(t("parent_back"))+"</button></div></div>";
   return h;
@@ -3053,9 +3162,9 @@ function applyLang(){
   const o=langOrder(),nx=LANGS[o[(o.indexOf(L)+1)%o.length]];
   $("lang-toggle").textContent=nx?nx.native:"EN";
 }
-const TABS=[["home","nav_home"],["adm","nav_adm"],["dob","nav_dob"],["exam","nav_exam"],["result","nav_result"],["att","nav_att"],["fee","nav_fee"],["tt","nav_tt"],["lab","nav_lab"],["cert","nav_cert"],["settings","nav_settings"]];
+const TABS=[["home","nav_home"],["adm","nav_adm"],["dob","nav_dob"],["exam","nav_exam"],["result","nav_result"],["att","nav_att"],["fee","nav_fee"],["tt","nav_tt"],["lab","nav_lab"],["cert","nav_cert"],["admin","nav_admin"],["settings","nav_settings"]];
 /* Which tab each module toggle controls (Round 22). Shared by renderTabs and quickLinksHTML. */
-const TAB_ON={fee:feesOn,att:attOn,tt:ttOn,lab:labOn,cert:certOn};
+const TAB_ON={fee:feesOn,att:attOn,tt:ttOn,lab:labOn,cert:certOn,admin:function(){return typeof Cloud!=="undefined"&&!!Cloud.isSuperAdmin;}};
 function renderTabs(){
   $("tabs").innerHTML=TABS.filter(function(x){return !TAB_ON[x[0]]||TAB_ON[x[0]]();}).map(function(x){
     return '<button type="button" role="tab" class="tab" data-tab="'+x[0]+'" aria-selected="'+(curTab===x[0])+'">'+esc(t(x[1]))+"</button>";
@@ -3253,13 +3362,13 @@ function render(){
     if(!Cloud.authResolved){$("tabs").innerHTML="";$("view").innerHTML='<div class="card"><p class="muted">⏳ '+esc(t("connecting"))+'</p></div>';return;}
     if(!Cloud.user){renderLogin();return;}
   }
-  if((curTab==="fee"&&!feesOn())||(curTab==="att"&&!attOn())||(curTab==="tt"&&!ttOn())||(curTab==="lab"&&!labOn())||(curTab==="cert"&&!certOn()))curTab="home";
+  if((curTab==="fee"&&!feesOn())||(curTab==="att"&&!attOn())||(curTab==="tt"&&!ttOn())||(curTab==="lab"&&!labOn())||(curTab==="cert"&&!certOn())||(curTab==="admin"&&!(typeof Cloud!=="undefined"&&Cloud.isSuperAdmin)))curTab="home";
   renderTabs();const v=$("view");
   const roBanner=(typeof Cloud!=="undefined"&&Cloud.enabled&&Cloud.readOnly)?'<div class="msg err" style="margin:.5rem 0">🔒 '+esc(t("sub_expired"))+'</div>':"";
   v.innerHTML = roBanner+(curTab==="home"?viewHome():curTab==="adm"?viewAdm():curTab==="dob"?viewDob():
     curTab==="exam"?viewExam():curTab==="result"?viewResult():curTab==="att"?viewAtt():curTab==="fee"?viewFee():curTab==="tt"?viewTimetable():curTab==="lab"?viewLab():
-    curTab==="cert"?viewCert():viewSettings());
-  const fns={home:afterHome,adm:afterAdm,dob:afterDob,exam:afterExam,result:afterResult,att:afterAtt,fee:afterFee,tt:afterTimetable,lab:afterLab,cert:afterCert,settings:afterSettings};
+    curTab==="cert"?viewCert():curTab==="admin"?viewAdmin():viewSettings());
+  const fns={home:afterHome,adm:afterAdm,dob:afterDob,exam:afterExam,result:afterResult,att:afterAtt,fee:afterFee,tt:afterTimetable,lab:afterLab,cert:afterCert,admin:afterAdmin,settings:afterSettings};
   if(fns[curTab])fns[curTab]();
   v.scrollTop=0;if(typeof window!=="undefined")window.scrollTo(0,0);
 }
@@ -4758,6 +4867,32 @@ ask_no_defaulters:{en:"No fee defaulters this month.",ur:"اس مہینے کوئ
 ask_no_result:{en:"No result found for this student yet.",ur:"اس طالب علم کا ابھی کوئی نتیجہ نہیں۔",bn:"এই শিক্ষার্থীর এখনো কোনো ফলাফল নেই।"},
 ask_student_notfound:{en:"I couldn't find a student with that name.",ur:"اس نام کا کوئی طالب علم نہیں ملا۔",bn:"এই নামের কোনো শিক্ষার্থী পাওয়া যায়নি।"},
 mod_title:{en:"Feature modules",ur:"سہولتیں",bn:"সুবিধা মডিউল"},
+pricing_annual:{en:"Annual",ur:"سالانہ",bn:"বার্ষিক"},
+pricing_per_year:{en:"per year",ur:"سالانہ",bn:"প্রতি বছর"},
+pricing_save:{en:"Save",ur:"بچت",bn:"সাশ্রয়"},
+sub_annual:{en:"Annual",ur:"سالانہ",bn:"বার্ষিক"},
+sub_monthly:{en:"Monthly",ur:"ماہانہ",bn:"মাসিক"},
+sub_billing:{en:"Billing cycle",ur:"ادائیگی کا دورانیہ",bn:"বিলিং চক্র"},
+sub_report_title:{en:"Report a subscription payment",ur:"سبسکرپشن ادائیگی رپورٹ کریں",bn:"সাবস্ক্রিপশন পেমেন্ট জানান"},
+sub_report_hint:{en:"Pay first, then report it here with the transaction ID. The admin switches the subscription on after checking the payment.",ur:"پہلے ادائیگی کریں، پھر ٹرانزیکشن آئی ڈی کے ساتھ یہاں رپورٹ کریں۔ ایڈمن ادائیگی چیک کر کے سبسکرپشن آن کرے گا۔",bn:"প্রথমে পেমেন্ট করুন, তারপর লেনদেন আইডি দিয়ে এখানে জানান। অ্যাডমিন পেমেন্ট যাচাই করে সাবস্ক্রিপশন চালু করবেন।"},
+sub_amount:{en:"Amount",ur:"رقم",bn:"পরিমাণ"},
+sub_method:{en:"Method",ur:"طریقہ",bn:"মাধ্যম"},
+sub_txn:{en:"Transaction ID",ur:"ٹرانزیکشن آئی ڈی",bn:"লেনদেন আইডি"},
+sub_report:{en:"Report payment",ur:"ادائیگی رپورٹ کریں",bn:"পেমেন্ট জানান"},
+sub_reported:{en:"Reported — waiting",ur:"رپورٹ شدہ — انتظار",bn:"জানানো হয়েছে — অপেক্ষায়"},
+sub_confirmed:{en:"Confirmed",ur:"تصدیق شدہ",bn:"নিশ্চিত"},
+sub_overdue:{en:"Subscription ended",ur:"سبسکرپشن ختم ہو گئی",bn:"সাবস্ক্রিপশন শেষ হয়েছে"},
+sub_due_in:{en:"Renewal due in {days} days",ur:"{days} دن میں تجدید واجب ہے",bn:"{days} দিনে নবায়ন বাকি"},
+sub_admin:{en:"Platform admin",ur:"پلیٹفارم ایڈمن",bn:"প্ল্যাটফর্ম অ্যাডমিন"},
+sub_admin_hint:{en:"All schools, their subscriptions and reported payments. Confirm a payment to switch a school on; remind schools that have not renewed.",ur:"تمام اسکول، ان کی سبسکرپشن اور رپورٹ شدہ ادائیگیاں۔ ادائیگی کی تصدیق کر کے اسکول آن کریں؛ جنہوں نے تجدید نہیں کی انہیں یاد دلائیں۔",bn:"সব স্কুল, তাদের সাবস্ক্রিপশন ও জানানো পেমেন্ট। পেমেন্ট নিশ্চিত করে স্কুল চালু করুন; যারা নবায়ন করেনি তাদের মনে করিয়ে দিন।"},
+sub_confirm:{en:"Confirm",ur:"تصدیق کریں",bn:"নিশ্চিত করুন"},
+sub_expected:{en:"Expected",ur:"متوقع",bn:"প্রত্যাশিত"},
+sub_remind_wa:{en:"WhatsApp reminder",ur:"واٹس ایپ یاد دہانی",bn:"হোয়াটসঅ্যাপ মনে করিয়ে দিন"},
+sub_remind_mail:{en:"Email reminder",ur:"ای میل یاد دہانی",bn:"ইমেইল মনে করিয়ে দিন"},
+sub_remind_msg:{en:"Assalam-o-Alaikum, this is the School Record System. Your subscription for {school} ({cycle}) ended on {until}. Amount due: {amount}. Please pay via JazzCash / EasyPaisa / bank transfer and share the transaction ID — your access will be switched on after payment. Thank you.",ur:"السلام علیکم، یہ اسکول ریکارڈ سسٹم ہے۔ {school} کی سبسکرپشن ({cycle}) {until} کو ختم ہو گئی ہے۔ واجب رقم: {amount}۔ براہ کرم JazzCash / EasyPaisa / بینک ٹرانسفر سے ادائیگی کریں اور ٹرانزیکشن آئی ڈی بھیجیں — ادائیگی کے بعد آپ کی رسائی آن کر دی جائے گی۔ شکریہ۔",bn:"আসসালামু আলাইকুম, এটি স্কুল রেকর্ড সিস্টেম। {school}-এর সাবস্ক্রিপশন ({cycle}) {until} তারিখে শেষ হয়েছে। বাকি পরিমাণ: {amount}। অনুগ্রহ করে জ্যাজক্যাশ / ইজিপয়সা / ব্যাংক ট্রান্সফারের মাধ্যমে পেমেন্ট করুন এবং লেনদেন আইডি পাঠান — পেমেন্টের পর আপনার অ্যাক্সেস চালু করা হবে। ধন্যবাদ।"},
+sub_remind_subject:{en:"Subscription renewal — {school}",ur:"سبسکرپشن تجدید — {school}",bn:"সাবস্ক্রিপশন নবায়ন — {school}"},
+sub_no_contact:{en:"No contact on file",ur:"رابطہ درج نہیں",bn:"যোগাযোগের তথ্য নেই"},
+nav_admin:{en:"Admin",ur:"ایڈمن",bn:"অ্যাডমিন"},
 publish_results:{en:"Publish results",ur:"نتائج شائع کریں",bn:"ফলাফল প্রকাশ করুন"},
 unpublish_results:{en:"Remove published results",ur:"شائع شدہ نتائج ہٹائیں",bn:"প্রকাশিত ফলাফল সরান"},
 publish_locked_only:{en:"Results can only be published after the exam is locked (approved).",ur:"نتائج صرف امتحان بند (منظور) ہونے کے بعد شائع ہو سکتے ہیں۔",bn:"পরীক্ষা লক (অনুমোদিত) হওয়ার পরেই ফলাফল প্রকাশ করা যাবে।"},
@@ -5231,14 +5366,103 @@ function schoolCardHTML(){
   const planTxt=s.plan==="trial"?t("plan_trial"):s.plan==="paid"?t("plan_paid"):t("plan_free");
   const statusTxt=s.status==="active"?t("sub_active"):t("sub_expired_short");
   const until=s.paidUntil||s.trialEndsAt||"";
+  const billTxt=s.plan==="paid"?" • "+esc(s.billing==="annual"?t("sub_annual"):t("sub_monthly")):"";
   let h='<div class="card"><h3>🏫 '+esc(t("school_sub"))+'</h3>'+
-    '<p><b>'+esc(s.name||"—")+'</b> • '+esc(planTxt)+' • '+esc(statusTxt)+
+    '<p><b>'+esc(s.name||"—")+'</b> • '+esc(planTxt)+billTxt+' • '+esc(statusTxt)+
     (until?" • "+esc(t("sub_until"))+": "+esc(String(until).slice(0,10)):"")+'</p>';
   const pk=countryPack(schoolCountry());
-  h+='<p>'+esc(t("sub_price"))+": <b>"+esc(pk.cur+" "+fmtNum(pk.price))+" "+esc(t("pricing_per_month"))+"</b>"+(pk.note?" ("+esc(pk.note)+")":"")+"<br>"+
+  h+='<p>'+esc(t("sub_price"))+": <b>"+esc(pk.cur+" "+fmtNum(pk.price))+" "+esc(t("pricing_per_month"))+"</b>"+(pk.note?" ("+esc(pk.note)+")":"")+
+    "<br>"+esc(t("pricing_annual"))+": <b>"+esc(pk.cur+" "+fmtNum(annualPrice(pk)))+" "+esc(t("pricing_per_year"))+"</b> ("+esc(t("pricing_save"))+" "+esc(pk.cur+" "+fmtNum(annualSave(pk)))+")<br>"+
     esc(t("sub_rails"))+": "+esc(pk.rails)+"</p>";
+  const due=subDue(s);
+  if(due.state==="overdue")h+='<p class="msg err">⚠️ '+esc(t("sub_overdue"))+(until?" — "+esc(String(until).slice(0,10)):"")+'</p>';
+  else if(due.state==="due_soon")h+='<p class="msg warn">⏰ '+esc(t("sub_due_in").replace("{days}",String(due.days)))+'</p>';
   if(s.status!=="active")h+='<p class="muted">'+esc(t("sub_renew"))+'</p>';
+  /* Report a subscription payment (teacher side). */
+  h+='<h3 style="margin:.8rem 0 .3rem">'+esc(t("sub_report_title"))+'</h3>'+
+    '<p class="muted">'+esc(t("sub_report_hint"))+'</p>'+
+    '<div class="grid2">'+
+    '<div class="field"><label>'+esc(t("sub_billing"))+'</label><select id="sub-cycle"><option value="monthly">'+esc(t("sub_monthly"))+'</option><option value="annual">'+esc(t("sub_annual"))+'</option></select></div>'+
+    '<div class="field"><label>'+esc(t("sub_amount"))+' ('+esc(pk.cur)+')</label><input id="sub-amount" inputmode="numeric" value="'+subAmountFor(pk,"monthly")+'"></div>'+
+    '<div class="field"><label>'+esc(t("sub_method"))+'</label><select id="sub-method"><option>JazzCash</option><option>EasyPaisa</option><option>Bank</option><option>Cash</option></select></div>'+
+    '<div class="field"><label>'+esc(t("sub_txn"))+'</label><input id="sub-txn" placeholder="..."></div></div>'+
+    '<button type="button" class="btn btn-primary" id="sub-report">'+esc(t("sub_report"))+'</button><div id="sub-msg"></div>';
+  const list=subPaymentsList();
+  if(list.length){
+    h+='<div style="margin-top:.6rem">'+list.map(function(p){
+      return '<div class="toolbar" style="margin:.3rem 0"><span>'+esc(String(p.at).slice(0,10))+' • '+esc(p.cycle==="annual"?t("sub_annual"):t("sub_monthly"))+' • <b>'+esc(pk.cur+" "+fmtNum(p.amount))+'</b> • '+esc(p.method)+(p.txnId?" • "+esc(p.txnId):"")+'</span><span class="chip">'+esc(p.status==="confirmed"?t("sub_confirmed"):t("sub_reported"))+'</span></div>';
+    }).join("")+"</div>";
+  }
   return h+"</div>";
+}
+/* ---- platform-admin dashboard (Round 23): renewals for all schools ---- */
+function viewAdmin(){
+  if(typeof Cloud==="undefined"||!Cloud.isSuperAdmin)return '<div class="card"><p class="muted">'+esc(t("login_notallowed"))+'</p></div>';
+  return '<div class="card"><h2>👑 '+esc(t("sub_admin"))+'</h2><p class="muted">'+esc(t("sub_admin_hint"))+'</p><div id="adm-list"><p class="muted">⏳ '+esc(t("connecting"))+'</p></div></div>';
+}
+function adminSchoolHTML(row){
+  const s=row.school, due=subDue(s);
+  const until=String(s.paidUntil||s.trialEndsAt||"").slice(0,10);
+  const pk=countryPack(s.country||"PK");
+  const cycle=s.billing==="annual"?"annual":"monthly";
+  const amt=subAmountFor(pk,cycle);
+  let chip;
+  if(due.state==="overdue")chip='<span class="chip">🔴 '+esc(t("sub_expired_short"))+'</span>';
+  else if(due.state==="due_soon")chip='<span class="chip">🟡 '+esc(t("sub_due_in").replace("{days}",String(due.days)))+'</span>';
+  else chip='<span class="chip">🟢 '+esc(t("sub_active"))+'</span>';
+  const phone=row.info?row.info.phone:"";
+  const waMsg=subReminderMsg(s);
+  const waNum=waNumber(phone);
+  const waLink=waNum?"https://wa.me/"+waNum+"?text="+encodeURIComponent(waMsg):"";
+  const mail=s.contactEmail?"mailto:"+encodeURIComponent(s.contactEmail)+"?subject="+encodeURIComponent(t("sub_remind_subject").replace("{school}",s.name||""))+"&body="+encodeURIComponent(waMsg):"";
+  let h='<div class="card" style="margin:.5rem 0"><b>'+esc(s.name||"—")+'</b> '+chip+'<br>'+
+    '<span class="muted">'+esc(s.plan==="trial"?t("plan_trial"):t("plan_paid"))+' • '+esc(cycle==="annual"?t("sub_annual"):t("sub_monthly"))+' • '+esc(t("sub_until"))+': '+esc(until||"—")+' • '+esc(pk.cur+" "+fmtNum(amt))+'</span>';
+  if(due.state!=="active"){
+    h+='<div class="toolbar" style="margin-top:.4rem">'+
+      (waLink?'<a class="btn btn-sm" href="'+waLink+'" target="_blank">💬 '+esc(t("sub_remind_wa"))+'</a>':"")+
+      (mail?'<a class="btn btn-sm" href="'+mail+'">✉️ '+esc(t("sub_remind_mail"))+'</a>':"")+
+      ((!waLink&&!mail)?'<span class="muted">'+esc(t("sub_no_contact"))+'</span>':"")+'</div>';
+  }
+  const reported=(row.pays||[]).filter(function(p){return p.status==="reported";});
+  const confirmed=(row.pays||[]).filter(function(p){return p.status==="confirmed";});
+  if(reported.length){
+    h+='<div style="margin-top:.5rem">'+reported.map(function(p){
+      return '<div class="toolbar" style="margin:.3rem 0"><span>'+esc(String(p.at).slice(0,10))+' • '+esc(p.cycle==="annual"?t("sub_annual"):t("sub_monthly"))+' • <b>'+esc(pk.cur+" "+fmtNum(p.amount))+'</b> • '+esc(p.method)+(p.txnId?" • "+esc(p.txnId):"")+' • '+esc(t("sub_expected"))+': '+esc(pk.cur+" "+fmtNum(subAmountFor(pk,p.cycle)))+'</span>'+
+      '<button type="button" class="btn btn-sm btn-primary" data-confirm="'+esc(s.id)+"|"+esc(p.id)+'">'+esc(t("sub_confirm"))+'</button></div>';
+    }).join("")+"</div>";
+  }
+  if(confirmed.length)h+='<p class="muted" style="margin-top:.4rem">'+esc(t("sub_confirmed"))+': '+confirmed.length+'</p>';
+  return h+"</div>";
+}
+function loadAdminList(){
+  const box=$("adm-list");if(!box)return;
+  if(typeof Cloud==="undefined"||!Cloud.isSuperAdmin){box.innerHTML='<p class="muted">'+esc(t("login_notallowed"))+'</p>';return;}
+  Cloud.listSchools().then(function(schools){
+    if(!schools.length){box.innerHTML='<p class="muted">'+esc(t("no_records"))+'</p>';return;}
+    const jobs=schools.map(function(s){
+      return Promise.all([Cloud.getSubPayments(s.id),Cloud.getPublicInfo(s.id)]).then(function(r){
+        return {school:s,pays:r[0]||[],info:r[1]||null};
+      });
+    });
+    return Promise.all(jobs).then(function(rows){
+      box.innerHTML=rows.map(adminSchoolHTML).join("");
+    });
+  }).catch(function(){box.innerHTML='<p class="muted">'+esc(t("login_notallowed"))+'</p>';});
+}
+function afterAdmin(){
+  const box=$("adm-list");
+  if(box)box.onclick=function(ev){
+    const b=ev.target&&ev.target.closest?ev.target.closest("[data-confirm]"):null;
+    if(!b)return;
+    const parts=String(b.getAttribute("data-confirm")).split("|");
+    if(parts.length!==2)return;
+    b.disabled=true;b.textContent="⏳";
+    Cloud.confirmSubPayment(parts[0],parts[1]).then(function(r){
+      if(r&&r.ok)loadAdminList();
+      else{b.disabled=false;b.textContent=t("sub_confirm");}
+    });
+  };
+  loadAdminList();
 }
 function accountCardHTML(){
   if(typeof Cloud==="undefined"||!Cloud.enabled)return "";
@@ -5433,6 +5657,18 @@ function afterSettings(){
   };
   $("s-demo").onclick=function(){if(confirm(t("seed_warn"))){seedDemo();render();}};
   $("s-wipe").onclick=function(){const v=prompt(t("wipe_confirm"));if(v==="ERASE"){takeSnapshot("before-wipe");DB=defaultDB();Store.save();render();}};
+  /* Subscription payment report (Round 23): cycle change refills the amount. */
+  const subCyc=$("sub-cycle"),subAmt=$("sub-amount");
+  if(subCyc&&subAmt)subCyc.onchange=function(){
+    subAmt.value=subAmountFor(countryPack(schoolCountry()),subCyc.value);
+  };
+  const subRep=$("sub-report");
+  if(subRep)subRep.onclick=function(){
+    const r=reportSubPayment({cycle:$("sub-cycle").value,amount:$("sub-amount").value,method:$("sub-method").value,txnId:$("sub-txn").value});
+    const m=$("sub-msg");
+    if(!r.ok){if(m)m.innerHTML='<div class="msg err">'+esc(r.error||t("req"))+'</div>';return;}
+    render();
+  };
 }
 
 /* ================= demo seed ================= */
@@ -5504,6 +5740,7 @@ const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,LAN
   COUNTRY_PACKS:COUNTRY_PACKS,countryPack:countryPack,schoolCountry:schoolCountry,countryPriceText:countryPriceText,pricingHTML:pricingHTML,
   payDetailsHTML:payDetailsHTML,concAmount:concAmount,setConcession:setConcession,removeConcession:removeConcession,concDossierHTML:concDossierHTML,weekKey:weekKey,attFlags:attFlags,attFlagsHTML:attFlagsHTML,teacherRemark:teacherRemark,setRemark:setRemark,
   feesOn:feesOn,attOn:attOn,ttOn:ttOn,labOn:labOn,certOn:certOn,feePayStatus:feePayStatus,feePayStatusText:feePayStatusText,
+  annualPrice:annualPrice,annualSave:annualSave,subAmountFor:subAmountFor,subCycleMonths:subCycleMonths,addMonthsISO:addMonthsISO,subDue:subDue,reportSubPayment:reportSubPayment,subPaymentsList:subPaymentsList,waNumber:waNumber,subReminderMsg:subReminderMsg,ANNUAL_DISC:ANNUAL_DISC,
   askAnswer:askAnswer,askNorm:askNorm,askFindStudent:askFindStudent,askFindClass:askFindClass,askBuild:askBuild,ASK_INTENTS:ASK_INTENTS,
   setTTCell:setTTCell,ttConflicts:ttConflicts,ttClasses:ttClasses,ttCell:ttCell,
   attGet:attGet,setAtt:setAtt,attMarkAll:attMarkAll,attSummary:attSummary,attAbsentees:attAbsentees,
