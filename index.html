@@ -1023,7 +1023,7 @@ function defaultDB(){return {
   seq:{adm:{},cert:{}},
   students:[],exams:[],marks:{},remarks:{},labItems:[],labMaint:[],certificates:[],timetable:{},attendance:{},feeHeads:[],feeRecords:[],
   settings:{
-    schoolName:"",deviceName:"",schoolPhone:"",feesEnabled:true,bankTitle:"",bankAccount:"",bankIBAN:"",jazzcashNo:"",easypaisaNo:"",country:"PK",lang:"ur",passPct:33,regPhotoDataUrl:"",
+    schoolName:"",deviceName:"",schoolPhone:"",feesEnabled:true,attEnabled:true,ttEnabled:true,labEnabled:true,certEnabled:true,bankTitle:"",bankAccount:"",bankIBAN:"",jazzcashNo:"",easypaisaNo:"",country:"PK",lang:"ur",passPct:33,regPhotoDataUrl:"",
     gradeScale:[{min:90,g:"A+"},{min:80,g:"A"},{min:70,g:"B"},{min:60,g:"C"},{min:50,g:"D"},{min:0,g:"F"}],
     divisions:[{min:60,d:"1st"},{min:50,d:"2nd"},{min:40,d:"3rd"},{min:0,d:"Fail"}],
     board:defaultBoard(),
@@ -2098,6 +2098,12 @@ function feeDefaulters(month){
 /* Fees on/off (Round 19): true unless the school explicitly turned fees off.
    Old data has no feesEnabled field, so it defaults to on. */
 function feesOn(){return (db().settings||{}).feesEnabled!==false;}
+/* Module toggles (Round 22): a module is on unless the school explicitly
+   turned it off in Settings. Old data has no field, so it defaults to on. */
+function attOn(){return (db().settings||{}).attEnabled!==false;}
+function ttOn(){return (db().settings||{}).ttEnabled!==false;}
+function labOn(){return (db().settings||{}).labEnabled!==false;}
+function certOn(){return (db().settings||{}).certEnabled!==false;}
 /* Payment status (Round 19): the tool itself works out whether a month's fee
    is paid in full, half, a quarter, three quarters, or only partly — from the
    amount due (total - discount + fine) and the amount paid, never typed. */
@@ -3048,8 +3054,10 @@ function applyLang(){
   $("lang-toggle").textContent=nx?nx.native:"EN";
 }
 const TABS=[["home","nav_home"],["adm","nav_adm"],["dob","nav_dob"],["exam","nav_exam"],["result","nav_result"],["att","nav_att"],["fee","nav_fee"],["tt","nav_tt"],["lab","nav_lab"],["cert","nav_cert"],["settings","nav_settings"]];
+/* Which tab each module toggle controls (Round 22). Shared by renderTabs and quickLinksHTML. */
+const TAB_ON={fee:feesOn,att:attOn,tt:ttOn,lab:labOn,cert:certOn};
 function renderTabs(){
-  $("tabs").innerHTML=TABS.filter(function(x){return x[0]!=="fee"||feesOn();}).map(function(x){
+  $("tabs").innerHTML=TABS.filter(function(x){return !TAB_ON[x[0]]||TAB_ON[x[0]]();}).map(function(x){
     return '<button type="button" role="tab" class="tab" data-tab="'+x[0]+'" aria-selected="'+(curTab===x[0])+'">'+esc(t(x[1]))+"</button>";
   }).join("");
   Array.prototype.forEach.call($("tabs").children,function(b){
@@ -3245,7 +3253,7 @@ function render(){
     if(!Cloud.authResolved){$("tabs").innerHTML="";$("view").innerHTML='<div class="card"><p class="muted">⏳ '+esc(t("connecting"))+'</p></div>';return;}
     if(!Cloud.user){renderLogin();return;}
   }
-  if(curTab==="fee"&&!feesOn())curTab="home";
+  if((curTab==="fee"&&!feesOn())||(curTab==="att"&&!attOn())||(curTab==="tt"&&!ttOn())||(curTab==="lab"&&!labOn())||(curTab==="cert"&&!certOn()))curTab="home";
   renderTabs();const v=$("view");
   const roBanner=(typeof Cloud!=="undefined"&&Cloud.enabled&&Cloud.readOnly)?'<div class="msg err" style="margin:.5rem 0">🔒 '+esc(t("sub_expired"))+'</div>':"";
   v.innerHTML = roBanner+(curTab==="home"?viewHome():curTab==="adm"?viewAdm():curTab==="dob"?viewDob():
@@ -3542,7 +3550,7 @@ function directoryCardHTML(){
     '<div id="dir-list"></div></div>';
 }
 function quickLinksHTML(){
-  const links=TABS.slice(1).map(function(x){
+  const links=TABS.slice(1).filter(function(x){return !TAB_ON[x[0]]||TAB_ON[x[0]]();}).map(function(x){
     return '<button type="button" class="btn" data-go="'+x[0]+'">'+esc(t(x[1]))+"</button>";
   }).join("");
   return '<div class="card"><h3>'+esc(t("quick_links"))+'</h3><div class="toolbar">'+links+"</div></div>";
@@ -3558,8 +3566,8 @@ function dashStatsHTML(){
       return '<button type="button" class="chip" data-clsgo="'+esc(k)+'" style="cursor:pointer">'+esc(k)+": <b>"+groups[k]+"</b></button>";
     }).join("")+"</div>";
   h+='<span class="chip">'+esc(t("dash_exams"))+": <b>"+db().exams.length+"</b></span>"+
-    '<span class="chip">'+esc(t("dash_certs"))+": <b>"+db().certificates.length+"</b></span>"+
-    (db().students.length?'<span class="chip">'+esc(t("dash_att"))+": <b>"+attSummary(todayISO(),"").P+"/"+db().students.length+" ("+attSummary(todayISO(),"").pct+"%)</b></span>":"")+"</div>";
+    (certOn()?'<span class="chip">'+esc(t("dash_certs"))+": <b>"+db().certificates.length+"</b></span>":"")+
+    (attOn()&&db().students.length?'<span class="chip">'+esc(t("dash_att"))+": <b>"+attSummary(todayISO(),"").P+"/"+db().students.length+" ("+attSummary(todayISO(),"").pct+"%)</b></span>":"")+"</div>";
   if(feesOn()&&(db().feeRecords||[]).length){
     const fs=feeSummary(todayISO().slice(0,7));
     h+='<div class="toolbar"><span class="chip">'+esc(t("dash_fee"))+": "+esc(t("fee_collected"))+" <b>"+fs.collected+"</b> • "+esc(t("fee_outstanding"))+" <b>"+fs.outstanding+"</b></span></div>";
@@ -3660,19 +3668,19 @@ function askFindClass(q){
 }
 function askBuild(id,st,cls){
   const month=todayISO().slice(0,7), today=todayISO();
-  if(id==="absent_today"){
+  if(id==="absent_today"){if(!attOn())return null;
     const list=(db().students||[]).filter(function(s){return (!cls||s.cls===cls)&&attGet(today,s.id)==="A";});
     if(!list.length)return '<div class="msg ok">'+esc(t("ask_all_present"))+"</div>";
     return "<b>"+esc(t("att_a"))+" — "+esc(today)+"</b><br>"+list.map(function(s){return "• "+esc(displayName(s))+" ("+esc(clsLabel(s.cls,s.section))+")";}).join("<br>");
   }
-  if(id==="defaulters"){
+  if(id==="defaulters"){if(!feesOn())return null;
     const sum=feeSummary(month);
     const list=(db().feeRecords||[]).filter(function(r){return r.month===month&&(r.total-r.discount+r.fine-feePaid(r))>0;}).map(function(r){return {st:(db().students||[]).find(function(s){return s.id===r.studentId;}),bal:r.total-r.discount+r.fine-feePaid(r)};}).filter(function(x){return x.st&&(!cls||x.st.cls===cls);});
     let h="<b>"+esc(t("fee_outstanding"))+": "+sum.outstanding+" · "+esc(t("fee_defaulters"))+": "+sum.defaulters+"</b>";
     if(!list.length)return h+'<br><div class="msg ok">'+esc(t("ask_no_defaulters"))+"</div>";
     return h+"<br>"+list.map(function(x){return "• "+esc(displayName(x.st))+" ("+esc(clsLabel(x.st.cls,x.st.section))+") — "+x.bal;}).join("<br>");
   }
-  if(id==="fee_status"){
+  if(id==="fee_status"){if(!feesOn())return null;
     if(!st)return askBuild("defaulters",null,cls);
     const b=feeBill(st.id,month);
     if(!b)return '<div class="msg err">'+esc(t("ask_student_notfound"))+"</div>";
@@ -3695,7 +3703,7 @@ function askBuild(id,st,cls){
     const list=cls?(db().students||[]).filter(function(s){return s.cls===cls;}):(db().students||[]);
     return "<b>"+esc(t("kpi_students"))+": "+list.length+(cls?" ("+esc(t("cls"))+" "+esc(cls)+")":"")+"</b>";
   }
-  if(id==="att_pct"){
+  if(id==="att_pct"){if(!attOn())return null;
     if(st){
       const recs=Object.keys(db().attendance||{}).filter(function(d){return d.slice(0,7)===month;});
       let p=0,a=0;
@@ -3711,7 +3719,7 @@ function askBuild(id,st,cls){
     if(!list.length)return '<div class="msg err">'+esc(t("no_records"))+"</div>";
     return "<b>"+esc(t("board_elig"))+"</b><br>"+list.map(function(s){return "• "+esc(displayName(s))+" ("+esc(clsLabel(s.cls,s.section))+") — "+(boardEligible(s)?esc(t("eligible")):esc(t("not_eligible")));}).join("<br>");
   }
-  if(id==="timetable"){
+  if(id==="timetable"){if(!ttOn())return null;
     const d=new Date(today+"T00:00:00"), day=(d.getDay()+6)%7;
     if(day>5)return '<div class="msg">'+esc(t("tt_no_class"))+"</div>";
     const classes=cls?[cls]:Object.keys(db().timetable||{});
@@ -3727,12 +3735,12 @@ function askBuild(id,st,cls){
       return "<b>"+esc(t("cls"))+" "+esc(c)+"</b><br>"+(cells.length?cells.map(function(x){return "• "+esc(x);}).join("<br>"):esc(t("tt_no_class")));
     }).join("<br><br>");
   }
-  if(id==="low_stock"){
+  if(id==="low_stock"){if(!labOn())return null;
     const list=(db().labItems||[]).filter(function(it){return Number(it.qty||0)<=Number(it.min||0);});
     if(!list.length)return '<div class="msg ok">'+esc(t("no_records"))+"</div>";
     return "<b>"+esc(t("low_stock"))+"</b><br>"+list.map(function(it){return "• "+esc(it.name)+" — "+it.qty+" / "+esc(t("min_stock"))+" "+it.min;}).join("<br>");
   }
-  if(id==="certs"){
+  if(id==="certs"){if(!certOn())return null;
     const cs=db().certificates||[];
     return "<b>"+esc(t("dash_certs"))+": "+cs.length+"</b>"+(cs.length?"<br>"+cs.slice(-5).map(function(c){const s=(db().students||[]).find(function(x){return x.id===c.studentId;});return "• "+(s?esc(displayName(s)):"?")+" — "+esc(c.type||"")+" "+esc(c.serial||"");}).join("<br>"):"");
   }
@@ -3769,7 +3777,7 @@ function viewHome(){
     return '<div class="dirpane dossier-open"><div class="dircol">'+directoryCardHTML()+'</div>'+
       '<div class="doscol">'+viewDossier(dossierId)+"</div></div>"+quickLinksHTML();
   }
-  return askCardHTML()+dashStatsHTML()+attFlagsHTML(todayISO().slice(0,7))+promoteCardHTML()+directoryCardHTML()+quickLinksHTML();
+  return askCardHTML()+dashStatsHTML()+(attOn()?attFlagsHTML(todayISO().slice(0,7)):"")+promoteCardHTML()+directoryCardHTML()+quickLinksHTML();
 }
 function kpi(n,l){return '<div class="kpi"><div class="n">'+n+'</div><div class="l">'+esc(l)+"</div></div>";}
 function drawDir(){
@@ -4749,6 +4757,7 @@ ask_all_present:{en:"Everyone is present today.",ur:"آج سب حاضر ہیں۔
 ask_no_defaulters:{en:"No fee defaulters this month.",ur:"اس مہینے کوئی نادہندہ نہیں۔",bn:"এই মাসে কোনো বকেয়া নেই।"},
 ask_no_result:{en:"No result found for this student yet.",ur:"اس طالب علم کا ابھی کوئی نتیجہ نہیں۔",bn:"এই শিক্ষার্থীর এখনো কোনো ফলাফল নেই।"},
 ask_student_notfound:{en:"I couldn't find a student with that name.",ur:"اس نام کا کوئی طالب علم نہیں ملا۔",bn:"এই নামের কোনো শিক্ষার্থী পাওয়া যায়নি।"},
+mod_title:{en:"Feature modules",ur:"سہولتیں",bn:"সুবিধা মডিউল"},
 publish_results:{en:"Publish results",ur:"نتائج شائع کریں",bn:"ফলাফল প্রকাশ করুন"},
 unpublish_results:{en:"Remove published results",ur:"شائع شدہ نتائج ہٹائیں",bn:"প্রকাশিত ফলাফল সরান"},
 publish_locked_only:{en:"Results can only be published after the exam is locked (approved).",ur:"نتائج صرف امتحان بند (منظور) ہونے کے بعد شائع ہو سکتے ہیں۔",bn:"পরীক্ষা লক (অনুমোদিত) হওয়ার পরেই ফলাফল প্রকাশ করা যাবে।"},
@@ -5282,6 +5291,12 @@ function viewSettings(){
     fld("jazzcash_no",'<input id="s-jazzcash" value="'+esc(s.jazzcashNo||"")+'" placeholder="03XX-XXXXXXX">')+
     fld("easypaisa_no",'<input id="s-easypaisa" value="'+esc(s.easypaisaNo||"")+'" placeholder="03XX-XXXXXXX">')+
     fld("fees_enabled",'<select id="s-feeson"><option value="1"'+(feesOn()?" selected":"")+'>'+esc(t("fees_yes"))+'</option><option value="0"'+(!feesOn()?" selected":"")+'>'+esc(t("fees_no"))+"</option></select>")+
+    '<h3 style="margin:.8rem 0 .3rem">'+esc(t("mod_title"))+'</h3>'+
+    fld("nav_att",'<select id="s-atton"><option value="1"'+(attOn()?" selected":"")+'>'+esc(t("fees_yes"))+'</option><option value="0"'+(!attOn()?" selected":"")+'>'+esc(t("fees_no"))+"</option></select>")+
+    fld("nav_tt",'<select id="s-tton"><option value="1"'+(ttOn()?" selected":"")+'>'+esc(t("fees_yes"))+'</option><option value="0"'+(!ttOn()?" selected":"")+'>'+esc(t("fees_no"))+"</option></select>")+
+    fld("nav_lab",'<select id="s-labon"><option value="1"'+(labOn()?" selected":"")+'>'+esc(t("fees_yes"))+'</option><option value="0"'+(!labOn()?" selected":"")+'>'+esc(t("fees_no"))+"</option></select>")+
+    fld("nav_cert",'<select id="s-certon"><option value="1"'+(certOn()?" selected":"")+'>'+esc(t("fees_yes"))+'</option><option value="0"'+(!certOn()?" selected":"")+'>'+esc(t("fees_no"))+"</option></select>")+
+
     '<div class="field"><label>'+esc(t("logo"))+'</label>'+
     (s.logoDataUrl?'<img src="'+s.logoDataUrl+'" style="height:54px;display:block;margin-bottom:.4rem" alt="">':"")+
     '<input id="s-logo" type="file" accept="image/*" style="margin-bottom:.4rem">'+
@@ -5332,7 +5347,7 @@ function viewSettings(){
 function afterSettings(){
   $("s-save").onclick=function(){
     const s=db().settings;
-    s.schoolName=$("s-name").value.trim();s.deviceName=$("s-device").value.trim();s.schoolPhone=$("s-phone").value.trim();s.country=$("s-country").value;s.feesEnabled=$("s-feeson").value==="1";s.bankTitle=$("s-banktitle").value.trim();s.bankAccount=$("s-bankacct").value.trim();s.bankIBAN=$("s-bankiban").value.trim();s.jazzcashNo=$("s-jazzcash").value.trim();s.easypaisaNo=$("s-easypaisa").value.trim();s.lang=$("s-lang").value;s.passPct=Number($("s-pass").value)||33;
+    s.schoolName=$("s-name").value.trim();s.deviceName=$("s-device").value.trim();s.schoolPhone=$("s-phone").value.trim();s.country=$("s-country").value;s.feesEnabled=$("s-feeson").value==="1";s.attEnabled=$("s-atton").value==="1";s.ttEnabled=$("s-tton").value==="1";s.labEnabled=$("s-labon").value==="1";s.certEnabled=$("s-certon").value==="1";s.bankTitle=$("s-banktitle").value.trim();s.bankAccount=$("s-bankacct").value.trim();s.bankIBAN=$("s-bankiban").value.trim();s.jazzcashNo=$("s-jazzcash").value.trim();s.easypaisaNo=$("s-easypaisa").value.trim();s.lang=$("s-lang").value;s.passPct=Number($("s-pass").value)||33;
     if(typeof Cloud!=="undefined")Cloud.pushPublicInfo();
     Store.save();render();
   };
@@ -5488,7 +5503,7 @@ const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,LAN
   verifyCodeFor:verifyCodeFor,verifyURL:verifyURL,qrSVG:qrSVG,verifyBlockHTML:verifyBlockHTML,
   COUNTRY_PACKS:COUNTRY_PACKS,countryPack:countryPack,schoolCountry:schoolCountry,countryPriceText:countryPriceText,pricingHTML:pricingHTML,
   payDetailsHTML:payDetailsHTML,concAmount:concAmount,setConcession:setConcession,removeConcession:removeConcession,concDossierHTML:concDossierHTML,weekKey:weekKey,attFlags:attFlags,attFlagsHTML:attFlagsHTML,teacherRemark:teacherRemark,setRemark:setRemark,
-  feesOn:feesOn,feePayStatus:feePayStatus,feePayStatusText:feePayStatusText,
+  feesOn:feesOn,attOn:attOn,ttOn:ttOn,labOn:labOn,certOn:certOn,feePayStatus:feePayStatus,feePayStatusText:feePayStatusText,
   askAnswer:askAnswer,askNorm:askNorm,askFindStudent:askFindStudent,askFindClass:askFindClass,askBuild:askBuild,ASK_INTENTS:ASK_INTENTS,
   setTTCell:setTTCell,ttConflicts:ttConflicts,ttClasses:ttClasses,ttCell:ttCell,
   attGet:attGet,setAtt:setAtt,attMarkAll:attMarkAll,attSummary:attSummary,attAbsentees:attAbsentees,
