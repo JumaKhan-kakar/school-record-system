@@ -14,6 +14,7 @@ One self-contained HTML file — no server, no database, no internet needed.
 - **Multi-phone merge** — teachers on different phones combine data without overwriting
 - **Automatic safety copies** — daily snapshots + one before every restore / merge / erase
 - **Bulk entry** — CSV import, register-photo helper, voice entry, paste-from-register scan
+- **Attendance & fees** — attendance flags, fee heads, concessions, challan pay  details, payment status, fees on/off toggle, teacher remarks, verification QR
 
 ## Use
 
