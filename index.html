@@ -3622,6 +3622,146 @@ function promoteCardHTML(){
   promoteMsg=null;
   return h;
 }
+
+/* ---- Ask the assistant (Round 21): natural-language questions over the
+   school's OWN data, answered locally and offline. No data leaves the device.
+   The cloud layers (LLM understanding + Google search for questions the local
+   data cannot answer) are a later phase and need a Gemini key + internet. */
+const ASK_INTENTS=[
+  {id:"absent_today",kw:["who was absent","who is absent","absent today","absent","غیر حاضر","کون غیر حاضر","آج غیر حاضر","অনুপস্থিত","কে অনুপস্থিত","আজ অনুপস্থিত"]},
+  {id:"defaulters",kw:["fee defaulters","defaulters","not paid","hasn't paid","unpaid","fee due","who owes","outstanding","fee","fees","نادہند","فیس باقی","فیس نہیں دی","بقایا","فیس","বকেয়া","ফি দেয়নি","ফি বাকি","ফি"]},
+  {id:"fee_status",kw:["fee status","fee of","how much fee","فیس کی صورتحال","فیس کتنی","ফির অবস্থা","ফি কত"]},
+  {id:"result",kw:["report card","result","marks","marksheet","نتیجہ","رزلٹ","نمبر","ফলাফল","রেজাল্ট","নম্বর"]},
+  {id:"count",kw:["how many students","total students","students in class","number of students","کتنے طلبہ","کل طلبہ","طلبہ کی تعداد","কতজন শিক্ষার্থী","মোট শিক্ষার্থী","শিক্ষার্থীর সংখ্যা"]},
+  {id:"att_pct",kw:["attendance of","attendance %","attendance percent","attendance","حاضری","حاضری فیصد","উপস্থিতি","উপস্থিতির হার"]},
+  {id:"board_elig",kw:["board eligibility","board eligible","eligible for board","board","بورڈ","اہل","বোর্ড","যোগ্য"]},
+  {id:"timetable",kw:["today's classes","timetable","routine","schedule","ٹائم ٹیبل","روٹین","آج کی کلاس","রুটিন","সময়সূচি","আজকের ক্লাস"]},
+  {id:"low_stock",kw:["low stock","lab low","running out","out of stock","کم اسٹاک","কম স্টক"]},
+  {id:"certs",kw:["certificates issued","certificate","slc","سرٹیفکیٹ","সার্টিফিকেট"]}
+];
+const ASK_EXAMPLES=["who was absent today","who has not paid fees","result of Ahmed Khan","how many students in class 6","attendance of Sara Bibi","today's timetable"];
+function askNorm(q){
+  q=String(q||"").toLowerCase();
+  const bd={"০":"0","১":"1","২":"2","৩":"3","৪":"4","৫":"5","৬":"6","৭":"7","৮":"8","৯":"9","۰":"0","۱":"1","۲":"2","۳":"3","۴":"4","۵":"5","۶":"6","۷":"7","۸":"8","۹":"9"};
+  return q.replace(/[০-৯۰-۹]/g,function(c){return bd[c]||c;}).replace(/\s+/g," ").trim();
+}
+function askFindStudent(q){
+  const nq=askNorm(q);
+  let best=null;
+  (db().students||[]).forEach(function(s){
+    const nm=askNorm(s.name);
+    if(nm&&nq.indexOf(nm)>=0&&(!best||nm.length>askNorm(best.name).length))best=s;
+  });
+  return best;
+}
+function askFindClass(q){
+  const m=askNorm(q).match(/(?:class|grade|کلاس|শ্রেণি|শ্রেণী)\s*[- ]?\s*(\d{1,2})/);
+  return m?m[1]:null;
+}
+function askBuild(id,st,cls){
+  const month=todayISO().slice(0,7), today=todayISO();
+  if(id==="absent_today"){
+    const list=(db().students||[]).filter(function(s){return (!cls||s.cls===cls)&&attGet(today,s.id)==="A";});
+    if(!list.length)return '<div class="msg ok">'+esc(t("ask_all_present"))+"</div>";
+    return "<b>"+esc(t("att_a"))+" — "+esc(today)+"</b><br>"+list.map(function(s){return "• "+esc(displayName(s))+" ("+esc(clsLabel(s.cls,s.section))+")";}).join("<br>");
+  }
+  if(id==="defaulters"){
+    const sum=feeSummary(month);
+    const list=(db().feeRecords||[]).filter(function(r){return r.month===month&&(r.total-r.discount+r.fine-feePaid(r))>0;}).map(function(r){return {st:(db().students||[]).find(function(s){return s.id===r.studentId;}),bal:r.total-r.discount+r.fine-feePaid(r)};}).filter(function(x){return x.st&&(!cls||x.st.cls===cls);});
+    let h="<b>"+esc(t("fee_outstanding"))+": "+sum.outstanding+" · "+esc(t("fee_defaulters"))+": "+sum.defaulters+"</b>";
+    if(!list.length)return h+'<br><div class="msg ok">'+esc(t("ask_no_defaulters"))+"</div>";
+    return h+"<br>"+list.map(function(x){return "• "+esc(displayName(x.st))+" ("+esc(clsLabel(x.st.cls,x.st.section))+") — "+x.bal;}).join("<br>");
+  }
+  if(id==="fee_status"){
+    if(!st)return askBuild("defaulters",null,cls);
+    const b=feeBill(st.id,month);
+    if(!b)return '<div class="msg err">'+esc(t("ask_student_notfound"))+"</div>";
+    return "<b>"+esc(displayName(st))+"</b><br>"+esc(t("fee_total"))+": "+b.total+" · "+esc(t("fee_paid"))+": "+b.paid+" · "+esc(t("fee_balance"))+": <b>"+b.balance+"</b> · "+esc(feePayStatusText(st.id,month));
+  }
+  if(id==="result"){
+    const exs=db().exams||[];
+    if(!exs.length)return '<div class="msg err">'+esc(t("no_records"))+"</div>";
+    const ex=exs[exs.length-1];
+    if(st){
+      const p=resultPayload(ex.id,st.id);
+      if(!p)return '<div class="msg err">'+esc(t("ask_no_result"))+"</div>";
+      return "<b>"+esc(displayName(st))+" — "+esc(ex.name||ex.id)+"</b><br>"+esc(t("percentage"))+": "+p.pct+"% · "+esc(t("grade"))+": "+p.grade+" · "+esc(t("division"))+": "+p.division+" · "+esc(t("position"))+": "+p.position;
+    }
+    const rows=(db().students||[]).map(function(s){return resultPayload(ex.id,s.id);}).filter(Boolean);
+    const passed=rows.filter(function(r){return r.pass;}).length;
+    return "<b>"+esc(ex.name||ex.id)+"</b><br>"+esc(t("sum_appeared"))+": "+rows.length+" · "+esc(t("sum_passed"))+": "+passed+" · "+esc(t("sum_failed"))+": "+(rows.length-passed);
+  }
+  if(id==="count"){
+    const list=cls?(db().students||[]).filter(function(s){return s.cls===cls;}):(db().students||[]);
+    return "<b>"+esc(t("kpi_students"))+": "+list.length+(cls?" ("+esc(t("cls"))+" "+esc(cls)+")":"")+"</b>";
+  }
+  if(id==="att_pct"){
+    if(st){
+      const recs=Object.keys(db().attendance||{}).filter(function(d){return d.slice(0,7)===month;});
+      let p=0,a=0;
+      recs.forEach(function(d){const v=attGet(d,st.id);if(v==="P"||v==="L")p++;else if(v==="A")a++;});
+      const pct=(p+a)?Math.round(p/(p+a)*100):0;
+      return "<b>"+esc(displayName(st))+"</b><br>"+esc(t("att_pct"))+": "+pct+"% · "+esc(t("att_p"))+": "+p+" · "+esc(t("att_a"))+": "+a;
+    }
+    const s=attSummary(today,cls);
+    return "<b>"+esc(t("dash_att"))+" — "+esc(today)+"</b><br>"+esc(t("att_p"))+": "+s.P+" · "+esc(t("att_a"))+": "+s.A+" · "+esc(t("att_l"))+": "+s.L+" · "+esc(t("att_pct"))+": "+s.pct+"%";
+  }
+  if(id==="board_elig"){
+    const list=(db().students||[]).filter(function(s){return (s.cls==="9"||s.cls==="10")&&boardEligible(s)!==null;});
+    if(!list.length)return '<div class="msg err">'+esc(t("no_records"))+"</div>";
+    return "<b>"+esc(t("board_elig"))+"</b><br>"+list.map(function(s){return "• "+esc(displayName(s))+" ("+esc(clsLabel(s.cls,s.section))+") — "+(boardEligible(s)?esc(t("eligible")):esc(t("not_eligible")));}).join("<br>");
+  }
+  if(id==="timetable"){
+    const d=new Date(today+"T00:00:00"), day=(d.getDay()+6)%7;
+    if(day>5)return '<div class="msg">'+esc(t("tt_no_class"))+"</div>";
+    const classes=cls?[cls]:Object.keys(db().timetable||{});
+    if(!classes.length)return '<div class="msg err">'+esc(t("no_records"))+"</div>";
+    return classes.map(function(c){
+      const grid=(db().timetable||{})[c]||{};
+      const dayGrid=grid[day]||{};
+      const cells=[];
+      for(let p=1;p<=8;p++){
+        const cell=dayGrid[p];
+        if(cell&&cell.subject)cells.push(p+". "+cell.subject+(cell.teacher?" ("+cell.teacher+")":""));
+      }
+      return "<b>"+esc(t("cls"))+" "+esc(c)+"</b><br>"+(cells.length?cells.map(function(x){return "• "+esc(x);}).join("<br>"):esc(t("tt_no_class")));
+    }).join("<br><br>");
+  }
+  if(id==="low_stock"){
+    const list=(db().labItems||[]).filter(function(it){return Number(it.qty||0)<=Number(it.min||0);});
+    if(!list.length)return '<div class="msg ok">'+esc(t("no_records"))+"</div>";
+    return "<b>"+esc(t("low_stock"))+"</b><br>"+list.map(function(it){return "• "+esc(it.name)+" — "+it.qty+" / "+esc(t("min_stock"))+" "+it.min;}).join("<br>");
+  }
+  if(id==="certs"){
+    const cs=db().certificates||[];
+    return "<b>"+esc(t("dash_certs"))+": "+cs.length+"</b>"+(cs.length?"<br>"+cs.slice(-5).map(function(c){const s=(db().students||[]).find(function(x){return x.id===c.studentId;});return "• "+(s?esc(displayName(s)):"?")+" — "+esc(c.type||"")+" "+esc(c.serial||"");}).join("<br>"):"");
+  }
+  return null;
+}
+function askAnswer(q){
+  const nq=askNorm(q);
+  if(!nq)return null;
+  const st=askFindStudent(q), cls=askFindClass(q);
+  let best=null,bestLen=0;
+  ASK_INTENTS.forEach(function(it){
+    it.kw.forEach(function(k){
+      if(nq.indexOf(k)>=0&&k.length>bestLen){best=it;bestLen=k.length;}
+    });
+  });
+  if(!best)return null;
+  return askBuild(best.id,st,cls);
+}
+function askCardHTML(){
+  return '<div class="card"><h3>'+esc(t("ask_title"))+'</h3>'+
+    micField("ask-q",'<input id="ask-q" placeholder="'+esc(t("ask_ph"))+'" style="flex:1">')+
+    '<div class="toolbar"><button type="button" class="btn btn-primary" id="ask-go">'+esc(t("ask_go"))+'</button></div>'+
+    '<div id="ask-out" style="margin-top:.4rem"></div></div>';
+}
+function askHelpHTML(){
+  return '<div class="muted">'+esc(t("ask_nomatch"))+'</div><div class="toolbar">'+
+    ASK_EXAMPLES.map(function(e){return '<button type="button" class="btn btn-sm ask-ex" data-q="'+esc(e)+'">'+esc(e)+"</button>";}).join("")+"</div>";
+}
+
 function viewHome(){
   /* desktop ≥900px: directory + dossier side by side (.dirpane);
      phone: dossier takes full view, directory hides behind Back (.dossier-open) */
@@ -3629,7 +3769,7 @@ function viewHome(){
     return '<div class="dirpane dossier-open"><div class="dircol">'+directoryCardHTML()+'</div>'+
       '<div class="doscol">'+viewDossier(dossierId)+"</div></div>"+quickLinksHTML();
   }
-  return dashStatsHTML()+attFlagsHTML(todayISO().slice(0,7))+promoteCardHTML()+directoryCardHTML()+quickLinksHTML();
+  return askCardHTML()+dashStatsHTML()+attFlagsHTML(todayISO().slice(0,7))+promoteCardHTML()+directoryCardHTML()+quickLinksHTML();
 }
 function kpi(n,l){return '<div class="kpi"><div class="n">'+n+'</div><div class="l">'+esc(l)+"</div></div>";}
 function drawDir(){
@@ -3652,6 +3792,18 @@ function drawDir(){
   });
 }
 function afterHome(){
+  bindMic();
+  const aq=$("ask-q"),ag=$("ask-go"),ao=$("ask-out");
+  const runAsk=function(){
+    if(!aq||!ao)return;
+    const ans=askAnswer(aq.value);
+    ao.innerHTML=ans||askHelpHTML();
+    Array.prototype.forEach.call(document.querySelectorAll(".ask-ex"),function(b){
+      b.onclick=function(){aq.value=b.getAttribute("data-q");runAsk();};
+    });
+  };
+  if(ag)ag.onclick=runAsk;
+  if(aq)aq.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();runAsk();}});
   drawDir();
   if(dossierId)afterDossier();
   $("dir-q").oninput=function(e){dirQ=e.target.value;dirLimit=50;drawDir();};
@@ -4589,6 +4741,14 @@ fee_quarter:{en:"Quarter paid",ur:"چوتھائی ادائیگی",bn:"এক-চ
 fee_threeq:{en:"Three quarters paid",ur:"تین چوتھائی ادائیگی",bn:"তিন-চতুর্থাংশ পরিশোধ"},
 fee_part:{en:"Partly paid",ur:"جزوی ادائیگی",bn:"আংশিক পরিশোধ"},
 fee_unpaid:{en:"Unpaid",ur:"ادائیگی نہیں ہوئی",bn:"পরিশোধ হয়নি"},
+ask_title:{en:"Ask the assistant",ur:"معاون سے پوچھیں",bn:"সহকারীকে জিজ্ঞাসা করুন"},
+ask_ph:{en:"Ask in your own words — who was absent today?",ur:"اپنے الفاظ میں پوچھیں — آج کون غیر حاضر تھا؟",bn:"নিজের ভাষায় জিজ্ঞাসা করুন — আজ কে অনুপস্থিত ছিল?"},
+ask_go:{en:"Ask",ur:"پوچھیں",bn:"জিজ্ঞাসা করুন"},
+ask_nomatch:{en:"I couldn't understand that yet. Try one of these:",ur:"میں ابھی یہ نہیں سمجھ سکا۔ ان میں سے ایک آزمائیں:",bn:"আমি এখনো এটা বুঝতে পারিনি। এগুলোর একটি চেষ্টা করুন:"},
+ask_all_present:{en:"Everyone is present today.",ur:"آج سب حاضر ہیں۔",bn:"আজ সবাই উপস্থিত।"},
+ask_no_defaulters:{en:"No fee defaulters this month.",ur:"اس مہینے کوئی نادہندہ نہیں۔",bn:"এই মাসে কোনো বকেয়া নেই।"},
+ask_no_result:{en:"No result found for this student yet.",ur:"اس طالب علم کا ابھی کوئی نتیجہ نہیں۔",bn:"এই শিক্ষার্থীর এখনো কোনো ফলাফল নেই।"},
+ask_student_notfound:{en:"I couldn't find a student with that name.",ur:"اس نام کا کوئی طالب علم نہیں ملا۔",bn:"এই নামের কোনো শিক্ষার্থী পাওয়া যায়নি।"},
 publish_results:{en:"Publish results",ur:"نتائج شائع کریں",bn:"ফলাফল প্রকাশ করুন"},
 unpublish_results:{en:"Remove published results",ur:"شائع شدہ نتائج ہٹائیں",bn:"প্রকাশিত ফলাফল সরান"},
 publish_locked_only:{en:"Results can only be published after the exam is locked (approved).",ur:"نتائج صرف امتحان بند (منظور) ہونے کے بعد شائع ہو سکتے ہیں۔",bn:"পরীক্ষা লক (অনুমোদিত) হওয়ার পরেই ফলাফল প্রকাশ করা যাবে।"},
@@ -5329,6 +5489,7 @@ const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,LAN
   COUNTRY_PACKS:COUNTRY_PACKS,countryPack:countryPack,schoolCountry:schoolCountry,countryPriceText:countryPriceText,pricingHTML:pricingHTML,
   payDetailsHTML:payDetailsHTML,concAmount:concAmount,setConcession:setConcession,removeConcession:removeConcession,concDossierHTML:concDossierHTML,weekKey:weekKey,attFlags:attFlags,attFlagsHTML:attFlagsHTML,teacherRemark:teacherRemark,setRemark:setRemark,
   feesOn:feesOn,feePayStatus:feePayStatus,feePayStatusText:feePayStatusText,
+  askAnswer:askAnswer,askNorm:askNorm,askFindStudent:askFindStudent,askFindClass:askFindClass,askBuild:askBuild,ASK_INTENTS:ASK_INTENTS,
   setTTCell:setTTCell,ttConflicts:ttConflicts,ttClasses:ttClasses,ttCell:ttCell,
   attGet:attGet,setAtt:setAtt,attMarkAll:attMarkAll,attSummary:attSummary,attAbsentees:attAbsentees,
   addFeeHead:addFeeHead,deleteFeeHead:deleteFeeHead,feeBill:feeBill,feeGenerate:feeGenerate,feeHeadsFor:feeHeadsFor,
