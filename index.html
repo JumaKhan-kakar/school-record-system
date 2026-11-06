@@ -11078,7 +11078,7 @@ function uid(p){return p+"_"+Date.now().toString(36)+Math.floor(Math.random()*1e
 function todayISO(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function fmtDate(iso){if(!iso)return "—";const p=String(iso).slice(0,10).split("-");return p.length===3?p[2]+"-"+p[1]+"-"+p[0]:iso;}
 function norm(s){return String(s==null?"":s).trim().toLowerCase();}
-function lang(){return (DB&&DB.settings&&DB.settings.lang)||"ur";}
+function lang(){return (DB&&DB.settings&&DB.settings.lang)||"en";}
 /* Languages (Round 20): every language the app can show. dir = text direction,
    speech = the voice-entry locale, native = the name shown in the picker.
    Adding a language = one LANGS line + translations in the dict; t() falls
@@ -11134,7 +11134,7 @@ function defaultDB(){return {
   seq:{adm:{},cert:{}},
   students:[],exams:[],marks:{},remarks:{},labItems:[],labMaint:[],certificates:[],timetable:{},attendance:{},feeHeads:[],feeRecords:[],subPayments:[],staff:[],staffAtt:{},salaryRecords:[],dateSheets:{},admitIssued:{},broadcasts:[],homework:[],routes:[],libBooks:[],libLoans:[],applications:[],complaints:[],signupRequests:[],hePrograms:[],heCourses:[],heResults:[],heEnrollments:[],
   settings:{
-    schoolName:"",deviceName:"",schoolPhone:"",feesEnabled:true,attEnabled:true,ttEnabled:true,labEnabled:true,certEnabled:true,staffEnabled:true,bcEnabled:true,hwEnabled:true,transportEnabled:true,libEnabled:true,admAppEnabled:true,cmpEnabled:true,heEnabled:false,bankTitle:"",bankAccount:"",bankIBAN:"",jazzcashNo:"",easypaisaNo:"",country:"PK",lang:"ur",passPct:33,regPhotoDataUrl:"",
+    schoolName:"",deviceName:"",schoolPhone:"",feesEnabled:true,attEnabled:true,ttEnabled:true,labEnabled:true,certEnabled:true,staffEnabled:true,bcEnabled:true,hwEnabled:true,transportEnabled:true,libEnabled:true,admAppEnabled:true,cmpEnabled:true,heEnabled:false,bankTitle:"",bankAccount:"",bankIBAN:"",jazzcashNo:"",easypaisaNo:"",country:"PK",lang:"en",passPct:33,regPhotoDataUrl:"",
     gradeScale:[{min:90,g:"A+"},{min:80,g:"A"},{min:70,g:"B"},{min:60,g:"C"},{min:50,g:"D"},{min:0,g:"F"}],
     divisions:[{min:60,d:"1st"},{min:50,d:"2nd"},{min:40,d:"3rd"},{min:0,d:"Fail"}],
     board:defaultBoard(),
@@ -11536,6 +11536,63 @@ const Cloud = {
         return out;
       }).catch(function(){return [];});
     }catch(e){return Promise.resolve([]);}
+  },
+  /* School head only. Invite a teacher by email: create their Auth login
+     on a SECONDARY app instance (so the head stays signed in), write
+     their teacher record for THIS school only, then email them a link
+     to set their own password. One email = one Auth user = one teacher
+     record = one school: an account can never open two schools. */
+  _secondaryAuth: null,
+  getSecondaryAuth: function(){
+    const self=this;
+    if(self._secondaryAuth)return self._secondaryAuth;
+    if(!self.fb||typeof FIREBASE_CONFIG==="undefined"||!FIREBASE_CONFIG)return null;
+    try{
+      let app=null;
+      try{app=self.fb.app("Secondary");}catch(e){app=null;}
+      if(!app)app=self.fb.initializeApp(FIREBASE_CONFIG,"Secondary");
+      self._secondaryAuth=app.auth();
+      return self._secondaryAuth;
+    }catch(e){return null;}
+  },
+  inviteTeacher: function(name,email){
+    const self=this;
+    name=String(name||"").trim();email=String(email||"").trim().toLowerCase();
+    if(!self.fs||!isSchoolAdmin()||!name||!validEmail(email))return Promise.resolve({ok:false,error:t("req")});
+    const sa=self.getSecondaryAuth();
+    if(!sa)return Promise.resolve({ok:false,error:t("team_no_sdk")});
+    return sa.createUserWithEmailAndPassword(email,inviteTempPassword()).then(function(cred){
+      const uid=cred&&cred.user?cred.user.uid:"";
+      if(!uid)return {ok:false,error:t("login_fail")};
+      return self.fs.collection("teachers").doc(uid).set({name:name,email:email,role:"teacher",schoolId:self.schoolId,at:tsNow()}).then(function(){
+        return self.auth.sendPasswordResetEmail(email).then(function(){
+          try{sa.signOut();}catch(e){}
+          return {ok:true,uid:uid};
+        });
+      });
+    }).catch(function(err){
+      if(err&&err.code==="auth/email-already-in-use")return {ok:false,error:t("team_exists")};
+      return {ok:false,error:t("login_fail")};
+    });
+  },
+  /* School head only: the teachers of their own school. */
+  listSchoolTeachers: function(){
+    const self=this;
+    if(!self.fs||!isSchoolAdmin())return Promise.resolve([]);
+    try{
+      return self.fs.collection("teachers").where("schoolId","==",self.schoolId).get().then(function(snap){
+        const out=[];snap.forEach(function(d){const v=d.data()||{};out.push({uid:d.id,name:v.name||"",email:v.email||"",role:v.role||"",disabled:!!v.disabled});});
+        return out;
+      }).catch(function(){return [];});
+    }catch(e){return Promise.resolve([]);}
+  },
+  /* School head only: send the set-your-password email again. */
+  resendInviteEmail: function(email){
+    const self=this;
+    email=String(email||"").trim().toLowerCase();
+    if(!self.auth||!isSchoolAdmin()||!validEmail(email))return Promise.resolve({ok:false});
+    try{return self.auth.sendPasswordResetEmail(email).then(function(){return {ok:true};}).catch(function(){return {ok:false};});}
+    catch(e){return Promise.resolve({ok:false});}
   },
   /* Platform admin only. Block (or unblock) one teacher account. A blocked
      teacher is signed out at next sign-in and the rules stop their reads. */
@@ -13817,6 +13874,18 @@ function heStanding(studentId){
   return {cgpa:cg.cgpa,floor:floor,canGraduate:cg.cgpa>=floor,probation:cg.cgpa<2.00,level:level};
 }
 
+
+function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||"").trim());}
+function inviteTempPassword(){
+  const chars="ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  let out="";
+  for(let i=0;i<16;i++)out+=chars[Math.floor(Math.random()*chars.length)];
+  return out;
+}
+/* The school head: role "admin" on the teacher record, signed into their
+   own school. A plain teacher never sees the invite card. */
+function isSchoolAdmin(){return typeof Cloud!=="undefined"&&!!Cloud.enabled&&!!Cloud.teacher&&Cloud.teacher.role==="admin"&&!!Cloud.schoolId;}
+
 /* ================= fees (Round 15) =================
    Fee heads per class (or all classes) -> monthly bills -> payments -> challan/receipt.
    A record is one student's bill for one month: the total is frozen at generation so
@@ -16024,7 +16093,7 @@ function askHelpHTML(){
    are answered from the web and labelled with their sources. The key lives
    in this school's own settings; it is never baked into the app file (the
    file is public) and it is stripped from JSON backups. */
-const GEMINI_MODEL="gemini-2.0-flash";
+const GEMINI_MODEL="gemini-3.8-flash";
 function geminiKey(){
   if(typeof Cloud!=="undefined"&&Cloud.enabled&&Cloud.platformKey)return String(Cloud.platformKey).trim();
   return String(((db().settings||{}).geminiKey)||"").trim();
@@ -16062,14 +16131,29 @@ function geminiCall(key,body){
   if(typeof fetch==="undefined")return Promise.reject(new Error("no fetch"));
   return fetch("https://generativelanguage.googleapis.com/v1beta/models/"+GEMINI_MODEL+":generateContent?key="+encodeURIComponent(key),{
     method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)
-  }).then(function(res){return res.json();});
+  }).then(function(res){
+    return res.json().then(function(b){return {status:res.status,body:b};}).catch(function(){return {status:res.status,body:null};});
+  });
+}
+/* Why a call failed, from the HTTP status alone. 400 = the key is wrong;
+   403 = the key/project may not use this API; 404 = the model name is
+   retired; 429 = too many tries. "net" = no connection at all. */
+function geminiReason(status,body){
+  if(!status)return "net";
+  if(status===400)return "invalid_key";
+  if(status===403)return "not_allowed";
+  if(status===404)return "model";
+  if(status===429)return "busy";
+  return "other";
 }
 function geminiPing(key){
+  if(!key)return Promise.resolve({ok:false,reason:"no_key"});
   return geminiCall(key,{contents:[{parts:[{text:"Reply with the single word OK."}]}],generationConfig:{temperature:0}})
-    .then(function(data){
-      const c=(data.candidates||[])[0],parts=(c&&c.content&&c.content.parts)||[];
-      return parts.some(function(p){return (p.text||"").trim().length>0;});
-    }).catch(function(){return false;});
+    .then(function(r){
+      if(r.status!==200)return {ok:false,reason:geminiReason(r.status,r.body)};
+      const c=(((r.body||{}).candidates)||[])[0],parts=(c&&c.content&&c.content.parts)||[];
+      return parts.some(function(p){return (p.text||"").trim().length>0;})?{ok:true}:{ok:false,reason:"empty"};
+    }).catch(function(){return {ok:false,reason:"net"};});
 }
 function askGemini(q){
   const key=geminiKey();
@@ -16089,7 +16173,12 @@ function askGemini(q){
     contents:[{parts:[{text:"SCHOOL DATA:\n"+ctx+"\n\nQUESTION:\n"+q}]}],
     tools:[{googleSearch:{}}],
     generationConfig:{temperature:0.2}
-  }).then(function(data){
+  }).then(function(r){
+    if(r.status!==200){
+      const rs=geminiReason(r.status,r.body);
+      return {ok:false,error:rs==="invalid_key"||rs==="not_allowed"?"gemini_key_bad":rs==="model"?"gemini_model":rs==="busy"?"gemini_busy":"gemini_offline"};
+    }
+    const data=r.body||{};
     const cand=(data.candidates||[])[0];
     if(!cand)return {ok:false,error:"gemini_empty"};
     const text=((cand.content&&cand.content.parts)||[]).map(function(p){return p.text||"";}).join("");
@@ -16124,6 +16213,32 @@ function copyText(text,btn){
     navigator.clipboard.writeText(String(text||"")).then(done).catch(function(){});
   }
 }
+
+/* First-run guide: the 5 steps a new school does first, each with a
+   button that opens the right tab. When all are done it collapses to
+   one line. The timetable step only appears while that module is on. */
+function setupSteps(){
+  const d=db(),steps=[];
+  steps.push({key:"setup_step_school",done:!!(d.settings&&String(d.settings.schoolName||"").trim()),tab:"settings"});
+  steps.push({key:"setup_step_students",done:(d.students||[]).length>0,tab:"adm"});
+  steps.push({key:"setup_step_fees",done:!feesOn()||(d.feeHeads||[]).length>0,tab:"fee"});
+  if(ttOn())steps.push({key:"setup_step_tt",done:Object.keys(d.timetable||{}).length>0,tab:"tt"});
+  const anyMarks=Object.keys(d.marks||{}).some(function(e){return Object.keys((d.marks||{})[e]||{}).length>0;});
+  steps.push({key:"setup_step_results",done:anyMarks,tab:"result"});
+  return steps;
+}
+function setupCardHTML(){
+  const steps=setupSteps(),done=steps.filter(function(x){return x.done;}).length;
+  if(done===steps.length)return '<div class="card"><b>✓ '+esc(t("setup_done"))+'</b></div>';
+  let h='<div class="card"><h3>🧭 '+esc(t("setup_title"))+'</h3>';
+  steps.forEach(function(st){
+    h+='<div class="toolbar" style="margin:.25rem 0"><span>'+(st.done?"✅ ":"○ ")+esc(t(st.key))+'</span>';
+    if(!st.done)h+='<button type="button" class="btn btn-sm" data-go="'+st.tab+'">'+esc(t("setup_go"))+"</button>";
+    h+='</div>';
+  });
+  return h+'</div>';
+}
+
 /* ---- morning briefing: what needs attention today, from local data only ---- */
 function briefingHTML(){
   const today=todayISO(),m=today.slice(0,7),items=[];
@@ -16193,7 +16308,7 @@ function viewHome(){
     return '<div class="dirpane dossier-open"><div class="dircol">'+directoryCardHTML()+'</div>'+
       '<div class="doscol">'+viewDossier(dossierId)+"</div></div>"+quickLinksHTML();
   }
-  return askCardHTML()+idScanBarHTML()+briefingHTML()+dashStatsHTML()+(attOn()?attFlagsHTML(todayISO().slice(0,7)):"")+promoteCardHTML()+directoryCardHTML()+quickLinksHTML();
+  return setupCardHTML()+askCardHTML()+idScanBarHTML()+briefingHTML()+dashStatsHTML()+(attOn()?attFlagsHTML(todayISO().slice(0,7)):"")+promoteCardHTML()+directoryCardHTML()+quickLinksHTML();
 }
 function kpi(n,l){return '<div class="kpi"><div class="n">'+n+'</div><div class="l">'+esc(l)+"</div></div>";}
 function drawDir(){
@@ -17614,6 +17729,30 @@ he_good:{en:"Good standing",ur:"اچھی حالت",bn:"ভালো অবস্
 he_prog_in_use:{en:"This program has courses. Delete them first.",ur:"اس پروگرام میں کورسز ہیں۔ پہلے انہیں حذف کریں۔",bn:"এই প্রোগ্রামে কোর্স আছে। আগে সেগুলো মুছুন।",hi:"इस कार्यक्रम में पाठ्यक्रम हैं। पहले उन्हें हटाएं।",ne:"यस कार्यक्रममा पाठ्यक्रमहरू छन्। पहिले तिनीहरूलाई मेटाउनुहोस्।",sw:"Programu hii ina kozi. Zifute kwanza.",ar:"هذا البرنامج يحتوي على مقررات. احذفها أولاً."},
 he_no_program:{en:"No programs yet. Add one above.",ur:"ابھی کوئی پروگرام نہیں۔ اوپر سے شامل کریں۔",bn:"এখনও কোনো প্রোগ্রাম নেই। উপরে যোগ করুন।",hi:"अभी कोई कार्यक्रम नहीं। ऊपर से जोड़ें।",ne:"अहिलेसम्म कुनै कार्यक्रम छैन। माथिबाट थप्नुहोस्।",sw:"Hakuna programu bado. Ongeza moja hapo juu.",ar:"لا توجد برامج بعد. أضف واحدًا أعلاه."},
 ask_no_gpa:{en:"No GPA record for this student yet.",ur:"اس طالب علم کا ابھی کوئی GPA ریکارڈ نہیں۔",bn:"এই শিক্ষার্থীর এখনও কোনো GPA রেকর্ড নেই।",hi:"इस छात्र का अभी कोई GPA रिकॉर्ड नहीं है।",ne:"यस विद्यार्थीको अहिलेसम्म कुनै GPA रेकर्ड छैन।",sw:"Hakuna rekodi ya GPA kwa mwanafunzi huyu bado.",ar:"لا يوجد سجل معدل لهذا الطالب بعد."},
+team_title:{en:"Teachers",ur:"اساتذہ",bn:"শিক্ষক",hi:"शिक्षक",ne:"शिक्षकहरू",sw:"Walimu",ar:"المعلمون"},
+team_hint:{en:"Add your school's teachers by email. Each teacher signs in with their own account and sees only this school — one account can never open two schools.",ur:"اپنے اسکول کے اساتذہ کو ای میل سے شامل کریں۔ ہر استاد اپنے اکاؤنٹ سے سائن ان کرتا ہے اور صرف یہی اسکول دیکھتا ہے — ایک اکاؤنٹ کبھی دو اسکول نہیں کھول سکتا۔",bn:"ইমেইল দিয়ে আপনার স্কুলের শিক্ষকদের যোগ করুন। প্রত্যেক শিক্ষক নিজের অ্যাকাউন্টে সাইন ইন করেন এবং শুধু এই স্কুলটিই দেখেন — একটি অ্যাকাউন্ট কখনো দুটি স্কুল খুলতে পারে না।",hi:"ईमेल से अपने स्कूल के शिक्षकों को जोड़ें। प्रत्येक शिक्षक अपने खाते से साइन इन करता है और केवल यही स्कूल देखता है — एक खाता कभी दो स्कूल नहीं खोल सकता।",ne:"इमेलबाट आफ्नो विद्यालयका शिक्षकहरू थप्नुहोस्। प्रत्येक शिक्षक आफ्नै खाताबाट साइन इन गर्छन् र यो विद्यालय मात्र देख्छन् — एउटा खाताले कहिल्यै दुई विद्यालय खोल्न सक्दैन।",sw:"Ongeza walimu wa shule yako kwa barua pepe. Kila mwalimu huingia kwa akaunti yake na huona shule hii tu — akaunti moja haiwezi kamwe kufungua shule mbili.",ar:"أضف معلمي مدرستك بالبريد الإلكتروني. يسجّل كل معلم بحسابه الخاص ويرى هذه المدرسة فقط — لا يمكن لحساب واحد أن يفتح مدرستين أبدًا."},
+team_name:{en:"Teacher name",ur:"استاد کا نام",bn:"শিক্ষকের নাম",hi:"शिक्षक का नाम",ne:"शिक्षकको नाम",sw:"Jina la mwalimu",ar:"اسم المعلم"},
+team_email:{en:"Teacher email",ur:"استاد کی ای میل",bn:"শিক্ষকের ইমেইল",hi:"शिक्षक का ईमेल",ne:"शिक्षकको इमेल",sw:"Barua pepe ya mwalimu",ar:"البريد الإلكتروني للمعلم"},
+team_invite:{en:"Invite teacher",ur:"استاد کو مدعو کریں",bn:"শিক্ষককে আমন্ত্রণ জানান",hi:"शिक्षक को आमंत्रित करें",ne:"शिक्षकलाई निमन्त्रणा गर्नुहोस्",sw:"Mwalike mwalimu",ar:"ادعُ المعلم"},
+team_sent:{en:"Invitation sent — they set their own password from the email.",ur:"دعوت بھیج دی گئی — وہ ای میل سے اپنا پاس ورڈ خود بنائیں گے۔",bn:"আমন্ত্রণ পাঠানো হয়েছে — তারা ইমেইল থেকে নিজের পাসওয়ার্ড সেট করবেন।",hi:"निमंत्रण भेजा गया — वे ईमेल से अपना पासवर्ड खुद बनाएंगे।",ne:"निमन्त्रणा पठाइयो — उनीहरूले इमेलबाट आफ्नो पासवर्ड आफैं बनाउनेछन्।",sw:"Mwaliko umetumwa — wataweka nenosiri lao wenyewe kutoka barua pepe.",ar:"تم إرسال الدعوة — سيضعون كلمة مرورهم بأنفسهم من البريد الإلكتروني."},
+team_no_sdk:{en:"Could not reach the sign-in service. Try again.",ur:"سائن ان سروس تک نہیں پہنچ سکے۔ دوبارہ کوشش کریں۔",bn:"সাইন-ইন পরিষেবায় পৌঁছানো যায়নি। আবার চেষ্টা করুন।",hi:"साइन-इन सेवा तक नहीं पहुंच सके। फिर से प्रयास करें।",ne:"साइन-इन सेवामा पुग्न सकिएन। फेरि प्रयास गर्नुहोस्।",sw:"Imeshindwa kufikia huduma ya kuingia. Jaribu tena.",ar:"تعذّر الوصول إلى خدمة تسجيل الدخول. حاول مرة أخرى."},
+team_exists:{en:"This email already has an account.",ur:"اس ای میل کا اکاؤنٹ پہلے سے موجود ہے۔",bn:"এই ইমেইলের অ্যাকাউন্ট ইতিমধ্যেই আছে।",hi:"इस ईमेल का खाता पहले से मौजूद है।",ne:"यो इमेलको खाता पहिले नै छ।",sw:"Barua pepe hii tayari ina akaunti.",ar:"هذا البريد الإلكتروني لديه حساب بالفعل."},
+team_resend:{en:"Resend setup email",ur:"سیٹ اپ ای میل دوبارہ بھیجیں",bn:"সেটআপ ইমেইল আবার পাঠান",hi:"सेटअप ईमेल फिर से भेजें",ne:"सेटअप इमेल फेरि पठाउनुहोस्",sw:"Tuma tena barua pepe ya kusanidi",ar:"إعادة إرسال بريد الإعداد"},
+team_list:{en:"No teachers yet — invite one above.",ur:"ابھی کوئی استاد نہیں — اوپر سے مدعو کریں۔",bn:"এখনও কোনো শিক্ষক নেই — উপরে আমন্ত্রণ জানান।",hi:"अभी कोई शिक्षक नहीं — ऊपर से आमंत्रित करें।",ne:"अहिलेसम्म कुनै शिक्षक छैनन् — माथिबाट निमन्त्रणा गर्नुहोस्।",sw:"Hakuna walimu bado — mwalike mmoja hapo juu.",ar:"لا يوجد معلمون بعد — ادعُ واحدًا أعلاه."},
+mod_on:{en:"On",ur:"آن",bn:"চালু",hi:"चालू",ne:"चालू",sw:"Washa",ar:"مفعّل"},
+mod_off:{en:"Off",ur:"آف",bn:"বন্ধ",hi:"बंद",ne:"बन्द",sw:"Zima",ar:"معطّل"},
+lang_search:{en:"Search language…",ur:"زبان تلاش کریں…",bn:"ভাষা খুঁজুন…",hi:"भाषा खोजें…",ne:"भाषा खोज्नुहोस्…",sw:"Tafuta lugha…",ar:"ابحث عن لغة…"},
+gemini_key_bad:{en:"This key is not valid. Copy it again from Google AI Studio — use the Copy button, and check there are no extra spaces.",ur:"یہ کی درست نہیں ہے۔ اسے گوگل اے آئی اسٹوڈیو سے دوبارہ کاپی کریں — کاپی بٹن استعمال کریں اور یقینی بنائیں کہ کوئی اضافی جگہ نہ ہو۔",bn:"এই কীটি বৈধ নয়। Google AI Studio থেকে আবার কপি করুন — Copy বোতামটি ব্যবহার করুন এবং অতিরিক্ত ফাঁকা জায়গা নেই তা দেখুন।",hi:"यह कुंजी मान्य नहीं है। Google AI Studio से इसे फिर से कॉपी करें — Copy बटन का उपयोग करें और देखें कि कोई अतिरिक्त स्थान न हो।",ne:"यो की मान्य छैन। Google AI Studio बाट फेरि प्रतिलिपि गर्नुहोस् — Copy बटन प्रयोग गर्नुहोस् र अतिरिक्त खाली ठाउँ छैन भनी जाँच गर्नुहोस्।",sw:"Ufunguo huu si halali. Nakili tena kutoka Google AI Studio — tumia kitufe cha Copy, na hakikisha hakuna nafasi za ziada.",ar:"هذا المفتاح غير صالح. انسخه مجددًا من Google AI Studio — استخدم زر النسخ وتأكد من عدم وجود مسافات زائدة."},
+gemini_model:{en:"Google has retired this AI model, so the key cannot be tested. Update the app to the newest version and try again.",ur:"گوگل نے یہ اے آئی ماڈل بند کر دیا ہے، اس لیے کی کی جانچ نہیں ہو سکتی۔ ایپ کو نئے ورژن میں اپ ڈیٹ کریں اور دوبارہ کوشش کریں۔",bn:"Google এই AI মডেলটি বন্ধ করে দিয়েছে, তাই কীটি পরীক্ষা করা যাচ্ছে না। অ্যাপটি নতুন সংস্করণে আপডেট করে আবার চেষ্টা করুন।",hi:"Google ने यह AI मॉडल बंद कर दिया है, इसलिए कुंजी जांची नहीं जा सकती। ऐप को नवीनतम संस्करण में अपडेट करें और फिर से प्रयास करें।",ne:"Google ले यो AI मोडेल बन्द गरेको छ, त्यसैले की परीक्षण गर्न सकिँदैन। एपलाई नयाँ संस्करणमा अद्यावधिक गर्नुहोस् र फेरि प्रयास गर्नुहोस्।",sw:"Google imesitisha mtindo huu wa AI, kwa hivyo ufunguo hauwezi kujaribiwa. Sasisha programu hadi toleo jipya zaidi na ujaribu tena.",ar:"أوقفت Google نموذج الذكاء الاصطناعي هذا، لذا لا يمكن اختبار المفتاح. حدّث التطبيق إلى أحدث إصدار وحاول مرة أخرى."},
+gemini_busy:{en:"Too many tries in a short time. Wait a minute and test again.",ur:"تھوڑے وقت میں بہت سی کوششیں ہو گئیں۔ ایک منٹ انتظار کریں اور دوبارہ جانچیں۔",bn:"অল্প সময়ে অনেকবার চেষ্টা হয়েছে। এক মিনিট অপেক্ষা করে আবার পরীক্ষা করুন।",hi:"थोड़े समय में बहुत अधिक प्रयास हुए। एक मिनट प्रतीक्षा करें और फिर से जांचें।",ne:"छोटो समयमा धेरै प्रयास भए। एक मिनेट पर्खनुहोस् र फेरि परीक्षण गर्नुहोस्।",sw:"Majaribio mengi sana kwa muda mfupi. Subiri dakika moja na ujaribu tena.",ar:"محاولات كثيرة جدًا في وقت قصير. انتظر دقيقة وحاول مرة أخرى."},
+setup_title:{en:"Set up your school",ur:"اپنا اسکول ترتیب دیں",bn:"আপনার স্কুল সেট আপ করুন",hi:"अपना स्कूल सेट करें",ne:"आफ्नो विद्यालय सेट अप गर्नुहोस्",sw:"Sanidi shule yako",ar:"جهّز مدرستك"},
+setup_step_school:{en:"School name and phone set",ur:"اسکول کا نام اور فون درج ہے",bn:"স্কুলের নাম ও ফোন দেওয়া আছে",hi:"स्कूल का नाम और फ़ोन दर्ज है",ne:"विद्यालयको नाम र फोन राखिएको छ",sw:"Jina na simu ya shule vimewekwa",ar:"تم إدخال اسم المدرسة والهاتف"},
+setup_step_students:{en:"Students added",ur:"طلبہ شامل کیے گئے",bn:"শিক্ষার্থী যোগ করা হয়েছে",hi:"छात्र जोड़े गए",ne:"विद्यार्थीहरू थपिएका छन्",sw:"Wanafunzi wameongezwa",ar:"تمت إضافة الطلاب"},
+setup_step_fees:{en:"Fee heads set (or fees switched off)",ur:"فیس کی مدیں مقرر ہیں (یا فیس بند ہے)",bn:"ফি হেড সেট করা আছে (অথবা ফি বন্ধ)",hi:"शुल्क शीर्ष निर्धारित हैं (या शुल्क बंद है)",ne:"शुल्क शीर्षकहरू सेट छन् (वा शुल्क बन्द छ)",sw:"Vichwa vya ada vimewekwa (au ada zimezimwa)",ar:"تم تحديد بنود الرسوم (أو الرسوم مغلقة)"},
+setup_step_tt:{en:"Timetable filled for a class",ur:"کسی جماعت کا ٹائم ٹیبل بھرا ہوا ہے",bn:"একটি ক্লাসের সময়সূচি পূরণ করা আছে",hi:"एक कक्षा की समय-सारणी भरी हुई है",ne:"एउटा कक्षाको समयतालिका भरिएको छ",sw:"Ratiba imejazwa kwa darasa",ar:"تم تعبئة الجدول لصفّ ما"},
+setup_step_results:{en:"First marks entered",ur:"پہلے نمبر درج کیے گئے",bn:"প্রথম নম্বর দেওয়া হয়েছে",hi:"पहले अंक दर्ज किए गए",ne:"पहिलो अङ्कहरू राखिएका छन्",sw:"Alama za kwanza zimeingizwa",ar:"تم إدخال أول الدرجات"},
+setup_done:{en:"Your school is set up — everything is ready.",ur:"آپ کا اسکول تیار ہے — سب کچھ مکمل ہے۔",bn:"আপনার স্কুল তৈরি — সবকিছু প্রস্তুত।",hi:"आपका स्कूल तैयार है — सब कुछ पूरा है।",ne:"तपाईंको विद्यालय तयार छ — सबै कुरा पूरा भयो।",sw:"Shule yako iko tayari — kila kitu kiko sawa.",ar:"مدرستك جاهزة — كل شيء مكتمل."},
+setup_go:{en:"Open",ur:"کھولیں",bn:"খুলুন",hi:"खोलें",ne:"खोल्नुहोस्",sw:"Fungua",ar:"افتح"},
 publish_results:{en:"Publish results",ur:"نتائج شائع کریں",bn:"ফলাফল প্রকাশ করুন",hi:"परिणाम प्रकाशित करें",ne:"नतिजा प्रकाशित गर्नुहोस्",sw:"Chapisha matokeo",ar:"نشر النتائج"},
 unpublish_results:{en:"Remove published results",ur:"شائع شدہ نتائج ہٹائیں",bn:"প্রকাশিত ফলাফল সরান",hi:"प्रकाशित परिणाम हटाएं",ne:"प्रकाशित नतिजा हटाउनुहोस्",sw:"Ondoa matokeo yaliyochapishwa",ar:"إزالة النتائج المنشورة"},
 publish_locked_only:{en:"Results can only be published after the exam is locked (approved).",ur:"نتائج صرف امتحان بند (منظور) ہونے کے بعد شائع ہو سکتے ہیں۔",bn:"পরীক্ষা লক (অনুমোদিত) হওয়ার পরেই ফলাফল প্রকাশ করা যাবে।",hi:"परिणाम तभी प्रकाशित किए जा सकते हैं जब परीक्षा लॉक (स्वीकृत) हो।",ne:"नतिजा परीक्षा लक (स्वीकृत) भएपछि मात्र प्रकाशित गर्न सकिन्छ।",sw:"Matokeo yanaweza kuchapishwa tu baada ya mtihani kufungwa (kuidhinishwa).",ar:"لا يمكن نشر النتائج إلا بعد قفل الامتحان (الموافقة عليه)."},
@@ -18147,7 +18286,7 @@ function viewAdmin(){
     '<p class="muted">'+esc(t("platform_key_hint"))+'</p>'+
     '<div class="field"><label>'+esc(t("ai_key_label"))+'</label>'+
     '<input id="adm-gemini" type="password" value="" placeholder="AIza..." autocomplete="off"></div>'+
-    '<div class="toolbar"><button type="button" class="btn btn-primary" id="adm-gemini-save">'+esc(t("save"))+'</button></div>'+
+    '<div class="toolbar"><button type="button" class="btn btn-primary" id="adm-gemini-save">'+esc(t("save"))+'</button> <button type="button" class="btn" id="adm-gemini-test">'+esc(t("ai_test"))+'</button></div>'+
     '<div id="adm-gemini-msg">'+(Cloud.platformKey?'<div class="msg ok">'+esc(t("platform_key_set"))+'</div>':'<div class="muted">'+esc(t("platform_key_none"))+'</div>')+'</div></div>'+
     '<div id="adm-summary"></div><div id="adm-signups"></div><div id="adm-list"><p class="muted">⏳ '+esc(t("connecting"))+'</p></div></div>';
 }
@@ -18242,6 +18381,17 @@ function afterAdmin(){
     Cloud.setPlatformKey(k).then(function(r){
       if(r&&r.ok){mg.innerHTML='<div class="msg ok">'+esc(t("platform_key_saved"))+'</div>';$("adm-gemini").value="";}
       else{mg.innerHTML='<div class="msg err">'+esc(t("ai_test_bad"))+'</div>';}
+    });
+  };
+  const gt2=$("adm-gemini-test");
+  if(gt2)gt2.onclick=function(){
+    const mg=$("adm-gemini-msg");
+    if(!Cloud.platformKey){mg.innerHTML='<div class="msg err">'+esc(t("ai_no_key"))+'</div>';return;}
+    mg.innerHTML='<div class="msg">'+esc(t("gemini_thinking"))+'</div>';
+    geminiPing(Cloud.platformKey).then(function(r){
+      if(r.ok){mg.innerHTML='<div class="msg ok">'+esc(t("ai_test_ok"))+'</div>';return;}
+      const msgs={no_key:"ai_no_key",invalid_key:"gemini_key_bad",not_allowed:"gemini_key_bad",model:"gemini_model",busy:"gemini_busy",net:"gemini_offline",empty:"gemini_empty",other:"ai_test_bad"};
+      mg.innerHTML='<div class="msg err">'+esc(t(msgs[r.reason]||"ai_test_bad"))+'</div>';
     });
   };
   loadAdminSignups();
@@ -18351,25 +18501,25 @@ function viewSettings(){
     fld("easypaisa_no",'<input id="s-easypaisa" value="'+esc(s.easypaisaNo||"")+'" placeholder="03XX-XXXXXXX">')+
     fld("fees_enabled",'<select id="s-feeson"><option value="1"'+(feesOn()?" selected":"")+'>'+esc(t("fees_yes"))+'</option><option value="0"'+(!feesOn()?" selected":"")+'>'+esc(t("fees_no"))+"</option></select>")+
     '<h3 style="margin:.8rem 0 .3rem">'+esc(t("mod_title"))+'</h3>'+
-    fld("nav_att",'<select id="s-atton"><option value="1"'+(attOn()?" selected":"")+'>'+esc(t("fees_yes"))+'</option><option value="0"'+(!attOn()?" selected":"")+'>'+esc(t("fees_no"))+"</option></select>")+
-    fld("nav_staff",'<select id="s-staffon"><option value="1"'+(staffOn()?" selected":"")+'>'+esc(t("fees_yes"))+'</option><option value="0"'+(!staffOn()?" selected":"")+'>'+esc(t("fees_no"))+"</option></select>")+
-    fld("nav_bc",'<select id="s-bcon"><option value="1"'+(bcOn()?" selected":"")+'>'+esc(t("fees_yes"))+'</option><option value="0"'+(!bcOn()?" selected":"")+'>'+esc(t("fees_no"))+"</option></select>")+
-    fld("nav_hw",'<select id="s-hwon"><option value="1"'+(hwOn()?" selected":"")+'>'+esc(t("fees_yes"))+'</option><option value="0"'+(!hwOn()?" selected":"")+'>'+esc(t("fees_no"))+"</option></select>")+
-    fld("nav_transport",'<select id="s-tron"><option value="1"'+(transportOn()?" selected":"")+'>'+esc(t("fees_yes"))+'</option><option value="0"'+(!transportOn()?" selected":"")+'>'+esc(t("fees_no"))+"</option></select>")+
-    fld("nav_library",'<select id="s-libon"><option value="1"'+(libOn()?" selected":"")+'>'+esc(t("fees_yes"))+'</option><option value="0"'+(!libOn()?" selected":"")+'>'+esc(t("fees_no"))+"</option></select>")+
-    fld("app_title",'<select id="s-appon"><option value="1"'+(admAppOn()?" selected":"")+'>'+esc(t("fees_yes"))+'</option><option value="0"'+(!admAppOn()?" selected":"")+'>'+esc(t("fees_no"))+"</option></select>")+
-    fld("nav_complaints",'<select id="s-cmpon"><option value="1"'+(cmpOn()?" selected":"")+'>'+esc(t("fees_yes"))+'</option><option value="0"'+(!cmpOn()?" selected":"")+'>'+esc(t("fees_no"))+"</option></select>")+
-    fld("nav_highered",'<select id="s-heon"><option value="1"'+(heOn()?" selected":"")+'>'+esc(t("fees_yes"))+'</option><option value="0"'+(!heOn()?" selected":"")+'>'+esc(t("fees_no"))+"</option></select>")+
-    fld("nav_tt",'<select id="s-tton"><option value="1"'+(ttOn()?" selected":"")+'>'+esc(t("fees_yes"))+'</option><option value="0"'+(!ttOn()?" selected":"")+'>'+esc(t("fees_no"))+"</option></select>")+
-    fld("nav_lab",'<select id="s-labon"><option value="1"'+(labOn()?" selected":"")+'>'+esc(t("fees_yes"))+'</option><option value="0"'+(!labOn()?" selected":"")+'>'+esc(t("fees_no"))+"</option></select>")+
-    fld("nav_cert",'<select id="s-certon"><option value="1"'+(certOn()?" selected":"")+'>'+esc(t("fees_yes"))+'</option><option value="0"'+(!certOn()?" selected":"")+'>'+esc(t("fees_no"))+"</option></select>")+
+    fld("nav_att",'<select id="s-atton"><option value="1"'+(attOn()?" selected":"")+'>'+esc(t("mod_on"))+'</option><option value="0"'+(!attOn()?" selected":"")+'>'+esc(t("mod_off"))+"</option></select>")+
+    fld("nav_staff",'<select id="s-staffon"><option value="1"'+(staffOn()?" selected":"")+'>'+esc(t("mod_on"))+'</option><option value="0"'+(!staffOn()?" selected":"")+'>'+esc(t("mod_off"))+"</option></select>")+
+    fld("nav_bc",'<select id="s-bcon"><option value="1"'+(bcOn()?" selected":"")+'>'+esc(t("mod_on"))+'</option><option value="0"'+(!bcOn()?" selected":"")+'>'+esc(t("mod_off"))+"</option></select>")+
+    fld("nav_hw",'<select id="s-hwon"><option value="1"'+(hwOn()?" selected":"")+'>'+esc(t("mod_on"))+'</option><option value="0"'+(!hwOn()?" selected":"")+'>'+esc(t("mod_off"))+"</option></select>")+
+    fld("nav_transport",'<select id="s-tron"><option value="1"'+(transportOn()?" selected":"")+'>'+esc(t("mod_on"))+'</option><option value="0"'+(!transportOn()?" selected":"")+'>'+esc(t("mod_off"))+"</option></select>")+
+    fld("nav_library",'<select id="s-libon"><option value="1"'+(libOn()?" selected":"")+'>'+esc(t("mod_on"))+'</option><option value="0"'+(!libOn()?" selected":"")+'>'+esc(t("mod_off"))+"</option></select>")+
+    fld("app_title",'<select id="s-appon"><option value="1"'+(admAppOn()?" selected":"")+'>'+esc(t("mod_on"))+'</option><option value="0"'+(!admAppOn()?" selected":"")+'>'+esc(t("mod_off"))+"</option></select>")+
+    fld("nav_complaints",'<select id="s-cmpon"><option value="1"'+(cmpOn()?" selected":"")+'>'+esc(t("mod_on"))+'</option><option value="0"'+(!cmpOn()?" selected":"")+'>'+esc(t("mod_off"))+"</option></select>")+
+    fld("nav_highered",'<select id="s-heon"><option value="1"'+(heOn()?" selected":"")+'>'+esc(t("mod_on"))+'</option><option value="0"'+(!heOn()?" selected":"")+'>'+esc(t("mod_off"))+"</option></select>")+
+    fld("nav_tt",'<select id="s-tton"><option value="1"'+(ttOn()?" selected":"")+'>'+esc(t("mod_on"))+'</option><option value="0"'+(!ttOn()?" selected":"")+'>'+esc(t("mod_off"))+"</option></select>")+
+    fld("nav_lab",'<select id="s-labon"><option value="1"'+(labOn()?" selected":"")+'>'+esc(t("mod_on"))+'</option><option value="0"'+(!labOn()?" selected":"")+'>'+esc(t("mod_off"))+"</option></select>")+
+    fld("nav_cert",'<select id="s-certon"><option value="1"'+(certOn()?" selected":"")+'>'+esc(t("mod_on"))+'</option><option value="0"'+(!certOn()?" selected":"")+'>'+esc(t("mod_off"))+"</option></select>")+
 
     '<div class="field"><label>'+esc(t("logo"))+'</label>'+
     (s.logoDataUrl?'<img src="'+s.logoDataUrl+'" style="height:54px;display:block;margin-bottom:.4rem" alt="">':"")+
     '<input id="s-logo" type="file" accept="image/*" style="margin-bottom:.4rem">'+
     (s.logoDataUrl?'<button type="button" class="btn btn-sm btn-danger" id="s-logodel">'+esc(t("remove_logo"))+"</button> ":"")+
     '<div class="hint">'+esc(t("logo")).split("(")[0]+'— 300 KB max</div></div>'+
-    fld("def_lang",'<select id="s-lang">'+Object.keys(LANGS).map(function(c){return '<option value="'+c+'"'+(s.lang===c?" selected":"")+'>'+esc(LANGS[c].native)+"</option>";}).join("")+"</select>")+
+    fld("def_lang",'<input id="s-lang-search" autocomplete="off" placeholder="'+esc(t("lang_search"))+'" value="'+esc((LANGS[s.lang||"en"]||LANGS.en).native)+'"><input type="hidden" id="s-lang" value="'+esc(s.lang||"en")+'"><div id="s-lang-list"></div>')+
     fld("pass_pct",'<input id="s-pass" inputmode="numeric" value="'+s.passPct+'">')+
     '<button type="button" class="btn btn-primary" id="s-save">'+esc(t("save"))+"</button></div>";
   const platKey=(typeof Cloud!=="undefined"&&Cloud.enabled&&Cloud.platformKey)?Cloud.platformKey:"";
@@ -18380,6 +18530,13 @@ function viewSettings(){
              '<input id="s-gemini" type="password" value="'+esc(s.geminiKey||"")+'" placeholder="AIza..." autocomplete="off"></div>'+
              '<div class="toolbar"><button type="button" class="btn" id="s-gemini-test">'+esc(t("ai_test"))+'</button></div>'+
              '<div id="s-gemini-msg"></div>')+'</div>';
+  if(isSchoolAdmin()){
+    h+='<div class="card"><h3>👥 '+esc(t("team_title"))+'</h3><p class="muted">'+esc(t("team_hint"))+'</p>'+
+      '<div class="field"><label>'+esc(t("team_name"))+'</label><input id="tm-name" autocomplete="off"></div>'+
+      '<div class="field"><label>'+esc(t("team_email"))+'</label><input id="tm-email" type="email" autocomplete="off" placeholder="name@example.com"></div>'+
+      '<button type="button" class="btn btn-primary" id="tm-invite">'+esc(t("team_invite"))+'</button> <span id="tm-msg" class="muted"></span>'+
+      '<div id="tm-list" style="margin-top:.6rem"></div></div>';
+  }
   h+='<div class="card"><h3>'+esc(t("grade_scale"))+'</h3><div class="grid2">'+
     s.gradeScale.filter(function(g){return g.g!=="F";}).map(function(g,i){
       return '<div class="field"><label>'+esc(t("grade"))+" "+g.g+" ≥ %</label>"+
@@ -18419,6 +18576,21 @@ function viewSettings(){
     (db().audit.map(function(a){return "<div>"+a.ts.slice(0,16).replace("T"," ")+" — <b>"+esc(a.action)+"</b>: "+esc(a.summary)+"</div>";}).join("")||'<span class="muted">—</span>')+"</div></div>";
   return h;
 }
+
+function loadTeamList(){
+  const box=$("tm-list");if(!box)return;
+  if(typeof Cloud==="undefined"||!Cloud.listSchoolTeachers){box.innerHTML="";return;}
+  Cloud.listSchoolTeachers().then(function(list){
+    const b=$("tm-list");if(!b)return;
+    b.innerHTML=list.length?list.map(function(tr){
+      return '<div class="toolbar" style="margin:.3rem 0"><span><b>'+esc(tr.name||tr.email)+'</b> • '+esc(tr.email)+(tr.role==="admin"?" • 👑":"")+(tr.disabled?" ⛔":"")+'</span>'+
+        '<button type="button" class="btn btn-sm" data-tmresend="'+esc(tr.email)+'">'+esc(t("team_resend"))+"</button></div>";
+    }).join(""):'<p class="muted">'+esc(t("team_list"))+"</p>";
+    b.querySelectorAll("[data-tmresend]").forEach(function(btn){
+      btn.onclick=function(){Cloud.resendInviteEmail(btn.getAttribute("data-tmresend")).then(function(r){const mg=$("tm-msg");if(mg)mg.textContent=r.ok?t("team_sent"):t("login_fail");});};
+    });
+  });
+}
 function afterSettings(){
   $("s-save").onclick=function(){
     const s=db().settings;
@@ -18426,15 +18598,37 @@ function afterSettings(){
     if(typeof Cloud!=="undefined")Cloud.pushPublicInfo();
     Store.save();render();
   };
+  const ti=$("tm-invite");
+  if(ti)ti.onclick=function(){
+    const mg=$("tm-msg");
+    mg.textContent="";
+    Cloud.inviteTeacher($("tm-name").value,$("tm-email").value).then(function(r){
+      if(!r.ok){mg.textContent=r.error;return;}
+      mg.textContent=t("team_sent");
+      $("tm-name").value="";$("tm-email").value="";
+      loadTeamList();
+    });
+  };
+  loadTeamList();
+  const lsi=$("s-lang-search"),lsl=$("s-lang-list"),lsh=$("s-lang");
+  const drawLangList=function(q){
+    if(!lsi||!lsl||!lsh)return;
+    q=String(q||"").trim().toLowerCase();
+    const rows=Object.keys(LANGS).filter(function(c){return !q||LANGS[c].native.toLowerCase().indexOf(q)>=0||LANGS[c].name.toLowerCase().indexOf(q)>=0||c===q;});
+    lsl.innerHTML=rows.map(function(c){return '<button type="button" class="btn btn-sm" style="display:block;width:100%;text-align:left;margin:.15rem 0" data-lang="'+c+'">'+esc(LANGS[c].native)+" \u2014 "+esc(LANGS[c].name)+"</button>";}).join("");
+    lsl.querySelectorAll("[data-lang]").forEach(function(b){b.onclick=function(){lsh.value=b.getAttribute("data-lang");lsi.value=LANGS[lsh.value].native;lsl.innerHTML="";};});
+  };
+  if(lsi){lsi.oninput=function(){drawLangList(lsi.value);};lsi.onfocus=function(){drawLangList("");};lsi.onblur=function(){setTimeout(function(){if(lsl)lsl.innerHTML="";},200);};}
   const gt=$("s-gemini-test");
   if(gt)gt.onclick=function(){
     const k=$("s-gemini").value.trim(),mg=$("s-gemini-msg");
     if(!k){mg.innerHTML='<div class="msg err">'+esc(t("ai_no_key"))+'</div>';return;}
     db().settings.geminiKey=k;Store.save();
     mg.innerHTML='<div class="msg">'+esc(t("gemini_thinking"))+'</div>';
-    geminiPing(k).then(function(ok){
-      mg.innerHTML=ok?'<div class="msg ok">'+esc(t("ai_test_ok"))+'</div>'
-                     :'<div class="msg err">'+esc(t("ai_test_bad"))+'</div>';
+    geminiPing(k).then(function(r){
+      if(r.ok){mg.innerHTML='<div class="msg ok">'+esc(t("ai_test_ok"))+'</div>';return;}
+      const msgs={no_key:"ai_no_key",invalid_key:"gemini_key_bad",not_allowed:"gemini_key_bad",model:"gemini_model",busy:"gemini_busy",net:"gemini_offline",empty:"gemini_empty",other:"ai_test_bad"};
+      mg.innerHTML='<div class="msg err">'+esc(t(msgs[r.reason]||"ai_test_bad"))+'</div>';
     });
   };
   const lg=$("s-logo");
@@ -18598,7 +18792,7 @@ const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,LAN
   computeResult:computeResult,resultRowFor:resultRowFor,getDossier:getDossier,
   boardEligible:boardEligible,defaultBoard:defaultBoard,
   sha256Hex:sha256Hex,parentHash:parentHash,publishResults:publishResults,unpublishResults:unpublishResults,parentLink:parentLink,
-  verifyCodeFor:verifyCodeFor,verifyURL:verifyURL,qrSVG:qrSVG,verifyBlockHTML:verifyBlockHTML,scanQRText:scanQRText,findStudentByScan:findStudentByScan,openStudentByScan:openStudentByScan,geminiKey:geminiKey,askGemini:askGemini,askGeminiSummary:askGeminiSummary,geminiPing:geminiPing,geminiAnswerHTML:geminiAnswerHTML,briefingHTML:briefingHTML,speakText:speakText,attMonthPct:attMonthPct,idCardHTML:idCardHTML,idCardPrintHTML:idCardPrintHTML,scanCardHTML:scanCardHTML,
+  verifyCodeFor:verifyCodeFor,verifyURL:verifyURL,qrSVG:qrSVG,verifyBlockHTML:verifyBlockHTML,scanQRText:scanQRText,findStudentByScan:findStudentByScan,openStudentByScan:openStudentByScan,geminiKey:geminiKey,askGemini:askGemini,askGeminiSummary:askGeminiSummary,geminiPing:geminiPing,geminiReason:geminiReason,setupSteps:setupSteps,setupCardHTML:setupCardHTML,geminiAnswerHTML:geminiAnswerHTML,briefingHTML:briefingHTML,speakText:speakText,attMonthPct:attMonthPct,idCardHTML:idCardHTML,idCardPrintHTML:idCardPrintHTML,scanCardHTML:scanCardHTML,
   COUNTRY_PACKS:COUNTRY_PACKS,countryPack:countryPack,schoolCountry:schoolCountry,countryPriceText:countryPriceText,pricingHTML:pricingHTML,
   payDetailsHTML:payDetailsHTML,concAmount:concAmount,setConcession:setConcession,removeConcession:removeConcession,concDossierHTML:concDossierHTML,weekKey:weekKey,attFlags:attFlags,attFlagsHTML:attFlagsHTML,teacherRemark:teacherRemark,setRemark:setRemark,
   feesOn:feesOn,attOn:attOn,staffOn:staffOn,ttOn:ttOn,labOn:labOn,certOn:certOn,feePayStatus:feePayStatus,feePayStatusText:feePayStatusText,
@@ -18607,7 +18801,7 @@ const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,LAN
   setTTCell:setTTCell,ttConflicts:ttConflicts,ttClasses:ttClasses,ttCell:ttCell,
   attGet:attGet,setAtt:setAtt,attMarkAll:attMarkAll,attSummary:attSummary,attAbsentees:attAbsentees,
   addStaff:addStaff,setStaffActive:setStaffActive,staffActive:staffActive,staffName:staffName,staffGet:staffGet,setStaffAtt:setStaffAtt,staffMarkAll:staffMarkAll,staffAttSummary:staffAttSummary,staffAbsentees:staffAbsentees,workingDaysInMonth:workingDaysInMonth,staffMonthStats:staffMonthStats,salaryRecord:salaryRecord,salaryPaid:salaryPaid,salaryStatus:salaryStatus,generateSalary:generateSalary,generateAllSalaries:generateAllSalaries,salarySetAdjust:salarySetAdjust,recordSalaryPayment:recordSalaryPayment,salarySummary:salarySummary,salarySlipHTML:salarySlipHTML,askFindStaff:askFindStaff,
-  dateSheetFor:dateSheetFor,dateSheetEntries:dateSheetEntries,setDateSheet:setDateSheet,admitCodeFor:admitCodeFor,admitCardHTML:admitCardHTML,admitCardsBatchHTML:admitCardsBatchHTML,dateSheetHTML:dateSheetHTML,issueAdmitCards:issueAdmitCards,withdrawAdmitCards:withdrawAdmitCards,bcOn:bcOn,bcClasses:bcClasses,bcResolve:bcResolve,bcRecipients:bcRecipients,bcNoContact:bcNoContact,createBroadcast:createBroadcast,bcGet:bcGet,bcNext:bcNext,bcWaLink:bcWaLink,broadcastMark:broadcastMark,bcSummary:bcSummary,schoolSummary:schoolSummary,hoAggregate:hoAggregate,hoSummaryHTML:hoSummaryHTML,adminSchoolHTML:adminSchoolHTML,hwOn:hwOn,hwList:hwList,hwDueCount:hwDueCount,addHomework:addHomework,hwSetDone:hwSetDone,deleteHomework:deleteHomework,hwItemHTML:hwItemHTML,hwParentHTML:hwParentHTML,transportOn:transportOn,routeById:routeById,transportFeeFor:transportFeeFor,addRoute:addRoute,setRouteFee:setRouteFee,deleteRoute:deleteRoute,routeStudents:routeStudents,setStudentTransport:setStudentTransport,transportChipHTML:transportChipHTML,libOn:libOn,addDaysISO:addDaysISO,libBookById:libBookById,libOutstanding:libOutstanding,libAvailable:libAvailable,addBook:addBook,deleteBook:deleteBook,issueBook:issueBook,returnBook:returnBook,libOverdue:libOverdue,libStudentLoans:libStudentLoans,libDossierHTML:libDossierHTML,admAppOn:admAppOn,pendingApplications:pendingApplications,submitApplication:submitApplication,reviewApplication:reviewApplication,appCardHTML:appCardHTML,cmpOn:cmpOn,cmpCatName:cmpCatName,openComplaints:openComplaints,submitComplaint:submitComplaint,replyComplaint:replyComplaint,resolveComplaint:resolveComplaint,cmpCardHTML:cmpCardHTML,ttPublish:ttPublish,ttParentHTML:ttParentHTML,publishAllTimetables:publishAllTimetables,slugifySchool:slugifySchool,pendingSignups:pendingSignups,submitSignup:submitSignup,signupReqCardHTML:signupReqCardHTML,heOn:heOn,heGradeFor:heGradeFor,hePctFor:hePctFor,heAttGate:heAttGate,heProgramById:heProgramById,heCourseById:heCourseById,heProgramCourses:heProgramCourses,heEnrollmentOf:heEnrollmentOf,addHeProgram:addHeProgram,deleteHeProgram:deleteHeProgram,addHeCourse:addHeCourse,deleteHeCourse:deleteHeCourse,enrollHe:enrollHe,recordHeResult:recordHeResult,heBestResults:heBestResults,heGPA:heGPA,heCGPA:heCGPA,heStanding:heStanding,
+  dateSheetFor:dateSheetFor,dateSheetEntries:dateSheetEntries,setDateSheet:setDateSheet,admitCodeFor:admitCodeFor,admitCardHTML:admitCardHTML,admitCardsBatchHTML:admitCardsBatchHTML,dateSheetHTML:dateSheetHTML,issueAdmitCards:issueAdmitCards,withdrawAdmitCards:withdrawAdmitCards,bcOn:bcOn,bcClasses:bcClasses,bcResolve:bcResolve,bcRecipients:bcRecipients,bcNoContact:bcNoContact,createBroadcast:createBroadcast,bcGet:bcGet,bcNext:bcNext,bcWaLink:bcWaLink,broadcastMark:broadcastMark,bcSummary:bcSummary,schoolSummary:schoolSummary,hoAggregate:hoAggregate,hoSummaryHTML:hoSummaryHTML,adminSchoolHTML:adminSchoolHTML,hwOn:hwOn,hwList:hwList,hwDueCount:hwDueCount,addHomework:addHomework,hwSetDone:hwSetDone,deleteHomework:deleteHomework,hwItemHTML:hwItemHTML,hwParentHTML:hwParentHTML,transportOn:transportOn,routeById:routeById,transportFeeFor:transportFeeFor,addRoute:addRoute,setRouteFee:setRouteFee,deleteRoute:deleteRoute,routeStudents:routeStudents,setStudentTransport:setStudentTransport,transportChipHTML:transportChipHTML,libOn:libOn,addDaysISO:addDaysISO,libBookById:libBookById,libOutstanding:libOutstanding,libAvailable:libAvailable,addBook:addBook,deleteBook:deleteBook,issueBook:issueBook,returnBook:returnBook,libOverdue:libOverdue,libStudentLoans:libStudentLoans,libDossierHTML:libDossierHTML,admAppOn:admAppOn,pendingApplications:pendingApplications,submitApplication:submitApplication,reviewApplication:reviewApplication,appCardHTML:appCardHTML,cmpOn:cmpOn,cmpCatName:cmpCatName,openComplaints:openComplaints,submitComplaint:submitComplaint,replyComplaint:replyComplaint,resolveComplaint:resolveComplaint,cmpCardHTML:cmpCardHTML,ttPublish:ttPublish,ttParentHTML:ttParentHTML,publishAllTimetables:publishAllTimetables,slugifySchool:slugifySchool,pendingSignups:pendingSignups,submitSignup:submitSignup,signupReqCardHTML:signupReqCardHTML,validEmail:validEmail,inviteTempPassword:inviteTempPassword,isSchoolAdmin:isSchoolAdmin,heOn:heOn,heGradeFor:heGradeFor,hePctFor:hePctFor,heAttGate:heAttGate,heProgramById:heProgramById,heCourseById:heCourseById,heProgramCourses:heProgramCourses,heEnrollmentOf:heEnrollmentOf,addHeProgram:addHeProgram,deleteHeProgram:deleteHeProgram,addHeCourse:addHeCourse,deleteHeCourse:deleteHeCourse,enrollHe:enrollHe,recordHeResult:recordHeResult,heBestResults:heBestResults,heGPA:heGPA,heCGPA:heCGPA,heStanding:heStanding,
   addFeeHead:addFeeHead,deleteFeeHead:deleteFeeHead,feeBill:feeBill,feeGenerate:feeGenerate,feeHeadsFor:feeHeadsFor,
   recordFeePayment:recordFeePayment,feeSetAdjust:feeSetAdjust,feeDefaulters:feeDefaulters,feeSummary:feeSummary,feePaid:feePaid,
   feeClearance:feeClearance,challanHTML:challanHTML,receiptHTML:receiptHTML,nextFeeReceipt:nextFeeReceipt,
