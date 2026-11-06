@@ -11180,7 +11180,7 @@ const Store={
   _ls:function(){try{return (typeof localStorage!=="undefined")?localStorage:null;}catch(e){return null;}},
   load:function(){
     const ls=this._ls();
-    if(ls){try{const raw=ls.getItem(demoMode?DEMO_LS_KEY:LS_KEY);if(raw){const d=JSON.parse(raw);if(d&&d.v===1&&d.settings)return d;}}catch(e){}}
+    if(ls){try{const raw=ls.getItem(demoMode?DEMO_LS_KEY:LS_KEY);if(raw){const d=JSON.parse(raw);if(d&&d.v===1&&d.settings){const m=mergeDefaults(d);if(JSON.stringify(m)!==raw)this._healed=true;return m;}}}catch(e){}}
     return defaultDB();
   },
   trySave:function(){
@@ -11192,7 +11192,27 @@ const Store={
   save:function(){this.trySave();if(!demoMode&&typeof Cloud!=="undefined")Cloud.onLocalSave();}
 };
 let DB=null;
-function db(){if(!DB)DB=Store.load();return DB;}
+function db(){if(!DB){DB=Store.load();if(Store._healed){Store._healed=false;Store.trySave();}}return DB;}
+/* Round 52 — stale-database repair: a database saved by an older build
+   lacks collections/settings added since. mergeDefaults() fills every
+   missing key from a fresh defaultDB() while keeping every saved value
+   (deep-merge for settings/seq); it never deletes or overwrites data. */
+function mergeDefaults(d){
+  const base=defaultDB();
+  if(!d||typeof d!=="object")return base;
+  Object.keys(base).forEach(function(k){if(d[k]===undefined)d[k]=base[k];});
+  d.settings=Object.assign({},base.settings,d.settings||{});
+  d.settings.board=Object.assign({},base.settings.board,(d.settings||{}).board||{});
+  d.settings.ageBands=Object.assign({},base.settings.ageBands,(d.settings||{}).ageBands||{});
+  d.seq=Object.assign({},base.seq,d.seq||{});
+  d.seq.adm=Object.assign({},d.seq.adm||{});
+  d.seq.cert=Object.assign({},d.seq.cert||{});
+  return d;
+}
+/* Defence in depth (Round 52): array/object accessors that create the
+   collection when it is missing, so an unguarded push can never throw. */
+function dbArr(key){const d=db();if(!Array.isArray(d[key]))d[key]=[];return d[key];}
+function dbObj(key){const d=db();if(!d[key]||typeof d[key]!=="object")d[key]={};return d[key];}
 /* ================= CLOUD SYNC (Firebase — free) =================
    Shared live database + teacher logins. How it works:
    - FIREBASE_CONFIG null (the plain file)  -> exactly as before: local-only, no login.
@@ -11323,6 +11343,9 @@ const Cloud = {
   },
   upsertLocal: function(coll,id,d){
     const D=db();
+    /* Round 52: a stale db can lack the map keys below — initialise them
+       instead of throwing on the first cloud delivery. */
+    ["marks","timetable","attendance","staffAtt","dateSheets","admitIssued","remarks"].forEach(function(k){if(!D[k]||typeof D[k]!=="object")D[k]={};});
     if(coll==="marks"){
       const ex=d.examId,st=d.studentId;if(!ex||!st)return;
       if(!D.marks[ex])D.marks[ex]={};
@@ -11336,8 +11359,10 @@ const Cloud = {
     if(coll==="dateSheets"){D.dateSheets[id]={entries:d.entries||[]};return;}
     if(coll==="admitIssued"){D.admitIssued[id]={at:d.at,count:d.count};return;}
     if(coll==="remarks"){D.remarks[id]=d.recs||{};return;}
-    const arr={students:D.students,exams:D.exams,labItems:D.labItems,labMaint:D.labMaint,certificates:D.certificates,feeHeads:D.feeHeads,feeRecords:D.feeRecords,subPayments:D.subPayments,staff:D.staff,salaryRecords:D.salaryRecords,broadcasts:D.broadcasts,homework:D.homework,routes:D.routes,libBooks:D.libBooks,libLoans:D.libLoans,applications:D.applications,complaints:D.complaints,hePrograms:D.hePrograms,heCourses:D.heCourses,heResults:D.heResults,heEnrollments:D.heEnrollments}[coll];
-    if(!arr)return;
+    let arr={students:D.students,exams:D.exams,labItems:D.labItems,labMaint:D.labMaint,certificates:D.certificates,feeHeads:D.feeHeads,feeRecords:D.feeRecords,subPayments:D.subPayments,staff:D.staff,salaryRecords:D.salaryRecords,broadcasts:D.broadcasts,homework:D.homework,routes:D.routes,libBooks:D.libBooks,libLoans:D.libLoans,applications:D.applications,complaints:D.complaints,signupRequests:D.signupRequests,hePrograms:D.hePrograms,heCourses:D.heCourses,heResults:D.heResults,heEnrollments:D.heEnrollments,imports:D.imports}[coll];
+    /* Round 52: a stale db can lack the array — create it instead of
+       silently dropping the incoming cloud record. */
+    if(!arr){arr=[];D[coll]=arr;}
     const rec=Object.assign({},d,{id:id});
     const ix=arr.findIndex(function(x){return x.id===id;});
     if(coll==="students"&&ix<0){
@@ -11349,6 +11374,9 @@ const Cloud = {
   },
   removeLocal: function(coll,id){
     const D=db();
+    /* Round 52: same stale-db guard as upsertLocal — a missing map must
+       not throw when a remote delete arrives. */
+    ["marks","timetable","attendance","staffAtt","dateSheets","admitIssued","remarks"].forEach(function(k){if(!D[k]||typeof D[k]!=="object")D[k]={};});
     if(coll==="marks"){const p=String(id).split("__");if(p.length===2&&D.marks[p[0]])delete D.marks[p[0]][p[1]];return;}
     if(coll==="settings")return;
     if(coll==="timetable"){delete D.timetable[id];return;}
@@ -11398,29 +11426,28 @@ const Cloud = {
     return f;
   },
   pushDoc: function(coll,id,data){
-    if(!this.ready||!this.fs||!this.schoolId)return;
-    try{this.coll(coll).doc(id).set(JSON.parse(JSON.stringify(data)));}catch(e){}
+    if(!this.ready||!this.fs||!this.schoolId)return Promise.resolve(false);
+    try{return this.coll(coll).doc(id).set(JSON.parse(JSON.stringify(data)));}catch(e){return Promise.resolve(false);}
   },
   deleteDoc: function(coll,id){
-    if(!this.ready||!this.fs||!this.schoolId)return;
-    try{this.coll(coll).doc(id).delete();}catch(e){}
+    if(!this.ready||!this.fs||!this.schoolId)return Promise.resolve(false);
+    try{return this.coll(coll).doc(id).delete();}catch(e){return Promise.resolve(false);}
   },
   /* Portal write without sign-in: the school id comes from the URL, not
      from the signed-in teacher. Used by admission applications. */
   pushPublicDoc: function(schoolId,coll,id,data){
-    if(!this.fs||!schoolId||!coll||!id)return;
-    try{this.fs.collection("schools").doc(schoolId).collection(coll).doc(id).set(JSON.parse(JSON.stringify(data)));}catch(e){}
+    if(!this.fs||!schoolId||!coll||!id)return Promise.resolve(false);
+    try{return this.fs.collection("schools").doc(schoolId).collection(coll).doc(id).set(JSON.parse(JSON.stringify(data)));}catch(e){return Promise.resolve(false);}
   },
   /* parent portal: fetch ONE public result by its hash. No sign-in, no list —
      the Firestore rules allow public reads only on publicResults. */
+  /* A failed read now REJECTS (Round 52): the portal must tell a broken
+     connection apart from "no result found" instead of hiding both. */
   getPublicResult: function(schoolId,hash){
     const self=this;
     if(!self.fs||!schoolId||!hash)return Promise.resolve(null);
-    try{
-      return self.fs.collection("schools").doc(schoolId).collection("publicResults").doc(hash).get()
-        .then(function(d){return d.exists?d.data():null;})
-        .catch(function(){return null;});
-    }catch(e){return Promise.resolve(null);}
+    return self.fs.collection("schools").doc(schoolId).collection("publicResults").doc(hash).get()
+      .then(function(d){return d.exists?d.data():null;});
   },
   getPublicInfo: function(schoolId){
     const self=this;
@@ -11707,6 +11734,7 @@ const SyncAdapter={
 };
 /* ================= history & audit ================= */
 function audit(action,summary){
+  if(!Array.isArray(db().audit))db().audit=[];
   db().audit.unshift({ts:tsNow(),action:action,summary:summary});
   if(db().audit.length>500)db().audit.length=500;
 }
@@ -11720,6 +11748,7 @@ function fileSafe(s){return String(s==null?"":s).trim().toLowerCase().replace(/[
 /* ================= admissions ================= */
 function nextAdmNo(admDateISO){
   const yr=String(admDateISO||todayISO()).slice(0,4);
+  if(!db().seq)db().seq={adm:{},cert:{}};
   db().seq.adm=db().seq.adm||{};
   const n=db().seq.adm[yr]||1;
   db().seq.adm[yr]=n+1;
@@ -11745,7 +11774,7 @@ function addStudent(d){
     dob:d.dob,gender:d.gender,cls:String(d.cls).trim(),section:String(d.section||"").trim(),
     admDate:d.admDate,contact:String(d.contact||"").trim(),address:String(d.address||"").trim(),
     pin:pin,history:[]};
-  db().students.push(st);
+  dbArr("students").push(st);
   logHist(st,"admit",st.admNo+" — "+st.name);
   Store.save();
   return {ok:true,student:st};
@@ -11857,7 +11886,7 @@ function addExam(d){
   if(!subs.length)return {ok:false,error:t("req")};
   const ex={id:uid("ex"),name:String(d.name||"").trim()||autoExamName(d),term:d.term,year:String(d.year||new Date().getFullYear()),
     cls:String(d.cls).trim(),section:String(d.section).trim(),subjects:subs,locked:false,history:[]};
-  db().exams.push(ex);
+  dbArr("exams").push(ex);
   logHist(ex,"create-exam",ex.name+" ("+ex.year+", "+clsLabel(ex.cls,ex.section)+")");
   Store.save();
   return {ok:true,exam:ex};
@@ -12419,7 +12448,7 @@ function addStaff(d){
   if(salary<=0)return {ok:false,error:t("req")};
   const role=["teacher","head","principal","clerk","other"].indexOf(String(d.role||""))>=0?String(d.role):"teacher";
   const st={id:uid("stf"),name:name,role:role,phone:String(d.phone||"").trim(),salary:salary,joinDate:String(d.joinDate||todayISO()),active:true};
-  db().staff.push(st);
+  dbArr("staff").push(st);
   audit("staff-add",st.name+" ("+t("role_"+role)+") "+salary);
   Store.save();
   return {ok:true,staff:st};
@@ -12515,7 +12544,7 @@ function generateSalary(staffId,month){
   const ms=staffMonthStats(staffId,month);
   const ded=Math.round((ms.A+0.5*ms.L)*perDay);
   const rec={id:uid("sal"),staffId:staffId,month:month,base:st.salary,presentDays:ms.P,absentDays:ms.A,lateDays:ms.L,leaveDays:ms.V,workingDays:wd,perDay:perDay,deduction:ded,allowances:0,advances:0,net:Math.max(0,st.salary-ded),payments:[]};
-  db().salaryRecords.push(rec);
+  dbArr("salaryRecords").push(rec);
   audit("salary-gen",month+" — "+st.name+" net "+rec.net+" (base "+rec.base+" - ded "+ded+")");
   Store.save();
   return {ok:true,record:rec};
@@ -12985,7 +13014,7 @@ function createBroadcast(cls,tplKey,customText){
   const noC=bcNoContact(cls).length;
   const bc={id:uid("bc"),at:tsNow(),cls:cls,tpl:tplKey,message:msg,recipients:recs.map(function(st){return {studentId:st.id,name:displayName(st),phone:attWaNumber(st),status:"pending"};})};
   if(!db().broadcasts)db().broadcasts=[];
-  db().broadcasts.push(bc);
+  dbArr("broadcasts").push(bc);
   audit("broadcast_start","Broadcast "+cls+": "+recs.length+" recipients");
   Store.save();
   return {ok:true,id:bc.id,count:recs.length,noContact:noC};
@@ -13470,7 +13499,7 @@ function addHomework(cls,section,subject,title,details,due){
   if(!title)return {ok:false,error:t("hw_no_title")};
   if(!validISODate(due))return {ok:false,error:t("hw_no_due")};
   const item={id:uid("hw"),cls:cls,section:section,subject:subject,title:title,details:details,due:due,done:false,at:tsNow()};
-  db().homework.push(item);
+  dbArr("homework").push(item);
   audit("homework-add",cls+" — "+subject+": "+title+" ("+due+")");
   Store.save();
   if(typeof Cloud!=="undefined"&&Cloud.enabled&&Cloud.ready&&Cloud.schoolId)Cloud.pushDoc("publicHomework",item.id,item);
@@ -13532,7 +13561,7 @@ function addRoute(name,vehicle,driver,phone,fee,stopsText){
   if(!(fee>=0))return {ok:false,error:t("req")};
   const stops=String(stopsText||"").split("\n").map(function(x){return x.trim();}).filter(function(x){return !!x;});
   const route={id:uid("rt"),name:name,vehicle:vehicle,driver:driver,phone:phone,fee:fee,stops:stops,at:tsNow()};
-  db().routes.push(route);
+  dbArr("routes").push(route);
   audit("route-add",name+" — "+fee+"/mo");
   Store.save();
   return {ok:true,id:route.id};
@@ -13596,7 +13625,7 @@ function addBook(title,author,copies){
   if(!title)return {ok:false,error:t("req")};
   if(!(copies>=1))return {ok:false,error:t("req")};
   const book={id:uid("lb"),title:title,author:author,copies:Math.floor(copies),at:tsNow()};
-  db().libBooks.push(book);
+  dbArr("libBooks").push(book);
   audit("book-add",title+" ("+book.copies+")");
   Store.save();
   return {ok:true,id:book.id};
@@ -13619,7 +13648,7 @@ function issueBook(bookId,studentId,dueDays){
   if(libOutstanding(bookId).some(function(l){return l.studentId===studentId;}))return {ok:false,error:t("lib_already_out")};
   if(libAvailable(bookId)<=0)return {ok:false,error:t("lib_no_copies")};
   const loan={id:uid("ll"),bookId:bookId,title:b.title,studentId:studentId,issued:todayISO(),due:addDaysISO(todayISO(),dueDays),returned:"",at:tsNow()};
-  db().libLoans.push(loan);
+  dbArr("libLoans").push(loan);
   audit("book-issue",b.title+" → "+displayName(st)+" (due "+loan.due+")");
   Store.save();
   return {ok:true,id:loan.id};
@@ -13658,9 +13687,9 @@ function submitApplication(d,schoolId){
   const app={id:uid("ap"),name:name,fatherName:fatherName,dob:dob,gender:gender,cls:cls,section:section,contact:contact,address:address,status:"pending",note:"",at:tsNow()};
   if(typeof Cloud!=="undefined"&&Cloud.fs&&schoolId){
     Cloud.pushPublicDoc(schoolId,"applications",app.id,app);
-    if(Cloud.schoolId===schoolId){db().applications.push(app);Store.save();}
+    if(Cloud.schoolId===schoolId){dbArr("applications").push(app);Store.save();}
   }else{
-    db().applications.push(app);
+    dbArr("applications").push(app);
     Store.save();
   }
   return {ok:true,id:app.id};
@@ -13710,9 +13739,9 @@ function submitComplaint(d,schoolId){
   const c={id:uid("cp"),admNo:admNo,studentName:studentName,cls:cls,category:category,message:message,status:"open",reply:"",at:tsNow(),resolvedAt:""};
   if(typeof Cloud!=="undefined"&&Cloud.fs&&schoolId){
     Cloud.pushPublicDoc(schoolId,"complaints",c.id,c);
-    if(Cloud.schoolId===schoolId){db().complaints.push(c);Store.save();}
+    if(Cloud.schoolId===schoolId){dbArr("complaints").push(c);Store.save();}
   }else{
-    db().complaints.push(c);
+    dbArr("complaints").push(c);
     Store.save();
   }
   return {ok:true,id:c.id};
@@ -13763,7 +13792,7 @@ function submitSignup(d){
   if(typeof Cloud!=="undefined"&&Cloud.fs){
     Cloud.pushPublicRoot("signupRequests",r.id,r);
   }else{
-    db().signupRequests.push(r);
+    dbArr("signupRequests").push(r);
     Store.save();
   }
   return {ok:true,id:r.id};
@@ -13828,7 +13857,7 @@ function addHeProgram(d){
   const mode=d.mode==="annual"?"annual":"semester";
   if(!name||!totalCredits)return {ok:false,error:t("req")};
   const p={id:uid("hp"),name:name,level:level,semesters:semesters,totalCredits:totalCredits,mode:mode,at:tsNow()};
-  db().hePrograms.push(p);Store.save();
+  dbArr("hePrograms").push(p);Store.save();
   return {ok:true,id:p.id};
 }
 function deleteHeProgram(id){
@@ -13848,7 +13877,7 @@ function addHeCourse(d){
   if(semester>program.semesters)return {ok:false,error:t("req")};
   if((db().heCourses||[]).some(function(c){return c.programId===program.id&&c.code===code;}))return {ok:false,error:t("req")};
   const c={id:uid("hc"),programId:program.id,code:code,title:title,credits:credits,semester:semester,at:tsNow()};
-  db().heCourses.push(c);Store.save();
+  dbArr("heCourses").push(c);Store.save();
   return {ok:true,id:c.id};
 }
 function deleteHeCourse(id){
@@ -13863,7 +13892,7 @@ function enrollHe(studentId,programId,semester){
   const sem=Math.max(1,Math.min(program?program.semesters:12,parseInt(semester,10)||1));
   if(!st||!program)return {ok:false,error:t("req")};
   (db().heEnrollments||[]).forEach(function(e){if(e.studentId===studentId)e.status="ended";});
-  db().heEnrollments.push({id:uid("he"),studentId:studentId,programId:programId,semester:sem, status:"active",at:tsNow()});
+  dbArr("heEnrollments").push({id:uid("he"),studentId:studentId,programId:programId,semester:sem, status:"active",at:tsNow()});
   Store.save();
   return {ok:true};
 }
@@ -13876,7 +13905,7 @@ function recordHeResult(studentId,courseId,marks){
   if(!enr||enr.programId!==course.programId)return {ok:false,error:t("req")};
   const attempt=(db().heResults||[]).filter(function(r){return r.studentId===studentId&&r.courseId===courseId;}).length+1;
   const r={id:uid("hr"),studentId:studentId,courseId:courseId,semester:course.semester,marks:Number(marks),grade:g.grade,points:g.points,credits:course.credits,attempt:attempt,at:tsNow()};
-  db().heResults.push(r);Store.save();
+  dbArr("heResults").push(r);Store.save();
   return {ok:true,id:r.id};
 }
 function heBestResults(studentId,semester){
@@ -13939,7 +13968,7 @@ function addFeeHead(d){
   const name=String(d.name||"").trim(), amount=Number(d.amount)||0;
   if(!name||amount<=0)return {ok:false,error:t("req")};
   const h={id:uid("fh"),name:name,amount:amount,cls:String(d.cls||"").trim()};
-  db().feeHeads.push(h);
+  dbArr("feeHeads").push(h);
   audit("fee-head",name+" "+amount+(h.cls?" ("+h.cls+")":""));
   Store.save();
   return {ok:true,head:h};
@@ -14017,7 +14046,7 @@ function feeEnsureRecord(studentId,month){
   rec={id:uid("fr"),studentId:studentId,month:month,total:total,transportFee:trFee,discount:0,fine:0,payments:[]};
   const ca=concAmount(st,total);
   if(ca>0){rec.discount=ca;rec.discountKind="concession";rec.discountNote=(st.concession.kind||"")+" — "+(st.concession.approver||"");}
-  db().feeRecords.push(rec);
+  dbArr("feeRecords").push(rec);
   return rec;
 }
 function feePaid(rec){return (rec.payments||[]).reduce(function(a,p){return a+Number(p.amount||0);},0);}
@@ -14112,7 +14141,7 @@ function reportSubPayment(d){
   if(!(amt>0))return {ok:false,error:t("req")};
   if(["Cash","JazzCash","EasyPaisa","Bank"].indexOf(d.method)<0)return {ok:false,error:t("req")};
   const p={id:uid("sp"),at:tsNow(),amount:amt,method:d.method,txnId:String(d.txnId||"").trim(),cycle:cycle,months:subCycleMonths(cycle),status:"reported",reportedBy:(typeof Cloud!=="undefined"&&Cloud.user?Cloud.user.email:"")};
-  db().subPayments.push(p);
+  dbArr("subPayments").push(p);
   audit("sub-report",p.cycle+" "+p.amount+" "+p.method+" "+(p.txnId||"—"));
   Store.save();
   return {ok:true,payment:p};
@@ -14553,7 +14582,7 @@ function addLabItem(d){
   const it={id:uid("lb"),name:d.name.trim(),category:d.category||"other",qty:Number(d.qty)||0,
     unit:String(d.unit||"").trim(),condition:d.condition||"good",
     minStock:Number(d.minStock)||0,nextService:d.nextService||"",history:[]};
-  db().labItems.push(it);
+  dbArr("labItems").push(it);
   logHist(it,"add-item",it.name);
   Store.save();
   return {ok:true,item:it};
@@ -14582,7 +14611,7 @@ function addMaint(d){
   if(!d.itemId||!d.date)return {ok:false,error:t("req")};
   const mn={id:uid("mt"),itemId:d.itemId,date:d.date,issue:String(d.issue||"").trim(),
     action:String(d.action||"").trim(),cost:Number(d.cost)||0,history:[]};
-  db().labMaint.push(mn);
+  dbArr("labMaint").push(mn);
   const it=db().labItems.find(function(x){return x.id===d.itemId;});
   logHist(mn,"add-maint",(it?it.name:"?")+" — "+mn.date);
   Store.save();
@@ -14663,7 +14692,7 @@ function importJSON(text){
   let d;try{d=JSON.parse(text);}catch(e){return {ok:false,error:t("bk_badjson")};}
   if(!d||d.v!==1||!d.settings||!Array.isArray(d.students))return {ok:false,error:t("bk_badfile")};
   takeSnapshot("before-restore");
-  DB=d;Store.save();
+  DB=mergeDefaults(d);Store.save();
   audit("restore",t("restore"));
   return {ok:true};
 }
@@ -14714,7 +14743,7 @@ function mergeJSON(text){
     idMap[inId]=ins.id;
     stuIds[ins.id]=1;byIdent[key]=ins;
     ins.history=ins.history||[];
-    db().students.push(ins);rep.students++;
+    dbArr("students").push(ins);rep.students++;
   });
   /* ---- exams + marks ---- */
   const examByKey={};
@@ -14728,7 +14757,7 @@ function mergeJSON(text){
       if(!ine.id||examIds[ine.id])ine.id=uid("ex");
       examIds[ine.id]=1;examByKey[key]=ine;
       ine.history=ine.history||[];
-      db().exams.push(ine);rep.exams++;
+      dbArr("exams").push(ine);rep.exams++;
       local=ine;
     }
     (ine.subjects||[]).forEach(function(s){
@@ -14752,7 +14781,7 @@ function mergeJSON(text){
     if(!c||!c.serial||certSerials[c.serial])return;
     if(!c.id||db().certificates.some(function(x){return x.id===c.id;}))c.id=uid("cert");
     certSerials[c.serial]=1;
-    db().certificates.push(c);rep.certs++;
+    dbArr("certificates").push(c);rep.certs++;
   });
   /* ---- lab items (match by name; merge maintenance history only) ---- */
   const labByName={};
@@ -14765,16 +14794,16 @@ function mergeJSON(text){
       (d.labMaint||[]).forEach(function(m){
         if(m.itemId!==inItemId)return;
         const dup=(db().labMaint||[]).some(function(x){return x.ts===m.ts&&x.itemId===local.id&&x.note===m.note;});
-        if(!dup)db().labMaint.push({id:uid("lm"),itemId:local.id,ts:m.ts,note:m.note,cost:m.cost||0});
+        if(!dup)dbArr("labMaint").push({id:uid("lm"),itemId:local.id,ts:m.ts,note:m.note,cost:m.cost||0});
       });
       return;
     }
     if(!it.id||labIds[it.id])it.id=uid("lab");
     labIds[it.id]=1;labByName[norm(it.name)]=it;
-    db().labItems.push(it);rep.lab++;
+    dbArr("labItems").push(it);rep.lab++;
     (d.labMaint||[]).forEach(function(m){
       if(m.itemId!==inItemId)return;
-      db().labMaint.push({id:uid("lm"),itemId:it.id,ts:m.ts,note:m.note,cost:m.cost||0});
+      dbArr("labMaint").push({id:uid("lm"),itemId:it.id,ts:m.ts,note:m.note,cost:m.cost||0});
     });
   });
   /* ---- counters: take the max so future numbers never collide ---- */
@@ -14818,7 +14847,7 @@ function restoreSnapshot(idx){
   takeSnapshot("before-restore");
   let d;try{d=JSON.parse(s.data);}catch(e){return {ok:false,error:t("merge_bad")};}
   if(!d||d.v!==1||!d.settings||!Array.isArray(d.students))return {ok:false,error:t("merge_bad")};
-  DB=d;Store.save();
+  DB=mergeDefaults(d);Store.save();
   return {ok:true};
 }
 /* ================= CSV BULK IMPORT — feed entries from a paper register ====
@@ -15691,6 +15720,13 @@ function renderParent(){
     msg.innerHTML="";res.innerHTML="";
     go.disabled=true;
     Cloud.getPublicResult(schoolId,parentHash(schoolId,adm,pin,father)).then(function(payload){
+      if(payload)return payload;
+      /* Adm numbers are stored upper-case ("ADM-…"); a parent typing them
+         in lower case must still find the card (Round 52). */
+      const upper=adm.toUpperCase();
+      if(upper===adm)return null;
+      return Cloud.getPublicResult(schoolId,parentHash(schoolId,upper,pin,father));
+    }).then(function(payload){
       go.disabled=false;
       if(!payload){msg.innerHTML='<div class="msg err">'+esc(t("parent_notfound"))+"</div>";return;}
       res.innerHTML=rcardHTML(payload)+
@@ -15735,6 +15771,9 @@ function renderParent(){
           hwBox.innerHTML=hwParentHTML(items);
         });
       }
+    }).catch(function(){
+      go.disabled=false;
+      msg.innerHTML='<div class="msg err">'+esc(t("portal_unreachable"))+"</div>";
     });
   };
 }
@@ -16084,15 +16123,19 @@ function ensurePin(st){
 }
 /* Publish a LOCKED exam's results for parents. Only from a locked (approved)
    exam; only in cloud mode with a signed-in teacher. */
+/* Publish a LOCKED exam's results for parents. Only from a locked (approved)
+   exam; only in cloud mode with a signed-in teacher. Round 52: the writes
+   are CONFIRMED — the old version counted fire-and-forget pushDoc calls, so
+   a denied write still reported "Published" while parents found nothing. */
 function publishResults(examId){
   const ex=db().exams.find(function(e){return e.id===examId;});
-  if(!ex)return {ok:false,error:t("no_records")};
-  if(!ex.locked)return {ok:false,error:t("publish_locked_only")};
-  if(typeof Cloud==="undefined"||!Cloud.enabled||!Cloud.ready||!Cloud.user||!Cloud.schoolId)return {ok:false,error:t("publish_cloud_only")};
+  if(!ex)return Promise.resolve({ok:false,error:t("no_records")});
+  if(!ex.locked)return Promise.resolve({ok:false,error:t("publish_locked_only")});
+  if(typeof Cloud==="undefined"||!Cloud.enabled||!Cloud.ready||!Cloud.user||!Cloud.schoolId)return Promise.resolve({ok:false,error:t("publish_cloud_only")});
   const rows=computeResult(examId);
   const done=rows.filter(function(r){return r.complete;});
   const schoolId=Cloud.schoolId;
-  let n=0;
+  const jobs=[];
   done.forEach(function(r){
     const st=r.student;
     const pin=ensurePin(st);
@@ -16100,34 +16143,49 @@ function publishResults(examId){
     if(!payload)return;
     payload.student.photo=""; /* keep the public doc small; card renders without it */
     payload.publishedAt=tsNow();
-    Cloud.pushDoc("publicResults",parentHash(schoolId,st.admNo,pin,st.fatherName),payload);
-    Cloud.pushDoc("verifyDocs",payload.verifyCode,{type:"result",code:payload.verifyCode,student:{name:st.name,fatherName:st.fatherName,admNo:st.admNo,cls:st.cls},exam:{id:ex.id,name:ex.name,year:ex.year,term:ex.term},total:payload.total,maxTotal:payload.maxTotal,pct:payload.pct,grade:payload.grade,division:payload.division,position:payload.position,pass:payload.pass,at:tsNow()});
-    n++;
+    jobs.push({kind:"pub",adm:st.admNo,p:Cloud.pushDoc("publicResults",parentHash(schoolId,st.admNo,pin,st.fatherName),payload)});
+    jobs.push({kind:"verify",adm:st.admNo,p:Cloud.pushDoc("verifyDocs",payload.verifyCode,{type:"result",code:payload.verifyCode,student:{name:st.name,fatherName:st.fatherName,admNo:st.admNo,cls:st.cls},exam:{id:ex.id,name:ex.name,year:ex.year,term:ex.term},total:payload.total,maxTotal:payload.maxTotal,pct:payload.pct,grade:payload.grade,division:payload.division,position:payload.position,pass:payload.pass,at:tsNow()})});
   });
-  db().settings.published=db().settings.published||{};
-  db().settings.published[examId]={count:n,at:tsNow()};
-  audit("publish-results",ex.name+" ("+ex.year+") — "+n+" "+t("dash_marks_done"));
-  Store.save();
-  return {ok:true,count:n};
+  return Promise.all(jobs.map(function(j){
+    return Promise.resolve(j.p).then(function(v){return {kind:j.kind,adm:j.adm,ok:v!==false};},function(){return {kind:j.kind,adm:j.adm,ok:false};});
+  })).then(function(results){
+    const good=results.filter(function(x){return x.kind==="pub"&&x.ok;});
+    const bad=results.filter(function(x){return x.kind==="pub"&&!x.ok;});
+    const n=good.length;
+    db().settings.published=db().settings.published||{};
+    if(n>0){
+      db().settings.published[examId]={count:n,at:tsNow()};
+      audit("publish-results",ex.name+" ("+ex.year+") — "+n+" "+t("dash_marks_done"));
+    }
+    Store.save();
+    if(bad.length)return {ok:false,count:n,failed:bad.length,error:t("publish_failed")};
+    return {ok:true,count:n};
+  });
 }
 function unpublishResults(examId){
   const ex=db().exams.find(function(e){return e.id===examId;});
-  if(!ex)return {ok:false};
-  if(typeof Cloud==="undefined"||!Cloud.enabled||!Cloud.ready||!Cloud.user||!Cloud.schoolId)return {ok:false,error:t("publish_cloud_only")};
+  if(!ex)return Promise.resolve({ok:false});
+  if(typeof Cloud==="undefined"||!Cloud.enabled||!Cloud.ready||!Cloud.user||!Cloud.schoolId)return Promise.resolve({ok:false,error:t("publish_cloud_only")});
   const rows=computeResult(examId);
   const schoolId=Cloud.schoolId;
-  let n=0;
+  const jobs=[];
   rows.forEach(function(r){
     const st=r.student;
     if(!st.pin)return;
-    Cloud.deleteDoc("publicResults",parentHash(schoolId,st.admNo,st.pin,st.fatherName));
-    Cloud.deleteDoc("verifyDocs",verifyCodeFor("result",examId+"|"+st.id));
-    n++;
+    jobs.push({kind:"pub",adm:st.admNo,p:Cloud.deleteDoc("publicResults",parentHash(schoolId,st.admNo,st.pin,st.fatherName))});
+    jobs.push({kind:"verify",adm:st.admNo,p:Cloud.deleteDoc("verifyDocs",verifyCodeFor("result",examId+"|"+st.id))});
   });
-  if(db().settings.published)delete db().settings.published[examId];
-  audit("unpublish-results",ex.name+" ("+ex.year+")");
-  Store.save();
-  return {ok:true,count:n};
+  return Promise.all(jobs.map(function(j){
+    return Promise.resolve(j.p).then(function(v){return {kind:j.kind,adm:j.adm,ok:v!==false};},function(){return {kind:j.kind,adm:j.adm,ok:false};});
+  })).then(function(results){
+    const bad=results.filter(function(x){return x.kind==="pub"&&!x.ok;});
+    const n=results.filter(function(x){return x.kind==="pub"&&x.ok;}).length;
+    if(db().settings.published)delete db().settings.published[examId];
+    audit("unpublish-results",ex.name+" ("+ex.year+")");
+    Store.save();
+    if(bad.length)return {ok:false,count:n,failed:bad.length,error:t("publish_failed")};
+    return {ok:true,count:n};
+  });
 }
 function parentLink(){
   if(typeof Cloud==="undefined"||!Cloud.schoolId)return "";
@@ -18326,6 +18384,8 @@ err_title:{en:"Error",ur:"غلطی",bn:"ত্রুটি",hi:"त्रुट�
 he_attempt:{en:"attempt",ur:"کوشش",bn:"প্রচেষ্টা",hi:"प्रयास",ne:"प्रयास",sw:"Jaribio",ar:"محاولة",zh:"次尝试",es:"intento",fr:"tentative",pt:"tentativa",ru:"попытка",id:"percobaan",de:"Versuch",ja:"回目の受験",pa:"کوشش",mr:"प्रयत्न",te:"ప్రయత్నం",fa:"تلاش",tr:"deneme",ta:"முயற்சி",vi:"lần thử",ko:"차 시도",tl:"pagsubok",ha:"ƙoƙari",it:"tentativo",ps:"هڅه",ms:"percubaan",yo:"ìgbìyànjú",ig:"mbọ"},
 method_cash:{en:"Cash",ur:"نقد",bn:"নগদ",hi:"नकद",ne:"नगद",sw:"Pesa taslimu",ar:"نقدًا",zh:"现金",es:"Efectivo",fr:"Espèces",pt:"Numerário",ru:"Наличные",id:"Tunai",de:"Bargeld",ja:"現金",pa:"نقد",mr:"रोख",te:"నగదు",fa:"نقدی",tr:"Nakit",ta:"பணம்",vi:"Tiền mặt",ko:"현금",tl:"Salapi",ha:"Tsabar kuɗi",it:"Contanti",ps:"نغدې",ms:"Tunai",yo:"Owó",ig:"Ego"},
 method_bank:{en:"Bank",ur:"بینک",bn:"ব্যাংক",hi:"बैंक",ne:"बैंक",sw:"Benki",ar:"بنك",zh:"银行",es:"Banco",fr:"Banque",pt:"Banco",ru:"Банковский перевод",id:"Transfer Bank",de:"Banküberweisung",ja:"銀行",pa:"بینک",mr:"बँक",te:"బ్యాంకు",fa:"بانک",tr:"Banka",ta:"வங்கி",vi:"Ngân hàng",ko:"은행",tl:"Bangko",ha:"Banki",it:"Banca",ps:"بانک",ms:"Pindahan Bank",yo:"Báǹkì",ig:"Ụlọ akụ"},
+publish_failed:{en:"Could not publish the results — the school's online records could not be saved. Check the connection and try again.",ur:"نتائج شائع نہیں ہو سکے — اسکول کا آن لائن ریکارڈ محفوظ نہیں ہو سکا۔ کنکشن چیک کریں اور دوبارہ کوشش کریں۔",bn:"ফলাফল প্রকাশ করা যায়নি — স্কুলের অনলাইন রেকর্ড সংরক্ষণ করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।",hi:"परिणाम प्रकाशित नहीं हो सके — स्कूल का ऑनलाइन रिकॉर्ड सहेजा नहीं जा सका। कनेक्शन जाँचें औौर पुनः प्रयास करें।",ne:"नतिजा प्रकाशित गर्न सकिएन — विद्यालयको अनलाइन रेकर्ड सेभ गर्न सकिएन। जडान जाँचेर फेरि प्रयास गर्नुहोस्।",sw:"Matokeo hayakuchapishwa — rekodi ya mtandaoni ya shule haikuweza kuhifadhiwa. Angalia muunganisho na ujaribu tena.",ar:"تعذّر نشر النتائج — تعذّر حفظ سجلات المدرسة عبر الإنترنت. تحقّق من الاتصال وحاول مرة أخرى.",zh:"无法发布成绩——学校的在线记录无法保存。请检查连接并重试。",es:"No se pudieron publicar los resultados: no se pudo guardar el registro en línea de la escuela. Comprueba la conexión e inténtalo de nuevo.",fr:"Impossible de publier les résultats — le registre en ligne de l'école n'a pas pu être enregistré. Vérifiez la connexion et réessayez.",pt:"Não foi possível publicar os resultados — o registo online da escola não pôde ser guardado. Verifique a ligação e tente novamente.",ru:"Не удалось опубликовать результаты — не удалось сохранить онлайн-записи школы. Проверьте соединение и попробуйте ещё раз.",id:"Hasil tidak dapat diterbitkan — catatan online sekolah tidak dapat disimpan. Periksa koneksi dan coba lagi.",de:"Die Ergebnisse konnten nicht veröffentlicht werden — die Online-Daten der Schule konnten nicht gespeichert werden. Prüfen Sie die Verbindung und versuchen Sie es erneut.",ja:"結果を公開できませんでした — 学校のオンライン記録を保存できませんでした。接続を確認して、もう一度お試しください。",pa:"ਨਤੀਜੇ ਪ੍ਰਕਾਸ਼ਤ ਨਹੀਂ ਹੋ ਸਕੇ — ਸਕੂਲ ਦਾ ਔਨਲਾਈਨ ਰਿਕਾਰਡ ਸੰਭਾਲਿਆ ਨਹੀਂ ਜਾ ਸਕਿਆ। ਕੁਨੈਕਸ਼ਨ ਚੈੱਕ ਕਰੋ ਤੇ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",mr:"निकाल प्रकाशित करता आले नाहीत — शाळेची ऑनलाइन नोंद जतन करता आली नाही. कनेक्शन तपासा आणि पुन्हा प्रयत्न करा.",te:"ఫలితాలను ప్రచురించలేకపోయాము — పాఠశాల ఆన్‌లైన్ రికార్డు సేవ్ కాలేదు. కనెక్షన్‌ను తనిఖీ చేసి మళ్ళీ ప్రయత్నించండి.",fa:"نتایج منتشر نشد — رکورد آنلاین مدرسه ذخیره نشد. اتصال را بررسی کنید و دوباره تلاش کنید.",tr:"Sonuçlar yayımlanamadı — okulun çevrimiçi kaydı kaydedilemedi. Bağlantıyı kontrol edip tekrar deneyin.",ta:"முடிவுகளை வெளியிட முடியவில்லை — பள்ளியின் ஆன்லைன் பதிவைச் சேமிக்க முடியவில்லை. இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",vi:"Không thể công bố kết quả — không lưu được hồ sơ trực tuyến của trường. Hãy kiểm tra kết nối và thử lại.",ko:"결과를 게시할 수 없습니다 — 학교 온라인 기록을 저장할 수 없습니다. 연결을 확인하고 다시 시도하세요.",tl:"Hindi maipublish ang mga resulta — hindi ma-save ang online record ng paaralan. Suriin ang koneksyon at subukang muli.",ha:"Ba a iya buga sakamako ba — ba a iya adana bayanan makaranta na intanet ba. Duba haɗin intanet kuma a sake gwadawa.",it:"Impossibile pubblicare i risultati: il registro online della scuola non è stato salvato. Controlla la connessione e riprova.",ps:"پایلې خپرې نه شوې — د ښوونځي آنلاین ریکارډ خوندي نه شو. اړیکه وګورئ او بیا هڅه وکړئ.",ms:"Keputusan tidak dapat diterbitkan — rekod dalam talian sekolah tidak dapat disimpan. Semak sambungan dan cuba lagi.",yo:"A kò le è tẹ àwọn èsì jáde — a kò le fi ìwé ìforúkọạsílẹ̀ orí ayélujára ti ilé-ẹ̀kọ́ pamọ́. Ṣàyẹ̀wò ìsopọ̀ náà kí o sì tún gbìyànjú.",ig:"Enweghị ike ibipụta nsonaazụ — enweghị ike ịchekwa ndekọ n'ịntanetị nke ụlọ akwụkwọ. Lelee njikọ wee nwaa ọzo."},
+portal_unreachable:{en:"Could not reach the school's records. Check the connection and try again.",ur:"اسکول کا ریکارڈ نہیں مل سکا۔ کنکشن چیک کریں اور دوبارہ کوشش کریں۔",bn:"স্কুলের রেকর্ডে পোঁছানো যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।",hi:"स्कूल के रिकॉर्ड तक नहीं पहुँचा जा सका। कनेक्शन जाँचें औौर पुनः प्रयास करें।",ne:"विद्यालयको रेकर्डमा पुग्न सकिएन। जडान जाँचेर फेरि प्रयास गर्नुहोस्।",sw:"Haikuweza kufikia rekodi za shule. Angalia muunganisho na ujaribu tena.",ar:"تعذّر الوصول إلى سجلات المدرسة. تحقّق من الاتصال وحاول مرة أخرى.",zh:"无法访问学校的记录。请检查连接并重试。",es:"No se pudo acceder a los registros de la escuela. Comprueba la conexión e inténtalo de nuevo.",fr:"Impossible d'accéder aux registres de l'école. Vérifiez la connexion et réessayez.",pt:"Não foi possível aceder aos registos da escola. Verifique a ligação e tente novamente.",ru:"Не удалось получить доступ к записям школы. Проверьте соединение и попробуйте ещё раз.",id:"Tidak dapat mengakses catatan sekolah. Periksa koneksi dan coba lagi.",de:"Auf die Daten der Schule konnte nicht zugegriffen werden. Prüfen Sie die Verbindung und versuchen Sie es erneut.",ja:"学校の記録にアクセスできませんでした。接続を確認して、もう一度お試しください。",pa:"ਸਕੂਲ ਦੇ ਰਿਕਾਰਡ ਤੱਕ ਪਹੁੰਚ ਨਹੀਂ ਹੋ ਸਕੀ। ਕੁਨੈਕਸ਼ਨ ਚੈੱਕ ਕਰੋ ਤੇ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",mr:"शाळेच्या नोंदीपर्यंत पोहोचता आले नाही. कनेक्शन तपासा आणि पुन्हा प्रयत्न करा.",te:"పాఠశాల రికార్డులను చేరుకోలేకపోయాము. కనెక్షన్‌ను తనిఖీ చేసి మళ్ళీ ప్రయత్నించండి.",fa:"به رکوردهای مدرسه دسترسی پیدا نشد. اتصال را بررسی کنید و دوباره تلاش کنید.",tr:"Okul kayıtlarına ulaşılamadı. Bağlantıyı kontrol edip tekrar deneyin.",ta:"பள்ளியின் பதிவுகளை அணுக முடியவில்லை. இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",vi:"Không thể truy cập hồ sơ của trường. Hãy kiểm tra kết nối và thử lại.",ko:"학교 기록에 접근할 수 없습니다. 연결을 확인하고 다시 시도하세요.",tl:"Hindi ma-access ang mga record ng paaralan. Suriin ang koneksyon at subukang muli.",ha:"Ba a iya samun bayanan makaranta ba. Duba haɗin intanet kuma a sake gwadawa.",it:"Impossibile accedere ai registri della scuola. Controlla la connessione e riprova.",ps:"د ښوونځي ریکارډونو ته لاسرسی ونه شو. اړیکه وګورئ او بیا هڅه وکړئ.",ms:"Tidak dapat mengakses rekod sekolah. Semak sambungan dan cuba lagi.",yo:"A kò le è dé ìwé ìforúkọạsílẹ̀ ilé-ẹ̀kọ́. Ṣàyẹ̀wò ìsopọ̀ náà kí o sì tún gbìyànjú.",ig:"Enweghị ike ịnweta ndekọ ụlọ akwụkwọ. Lelee njikọ wee nwaa ọzo."},
 publish_results:{en:"Publish results",ur:"نتائج شائع کریں",bn:"ফলাফল প্রকাশ করুন",hi:"परिणाम प्रकाशित करें",ne:"नतिजा प्रकाशित गर्नुहोस्",sw:"Chapisha matokeo",ar:"نشر النتائج",zh:"发布成绩",es:"Publicar resultados",fr:"Publier les résultats",pt:"Publicar resultados",ru:"Опубликовать результаты",id:"Terbitkan hasil",de:"Ergebnisse veröffentlichen",ja:"結果を公開",pa:"نتیجے شائع کرو",mr:"निकाल प्रकाशित करा",te:"ఫలితాలను ప్రచురించండి",fa:"انتشار نتایج",tr:"Sonuçları yayımla",ta:"முடிவுகளை வெளியிடவும்",vi:"Công bố kết quả",ko:"결과 게시",tl:"Ilathala ang mga resulta",ha:"Buga sakamako",it:"Pubblica risultati",ps:"پایلې خپرې کړئ",ms:"Terbitkan keputusan",yo:"Ṣe àtẹ̀jáde èsì",ig:"Bipụta nsonaazụ"},
 unpublish_results:{en:"Remove published results",ur:"شائع شدہ نتائج ہٹائیں",bn:"প্রকাশিত ফলাফল সরান",hi:"प्रकाशित परिणाम हटाएं",ne:"प्रकाशित नतिजा हटाउनुहोस्",sw:"Ondoa matokeo yaliyochapishwa",ar:"إزالة النتائج المنشورة",zh:"撤回已发布的成绩",es:"Quitar resultados publicados",fr:"Retirer les résultats publiés",pt:"Remover resultados publicados",ru:"Удалить опубликованные результаты",id:"Hapus hasil yang diterbitkan",de:"Veröffentlichte Ergebnisse entfernen",ja:"公開済みの結果を削除",pa:"شائع شدہ نتیجے ہٹاؤ",mr:"प्रकाशित निकाल काढा",te:"ప్రచురించిన ఫలితాలను తీసివేయండి",fa:"حذف نتایج منتشرشده",tr:"Yayımlanan sonuçları kaldır",ta:"வெளியிடப்பட்ட முடிவுகளை அகற்று",vi:"Gỡ các kết quả đã công bố",ko:"게시된 결과 제거",tl:"Alisin ang mga nailathalang resulta",ha:"Cire sakamakon da aka buga",it:"Rimuovi i risultati pubblicati",ps:"خپرې شوې پایلې لرې کړئ",ms:"Buang keputusan yang diterbitkan",yo:"Yọ àwọn èsì tí a ti ṣe àtẹ̀jáde kúrò",ig:"Wepụ nsonaazụ ebipụtara"},
 publish_locked_only:{en:"Results can only be published after the exam is locked (approved).",ur:"نتائج صرف امتحان بند (منظور) ہونے کے بعد شائع ہو سکتے ہیں۔",bn:"পরীক্ষা লক (অনুমোদিত) হওয়ার পরেই ফলাফল প্রকাশ করা যাবে।",hi:"परिणाम तभी प्रकाशित किए जा सकते हैं जब परीक्षा लॉक (स्वीकृत) हो।",ne:"नतिजा परीक्षा लक (स्वीकृत) भएपछि मात्र प्रकाशित गर्न सकिन्छ।",sw:"Matokeo yanaweza kuchapishwa tu baada ya mtihani kufungwa (kuidhinishwa).",ar:"لا يمكن نشر النتائج إلا بعد قفل الامتحان (الموافقة عليه).",zh:"只有在考试锁定（批准）后才能发布成绩。",es:"Los resultados solo se pueden publicar después de que el examen esté bloqueado (aprobado).",fr:"Les résultats ne peuvent être publiés qu'après le verrouillage (l'approbation) de l'examen.",pt:"Os resultados só podem ser publicados depois de o exame estar bloqueado (aprovado).",ru:"Результаты могут быть опубликованы только после того, как экзамен будет заблокирован (утвержден).",id:"Hasil hanya dapat diterbitkan setelah ujian dikunci (disetujui).",de:"Ergebnisse können erst veröffentlicht werden, nachdem die Prüfung gesperrt (genehmigt) wurde.",ja:"結果は試験がロック（承認）された後にのみ公開できます。",pa:"نتیجے صرف امتحان بند (منظور شدہ) ہون توں بعد شائع ہو سکدے نیں۔",mr:"परीक्षा लॉक (मंजूर) झाल्यानंतरच निकाल प्रकाशित करता येतात.",te:"పరీక్ష లాక్ చేయబడిన (ఆమోదించబడిన) తర్వాత మాత్రమే ఫలితాలు ప్రచురించబడతాయి.",fa:"نتایج فقط پس از قفل شدن (تأیید) امتحان قابل انتشارند.",tr:"Sonuçlar yalnızca sınav kilitlendikten (onaylandıktan) sonra yayımlanabilir.",ta:"தேர்வு பூட்டப்பட்ட பின்னரே (அங்கீகரிக்கப்பட்ட) முடிவுகளை வெளியிட முடியும்.",vi:"Kết quả chỉ được công bố sau khi kỳ thi bị khóa (đã phê duyệt).",ko:"결과는 시험이 잠긴(승인된) 후에만 게시할 수 있습니다.",tl:"Maaari lamang ilathala ang mga resulta pagkatapos ma-lock (maaprubahan) ang pagsusulit.",ha:"Za a iya buga sakamako kaɗai bayan an kulle jarrabawa (an amince).",it:"I risultati possono essere pubblicati solo dopo che l'esame è stato bloccato (approvato).",ps:"پایلې یوازې د ازموینې له تړل کېدو (منظورېدو) وروسته خپرېدای شي.",ms:"Keputusan hanya boleh diterbitkan selepas peperiksaan dikunci (diluluskan).",yo:"A lè ṣe àtẹ̀jáde èsì nìkan lẹ́yìn tí a bá ti tì ìdánwò (tí a bá ti fọwọ́ sí).",ig:"Enwere ike ibipụta nsonaazụ naanị mgbe akpọchiri ule (akwadoro)."},
@@ -18493,16 +18553,19 @@ function afterResult(){
     if(!curResExamId)return;
     const ex=db().exams.find(function(e){return e.id===curResExamId;});
     if(!ex||!ex.locked){pubmsg.innerHTML='<div class="msg err">'+esc(t("publish_locked_only"))+"</div>";return;}
-    const r=publishResults(curResExamId);
-    if(!r.ok){pubmsg.innerHTML='<div class="msg err">'+esc(r.error||t("login_fail"))+"</div>";return;}
-    const link=parentLink();
-    pubmsg.innerHTML='<div class="msg okm">'+esc(t("publish_done"))+" — "+r.count+" "+esc(t("dash_marks_done"))+".</div>"+
-      (link?'<div class="card" style="margin-top:.5rem"><b>'+esc(t("publish_link"))+'</b><br><span style="word-break:break-all">'+esc(link)+"</span></div>":"");
+    pubmsg.innerHTML='<div class="msg">'+esc(t("connecting"))+"</div>";
+    publishResults(curResExamId).then(function(r){
+      if(!r.ok){pubmsg.innerHTML='<div class="msg err">'+esc(r.error||t("login_fail"))+"</div>";return;}
+      const link=parentLink();
+      pubmsg.innerHTML='<div class="msg okm">'+esc(t("publish_done"))+" — "+r.count+" "+esc(t("dash_marks_done"))+".</div>"+
+        (link?'<div class="card" style="margin-top:.5rem"><b>'+esc(t("publish_link"))+'</b><br><span style="word-break:break-all">'+esc(link)+"</span></div>":"");
+    });
   };
   if(unp)unp.onclick=function(){
     if(!curResExamId)return;
-    const r=unpublishResults(curResExamId);
-    pubmsg.innerHTML=r.ok?'<div class="msg okm">'+esc(t("unpublish_done"))+"</div>":'<div class="msg err">'+esc(r.error||t("login_fail"))+"</div>";
+    unpublishResults(curResExamId).then(function(r){
+      pubmsg.innerHTML=r.ok?'<div class="msg okm">'+esc(t("unpublish_done"))+"</div>":'<div class="msg err">'+esc(r.error||t("login_fail"))+"</div>";
+    });
   };
   $("r-csv").onclick=function(){if(curResExamId)downloadFile("results.csv",exportCSV("results",curResExamId),"text/csv;charset=utf-8");};
   $("r-print").onclick=function(){if(curResExamId)doPrint(broadsheetPrintHTML(curResExamId));};
@@ -18655,7 +18718,7 @@ function issueCertificate(studentId,type,d){
   cert.verifyCode=verifyCodeFor("cert",cert.id);
   cert.verifySchool=verifySchoolId();
   db().certificates=db().certificates||[];
-  db().certificates.push(cert);
+  dbArr("certificates").push(cert);
   if(typeof Cloud!=="undefined")Cloud.pushDoc("verifyDocs",cert.verifyCode,{type:"cert",code:cert.verifyCode,serial:cert.serial,certType:type,student:{name:cert.snapshot.name,fatherName:cert.snapshot.fatherName,admNo:cert.snapshot.admNo,cls:cert.snapshot.cls},issuedAt:cert.issuedAt,at:tsNow()});
   logHist(cert,"issue",serial+" — "+cert.snapshot.display+" ["+cert.snapshot.admNo+"]");
   audit("issue-certificate",serial+" ("+certTypeName(type)+")");
@@ -19362,7 +19425,7 @@ const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,LAN
   addExam:addExam,deleteExam:deleteExam,setMark:setMark,lockExam:lockExam,
   computeResult:computeResult,resultRowFor:resultRowFor,getDossier:getDossier,
   boardEligible:boardEligible,defaultBoard:defaultBoard,
-  sha256Hex:sha256Hex,parentHash:parentHash,publishResults:publishResults,unpublishResults:unpublishResults,parentLink:parentLink,
+  sha256Hex:sha256Hex,parentHash:parentHash,publishResults:publishResults,unpublishResults:unpublishResults,parentLink:parentLink,mergeDefaults:mergeDefaults,dbArr:dbArr,
   verifyCodeFor:verifyCodeFor,verifyURL:verifyURL,qrSVG:qrSVG,verifyBlockHTML:verifyBlockHTML,scanQRText:scanQRText,findStudentByScan:findStudentByScan,openStudentByScan:openStudentByScan,geminiKey:geminiKey,askGemini:askGemini,askGeminiSummary:askGeminiSummary,geminiPing:geminiPing,geminiReason:geminiReason,setupSteps:setupSteps,setupCardHTML:setupCardHTML,geminiAnswerHTML:geminiAnswerHTML,briefingHTML:briefingHTML,speakText:speakText,attMonthPct:attMonthPct,idCardHTML:idCardHTML,idCardPrintHTML:idCardPrintHTML,scanCardHTML:scanCardHTML,
   COUNTRY_PACKS:COUNTRY_PACKS,countryPack:countryPack,schoolCountry:schoolCountry,countryPriceText:countryPriceText,pricingHTML:pricingHTML,
   payDetailsHTML:payDetailsHTML,concAmount:concAmount,setConcession:setConcession,removeConcession:removeConcession,concDossierHTML:concDossierHTML,weekKey:weekKey,attFlags:attFlags,attFlagsHTML:attFlagsHTML,teacherRemark:teacherRemark,setRemark:setRemark,
