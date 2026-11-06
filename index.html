@@ -127,6 +127,19 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:1rem 0}
   .tab:hover{background:#e8f0fe}
   .btn:hover{filter:brightness(.96)}
 }
+
+/* ============ teacher tools (round 68) ============ */
+.calc-disp{background:#0f2a44;color:#fff;border-radius:10px;padding:.7rem .9rem;margin-bottom:.5rem;text-align:end;word-break:break-all}
+.calc-disp .expr{font-size:1rem;opacity:.85;min-height:1.4em}
+.calc-disp .res{font-size:1.6rem;font-weight:800;min-height:1.4em}
+.calc-keys{display:grid;grid-template-columns:repeat(5,1fr);gap:.4rem}
+.calc-keys .btn{margin:0;min-height:52px;font-size:1.05rem;padding:.5rem .2rem}
+.calc-keys .btn.fn{background:#eef3f8}
+.tools-big{font-size:1.5rem;font-weight:800;text-align:center;padding:.8rem 0}
+.tools-ans{font-size:1.15rem;font-weight:700;margin:.5rem 0}
+.tools-steps{font-size:.95rem;margin:.4rem 0}
+.tools-steps li{margin:.2rem 0}
+
 /* ============ print ============ */
 @page{size:A4;margin:11mm}
 @media print{
@@ -15431,7 +15444,137 @@ function applyLang(){
   $("lang-toggle").textContent=(LANGS[L]||LANGS.en).native+" ▾";
   const lms=$("lang-menu-search");if(lms)lms.placeholder=t("lang_search");
 }
-const TABS=[["home","nav_home"],["adm","nav_adm"],["dob","nav_dob"],["exam","nav_exam"],["result","nav_result"],["att","nav_att"],["fee","nav_fee"],["staff","nav_staff"],["bc","nav_bc"],["hw","nav_hw"],["tr","nav_transport"],["lib","nav_library"],["cmp","nav_complaints"],["tt","nav_tt"],["he","nav_highered"],["lab","nav_lab"],["cert","nav_cert"],["admin","nav_admin"],["settings","nav_settings"]];
+/* ================= i18n additions: Round 68 Teacher Tools ================= */
+Object.assign(T,{
+nav_tools:{en:"Tools",ur:"اوزار",bn:"সরঞ্জাম",hi:"उपकरण",ne:"साधनहरू",sw:"Zana",ar:"الأدوات",zh:"工具",es:"Herramientas",fr:"Outils",pt:"Ferramentas",ru:"Инструменты",id:"Alat",de:"Werkzeuge",ja:"ツール",pa:"اوزار",mr:"साधने",te:"సాధనాలు",fa:"ابزارها",tr:"Araçlar",ta:"கருவிகள்",vi:"Công cụ",ko:"도구",tl:"Mga Kagamitan",ha:"Kayan aiki",it:"Strumenti",ps:"وسایل",ms:"Alat",yo:"Àwọn irinṣẹ́",ig:"Ngwaọrụ"},
+tools_title:{en:"Teacher Tools",ur:"استاد کے اوزار",bn:"শিক্ষকের সরঞ্জাম",hi:"शिक्षक उपकरण",ne:"शिक्षकका साधनहरू",sw:"Zana za Mwalimu",ar:"أدوات المعلم",zh:"教师工具",es:"Herramientas del docente",fr:"Outils de l'enseignant",pt:"Ferramentas do professor",ru:"Инструменты учителя",id:"Alat Guru",de:"Lehrer-Werkzeuge",ja:"先生のツール",pa:"استاد دے اوزار",mr:"शिक्षकांची साधने",te:"ఉపాధ్యాయ సాధనాలు",fa:"ابزارهای معلم",tr:"Öğretmen Araçları",ta:"ஆசிரியர் கருவிகள்",vi:"Công cụ giáo viên",ko:"교사 도구",tl:"Mga Kagamitan ng Guro",ha:"Kayan aikin Malami",it:"Strumenti dell'insegnante",ps:"د ښوونکي وسایل",ms:"Alat Guru",yo:"Àwọn Irinṣẹ́ Olùkọ́",ig:"Ngwa Onye Nkuzi"},
+tools_sub:{en:"Everyday tools for teachers. Everything works offline except Tell me more.",ur:"اساتذہ کے لیے روزمرہ کے اوزار۔ 'مزید بتائیں' کے علاوہ سب کچھ آف لائن چلتا ہے۔",bn:"শিক্ষকদের জন্য দৈনন্দিন সরঞ্জাম। 'আরও বলুন' ছাড়া সবকিছু অফলাইনে চলে।",hi:"शिक्षकों के लिए रोज़मर्रा के उपकरण। 'और बताएं' के अलावा सब कुछ ऑफ़लाइन चलता है।",ne:"शिक्षकहरूका लागि दैनिक साधनहरू। 'थप भन्नुहोस्' बाहेक सबै अफलाइन चल्छ।",sw:"Zana za kila siku za walimu. Kila kitu hufanya kazi bila mtandao isipokuwa 'Niambie zaidi'.",ar:"أدوات يومية للمعلمين. كل شيء يعمل دون اتصال بالإنترنت باستثناء 'أخبرني المزيد'.",zh:"教师日常工具。除“告诉我更多”外，其他全部离线可用。",es:"Herramientas diarias para docentes. Todo funciona sin conexión excepto 'Cuéntame más'.",fr:"Outils quotidiens pour les enseignants. Tout fonctionne hors ligne sauf « Dis-m'en plus ».",pt:"Ferramentas do dia a dia para professores. Tudo funciona offline exceto 'Conta-me mais'.",ru:"Повседневные инструменты учителя. Всё работает офлайн, кроме «Расскажи ещё».",id:"Alat sehari-hari untuk guru. Semua bekerja offline kecuali 'Ceritakan lebih lanjut'.",de:"Alltagswerkzeuge für Lehrkräfte. Alles funktioniert offline außer „Erzähl mir mehr“.",ja:"先生のための毎日のツール。「もっと教えて」以外はすべてオフラインで動作します。",pa:"استاداں لئی روزانہ اوزار۔ 'ہور دسو' توں علاوہ سب کجھ آف لائن چلدا اے۔",mr:"शिक्षकांसाठी दैनंदिन साधने. 'अधिक सांगा' वगळता सर्वकाही ऑफलाइन चालते.",te:"ఉపాధ్యాయుల కోసం రోజువారీ సాధనాలు. 'ఇంకా చెప్పండి' తప్ప అన్నీ ఆఫ్‌లైన్‌లో పనిచేస్తాయి.",fa:"ابزارهای روزمره برای معلمان. همه‌چیز آفلاین کار می‌کند به‌جز «بیشتر بگو».",tr:"Öğretmenler için günlük araçlar. 'Bana daha fazlasını anlat' dışında her şey çevrimdışı çalışır.",ta:"ஆசிரியர்களுக்கான அன்றாட கருவிகள். 'மேலும் சொல்' தவிர அனைத்தும் ஆஃப்லைனில் வேலை செய்யும்.",vi:"Công cụ hằng ngày cho giáo viên. Mọi thứ đều hoạt động ngoại tuyến trừ 'Kể thêm cho tôi'.",ko:"교사를 위한 일상 도구. '더 알려줘'를 제외하고 모든 것이 오프라인으로 작동합니다.",tl:"Mga pang-araw-araw na kagamitan para sa mga guro. Lahat ay gumagana nang offline maliban sa 'Sabihin mo pa'.",ha:"Kayan aikin yau da kullun ga malamai. Komai na aiki ba tare da intanet ba sai 'Faɗa mini ƙari'.",it:"Strumenti quotidiani per insegnanti. Tutto funziona offline tranne 'Dimmi di più'.",ps:"د ښوونکو لپاره ورځني وسایل. هر څه آفلاین کار کوي پرته له 'نور راته ووایه'.",ms:"Alat harian untuk guru. Semuanya berfungsi luar talian kecuali 'Beritahu saya lagi'.",yo:"Àwọn irinṣẹ́ ojoojúmọ́ fún àwọn olùkọ́. Ohun gbogbo ń ṣiṣẹ́ láìsí ìtàkùn àyàfi 'Sọ sí i'.",ig:"Ngwa kwa ụbọchị maka ndị nkuzi. Ihe niile na-arụ ọrụ na-anọghị n'ịntanetị ewezuga 'Gwa m karịa'."},
+tools_calc:{en:"Calculator",ur:"کیلکولیٹر",bn:"ক্যালকুলেটর",hi:"कैलकुलेटर",ne:"क्यालकुलेटर",sw:"Kikokotoo",ar:"الآلة الحاسبة",zh:"计算器",es:"Calculadora",fr:"Calculatrice",pt:"Calculadora",ru:"Калькулятор",id:"Kalkulator",de:"Rechner",ja:"電卓",pa:"کیلکولیٹر",mr:"कॅल्क्युलेटर",te:"కాలిక్యులేటర్",fa:"ماشین‌حساب",tr:"Hesap makinesi",ta:"கால்குலேட்டர்",vi:"Máy tính",ko:"계산기",tl:"Calculator",ha:"Kalkuleta",it:"Calcolatrice",ps:"حساب کوونکی",ms:"Kalkulator",yo:"Ẹ̀rọ ìṣirò",ig:"Ihe mgbako"},
+tools_maths:{en:"Maths Solvers",ur:"ریاضی کے حل",bn:"গণিত সমাধান",hi:"गणित हल",ne:"गणित समाधानहरू",sw:"Visuluhishi vya Hisabati",ar:"حلول الرياضيات",zh:"数学求解",es:"Solucionadores de matemáticas",fr:"Solveurs de maths",pt:"Solucionadores de matemática",ru:"Решатели задач",id:"Pemecah Matematika",de:"Mathe-Löser",ja:"数学ソルバー",pa:"ریاضی دے حل",mr:"गणित सोडवणूक",te:"గణిత పరిష్కారాలు",fa:"حل‌کننده‌های ریاضی",tr:"Matematik Çözücüler",ta:"கணித தீர்வுகள்",vi:"Bộ giải toán",ko:"수학 풀이",tl:"Mga Solver sa Math",ha:"Masu warware Lissafi",it:"Risolutori di matematica",ps:"د ریاضی حل کوونکي",ms:"Penyelesai Matematik",yo:"Àwọn Olùyanju Ìṣirò",ig:"Ndị na-edozi Mgbakọ"},
+tools_theorems:{en:"Theorem Solver",ur:"قضیہ حل کرنے والا",bn:"উপপাদ্য সমাধান",hi:"प्रमेय हल",ne:"प्रमेय समाधान",sw:"Kisuluhishi cha Nadharia",ar:"حلّال النظريات",zh:"定理求解",es:"Solucionador de teoremas",fr:"Solveur de théorèmes",pt:"Solucionador de teoremas",ru:"Решатель теорем",id:"Pemecah Teorema",de:"Satz-Löser",ja:"定理ソルバー",pa:"قضیہ حل کرن والا",mr:"प्रमेय सोडवणूक",te:"సిద్ధాంత పరిష్కారి",fa:"حل‌کننده قضیه",tr:"Teorem Çözücü",ta:"தேற்றம் தீர்வு",vi:"Bộ giải định lý",ko:"정리 풀이",tl:"Solver ng Teorama",ha:"Mai warware Ka'ida",it:"Risolutore di teoremi",ps:"د قضیې حل کوونکی",ms:"Penyelesai Teorem",yo:"Olùyanju Ẹ̀kọ́",ig:"Onye na-edozi Usoro"},
+tools_class:{en:"Class Utilities",ur:"کلاس کے اوزار",bn:"শ্রেণির সরঞ্জাম",hi:"कक्षा उपकरण",ne:"कक्षाका साधनहरू",sw:"Zana za Darasa",ar:"أدوات الصف",zh:"班级工具",es:"Utilidades de clase",fr:"Utilitaires de classe",pt:"Utilitários de turma",ru:"Инструменты класса",id:"Utilitas Kelas",de:"Klassen-Werkzeuge",ja:"クラスの便利ツール",pa:"کلاس دے اوزار",mr:"वर्ग साधने",te:"తరగతి సాధనాలు",fa:"ابزارهای کلاس",tr:"Sınıf Araçları",ta:"வகுப்பு கருவிகள்",vi:"Tiện ích lớp học",ko:"학급 도구",tl:"Mga Utility ng Klase",ha:"Kayan aikin Aji",it:"Utilità di classe",ps:"د ټولګي وسایل",ms:"Utiliti Kelas",yo:"Àwọn Irinṣẹ́ Kíláàsì",ig:"Ngwa Klas"},
+tools_exp:{en:"Subject Explainer",ur:"مضمون کی وضاحت",bn:"বিষয় ব্যাখ্যা",hi:"विषय व्याख्या",ne:"विषय व्याख्या",sw:"Mfafanuzi wa Masomo",ar:"شرح المواد",zh:"学科讲解",es:"Explicador de materias",fr:"Explicateur de matières",pt:"Explicador de matérias",ru:"Объяснение предметов",id:"Penjelas Mata Pelajaran",de:"Fach-Erklärer",ja:"教科の説明",pa:"مضمون دی وضاحت",mr:"विषय स्पष्टीकरण",te:"సబ్జెక్టు వివరణ",fa:"توضیح درس‌ها",tr:"Ders Anlatıcı",ta:"பாட விளக்கம்",vi:"Giải thích môn học",ko:"과목 설명",tl:"Tagapaliwanag ng Paksa",ha:"Mai bayanin Darussa",it:"Spiegazione delle materie",ps:"د مضمون تشریح",ms:"Penerang Subjek",yo:"Aláàyé Ẹ̀kọ́",ig:"Nkọwa Isiokwu"},
+tools_pract:{en:"Science Practicals",ur:"سائنس کے عملی کام",bn:"বিজ্ঞান ব্যবহারিক",hi:"विज्ञान प्रयोग",ne:"विज्ञान प्रयोगहरू",sw:"Majaribio ya Sayansi",ar:"تجارب العلوم العملية",zh:"科学实验",es:"Prácticas de ciencias",fr:"Travaux pratiques de sciences",pt:"Práticas de ciências",ru:"Практические работы",id:"Praktikum Sains",de:"Naturwissenschaftliche Versuche",ja:"理科の実験",pa:"سائنس دے عملی کام",mr:"विज्ञान प्रात्यक्षिके",te:"సైన్స్ ప్రయోగాలు",fa:"کارهای عملی علوم",tr:"Fen Deneyleri",ta:"அறிவியல் செய்முறைகள்",vi:"Thực hành khoa học",ko:"과학 실험",tl:"Mga Praktikal sa Agham",ha:"Ayyukan Kimiyya",it:"Esperimenti di scienze",ps:"د ساینس عملي کارونه",ms:"Amali Sains",yo:"Àwọn Ìdánwò Sáyẹ́nsì",ig:"Ọrụ Sayensị"},
+tools_calc_div0:{en:"Can't divide by zero",ur:"صفر سے تقسیم نہیں کر سکتے",bn:"শূন্য দিয়ে ভাগ করা যায় না",hi:"शून्य से भाग नहीं दे सकते",ne:"शून्यले भाग गर्न मिल्दैन",sw:"Huwezi kugawanya kwa sufuri",ar:"لا يمكن القسمة على صفر",zh:"不能除以零",es:"No se puede dividir entre cero",fr:"Impossible de diviser par zéro",pt:"Não é possível dividir por zero",ru:"На ноль делить нельзя",id:"Tidak bisa dibagi nol",de:"Durch null kann man nicht teilen",ja:"ゼロで割ることはできません",pa:"صفر نال تقسیم نئیں کر سکدے",mr:"शून्याने भागाकार करता येत नाही",te:"సున్నాతో భాగించలేము",fa:"نمی‌توان بر صفر تقسیم کرد",tr:"Sıfıra bölünmez",ta:"பூஜ்ஜியத்தால் வகுக்க முடியாது",vi:"Không thể chia cho 0",ko:"0으로 나눌 수 없습니다",tl:"Hindi maaaring hatiin sa zero",ha:"Ba za a iya raba da sifili ba",it:"Non si può dividere per zero",ps:"په صفر نشو وېشلای",ms:"Tidak boleh bahagi dengan sifar",yo:"A kò lè pín pẹ̀lú òdo",ig:"Enweghị ike ike site na efu"},
+tools_calc_brackets:{en:"Check the brackets",ur:"بریکٹ چیک کریں",bn:"বন্ধনী দেখুন",hi:"कोष्ठक जांचें",ne:"कोष्ठकहरू जाँच्नुहोस्",sw:"Angalia mabano",ar:"تحقق من الأقواس",zh:"请检查括号",es:"Revisa los paréntesis",fr:"Vérifiez les parenthèses",pt:"Verifica os parênteses",ru:"Проверьте скобки",id:"Periksa tanda kurung",de:"Prüfen Sie die Klammern",ja:"かっこを確認してください",pa:"بریکٹ چیک کرو",mr:"कंस तपासा",te:"బ్రాకెట్లను చూడండి",fa:"پرانتزها را بررسی کنید",tr:"Parantezleri kontrol edin",ta:"அடைப்புக்குறிகளைச் சரிபார்க்கவும்",vi:"Kiểm tra dấu ngoặc",ko:"괄호를 확인하세요",tl:"Suriin ang mga panaklong",ha:"Duba ƙusoshin",it:"Controlla le parentesi",ps:"قوسونه وګورئ",ms:"Semak kurungan",yo:"Ṣàyẹ̀wò àwọn àmì ìṣẹ́",ig:"Lelee mgbakọ"},
+tools_calc_bad:{en:"Check the numbers",ur:"نمبر چیک کریں",bn:"সংখ্যাগুলো দেখুন",hi:"संख्याएं जांचें",ne:"सङ्ख्याहरू जाँच्नुहोस्",sw:"Angalia nambari",ar:"تحقق من الأرقام",zh:"请检查数字",es:"Revisa los números",fr:"Vérifiez les nombres",pt:"Verifica os números",ru:"Проверьте числа",id:"Periksa angkanya",de:"Prüfen Sie die Zahlen",ja:"数字を確認してください",pa:"نمبر چیک کرو",mr:"संख्या तपासा",te:"సంఖ్యలను చూడండి",fa:"عددها را بررسی کنید",tr:"Sayıları kontrol edin",ta:"எண்களைச் சரிபார்க்கவும்",vi:"Kiểm tra các số",ko:"숫자를 확인하세요",tl:"Suriin ang mga numero",ha:"Duba lambobin",it:"Controlla i numeri",ps:"شمېرې وګورئ",ms:"Semak nombor",yo:"Ṣàyẹ̀wò àwọn nọ́mbà",ig:"Lelee ọnụọgụgụ"},
+tools_calc_fact:{en:"Use a whole number from 0 to 170 with !",ur:"! کے ساتھ 0 سے 170 تک پورا نمبر استعمال کریں",bn:"! এর সাথে ০ থেকে ১৭০ পর্যন্ত পূর্ণ সংখ্যা ব্যবহার করুন",hi:"! के साथ 0 से 170 तक की पूर्ण संख्या इस्तेमाल करें",ne:"! सँग ० देखि १७० सम्मको पूर्ण सङ्ख्या प्रयोग गर्नुहोस्",sw:"Tumia nambari kamili kutoka 0 hadi 170 na !",ar:"استخدم عددًا صحيحًا من ٠ إلى ١٧٠ مع !",zh:"使用 0 到 170 的整数配合 !",es:"Usa un número entero de 0 a 170 con !",fr:"Utilisez un nombre entier de 0 à 170 avec !",pt:"Usa um número inteiro de 0 a 170 com !",ru:"Используйте целое число от 0 до 170 с !",id:"Gunakan bilangan bulat 0 sampai 170 dengan !",de:"Verwenden Sie eine ganze Zahl von 0 bis 170 mit !",ja:"! には 0 から 170 までの整数を使ってください",pa:"! نال 0 توں 170 تک پورا نمبر ورتو",mr:"! सोबत ० ते १७० पर्यंत पूर्ण संख्या वापरा",te:"! తో 0 నుండి 170 వరకు పూర్ణ సంఖ్యను వాడండి",fa:"با ! عدد صحیح ۰ تا ۱۷۰ استفاده کنید",tr:"! ile 0 ile 170 arasında tam sayı kullanın",ta:"! உடன் 0 முதல் 170 வரை முழு எண்ணைப் பயன்படுத்தவும்",vi:"Dùng số nguyên từ 0 đến 170 với !",ko:"!와 함께 0부터 170까지의 정수를 사용하세요",tl:"Gumamit ng buong numero mula 0 hanggang 170 na may !",ha:"Yi amfani da lamba gaba ɗaya daga 0 zuwa 170 tare da !",it:"Usa un numero intero da 0 a 170 con !",ps:"د ! سره له 0 څخه تر 170 پورې ټول شمېره وکاروئ",ms:"Gunakan nombor bulat 0 hingga 170 dengan !",yo:"Lo nọ́mbà gbogbo láti 0 sí 170 pẹ̀lú !",ig:"Jiri ọnụọgụgụ zuru oke site na 0 ruo 170 na !"},
+tools_calc_empty:{en:"Type a sum first",ur:"پہلے کوئی جمع لکھیں",bn:"আগে একটি হিসাব লিখুন",hi:"पहले कोई जोड़ लिखें",ne:"पहिले एउटा हिसाब लेख्नुहोस्",sw:"Andika hesabu kwanza",ar:"اكتب عملية حسابية أولاً",zh:"请先输入算式",es:"Escribe primero una operación",fr:"Tapez d'abord un calcul",pt:"Escreve primeiro uma conta",ru:"Сначала введите пример",id:"Ketik soal dulu",de:"Tippen Sie zuerst eine Rechnung ein",ja:"まず式を入力してください",pa:"پہلاں کوئی جمع لکھو",mr:"आधी एखादी बेरीज लिहा",te:"ముందు ఒక లెక్క రాయండి",fa:"اول یک محاسبه بنویسید",tr:"Önce bir işlem yazın",ta:"முதலில் ஒரு கணக்கை எழுதவும்",vi:"Hãy gõ một phép tính trước",ko:"먼저 식을 입력하세요",tl:"Mag-type muna ng isang kuwenta",ha:"Rubuta lissafi da farko",it:"Scrivi prima un calcolo",ps:"لومړی یوه محاسبه ولیکئ",ms:"Taip satu pengiraan dahulu",yo:"Kọ́ ìṣirò kan ní àkọ́kọ́",ig:"Dee mgbakọ na mbụ"},
+tools_solve:{en:"Solve",ur:"حل کریں",bn:"সমাধান করুন",hi:"हल करें",ne:"हल गर्नुहोस्",sw:"Tatua",ar:"حلّ",zh:"求解",es:"Resolver",fr:"Résoudre",pt:"Resolver",ru:"Решить",id:"Selesaikan",de:"Lösen",ja:"解く",pa:"حل کرو",mr:"सोडवा",te:"పరిష్కరించండి",fa:"حل کن",tr:"Çöz",ta:"தீர்க்கவும்",vi:"Giải",ko:"풀기",tl:"Lutasin",ha:"Warware",it:"Risolvi",ps:"حل کړئ",ms:"Selesaikan",yo:"Yanjú",ig:"Dozie"},
+tools_answer:{en:"Answer",ur:"جواب",bn:"উত্তর",hi:"उत्तर",ne:"उत्तर",sw:"Jibu",ar:"الجواب",zh:"答案",es:"Respuesta",fr:"Réponse",pt:"Resposta",ru:"Ответ",id:"Jawaban",de:"Antwort",ja:"答え",pa:"جواب",mr:"उत्तर",te:"సమాధానం",fa:"جواب",tr:"Cevap",ta:"விடை",vi:"Đáp án",ko:"답",tl:"Sagot",ha:"Amsa",it:"Risposta",ps:"ځواب",ms:"Jawapan",yo:"Ìdáhùn",ig:"Azịza"},
+tools_steps:{en:"Show steps",ur:"مراحل دکھائیں",bn:"ধাপগুলো দেখান",hi:"चरण दिखाएं",ne:"चरणहरू देखाउनुहोस्",sw:"Onyesha hatua",ar:"أظهر الخطوات",zh:"显示步骤",es:"Mostrar pasos",fr:"Afficher les étapes",pt:"Mostrar passos",ru:"Показать шаги",id:"Tampilkan langkah",de:"Schritte anzeigen",ja:"手順を表示",pa:"مراحل وکھاؤ",mr:"पायऱ्या दाखवा",te:"దశలు చూపండి",fa:"مراحل را نشان بده",tr:"Adımları göster",ta:"படிகளைக் காட்டு",vi:"Hiện các bước",ko:"풀이 과정 보기",tl:"Ipakita ang mga hakbang",ha:"Nuna matakai",it:"Mostra i passaggi",ps:"ګامونه وښایاست",ms:"Tunjuk langkah",yo:"Fi àwọn ìgbésẹ̀ hàn",ig:"Gosi usoro"},
+tools_hide_steps:{en:"Hide steps",ur:"مراحل چھپائیں",bn:"ধাপগুলো লুকান",hi:"चरण छिपाएं",ne:"चरणहरू लुकाउनुहोस्",sw:"Ficha hatua",ar:"أخفِ الخطوات",zh:"隐藏步骤",es:"Ocultar pasos",fr:"Masquer les étapes",pt:"Esconder passos",ru:"Скрыть шаги",id:"Sembunyikan langkah",de:"Schritte ausblenden",ja:"手順を隠す",pa:"مراحل لکاؤ",mr:"पायऱ्या लपवा",te:"దశలు దాచండి",fa:"مراحل را پنهان کن",tr:"Adımları gizle",ta:"படிகளை மறை",vi:"Ẩn các bước",ko:"풀이 과정 숨기기",tl:"Itago ang mga hakbang",ha:"Ɓoye matakai",it:"Nascondi i passaggi",ps:"ګامونه پټ کړئ",ms:"Sembunyi langkah",yo:"Fi àwọn ìgbésẹ̀ pamọ́",ig:"Zoo usoro"},
+tools_arith:{en:"Arithmetic",ur:"حساب",bn:"পাটিগণিত",hi:"अंकगणित",ne:"अङ्कगणित",sw:"Hesabu",ar:"الحساب",zh:"四则运算",es:"Aritmética",fr:"Arithmétique",pt:"Aritmética",ru:"Арифметика",id:"Aritmetika",de:"Arithmetik",ja:"四則演算",pa:"حساب",mr:"अंकगणित",te:"అంకగణితం",fa:"حساب",tr:"Aritmetik",ta:"எண்கணிதம்",vi:"Số học",ko:"사칙연산",tl:"Aritmetika",ha:"Lissafin Ƙari",it:"Aritmetica",ps:"حساب",ms:"Aritmetik",yo:"Ìṣirò",ig:"Mgbakọ"},
+tools_frac:{en:"Fractions",ur:"کسریں",bn:"ভগ্নাংশ",hi:"भिन्न",ne:"भिन्नहरू",sw:"Sehemu",ar:"الكسور",zh:"分数",es:"Fracciones",fr:"Fractions",pt:"Frações",ru:"Дроби",id:"Pecahan",de:"Brüche",ja:"分数",pa:"کسریں",mr:"अपूर्णांक",te:"భిన్నాలు",fa:"کسرها",tr:"Kesirler",ta:"பின்னங்கள்",vi:"Phân số",ko:"분수",tl:"Mga Praksyon",ha:"Kashi",it:"Frazioni",ps:"کسرونه",ms:"Pecahan",yo:"Àwọn Ìdá",ig:"Nkeji"},
+tools_pct:{en:"Percentage",ur:"فیصد",bn:"শতাংশ",hi:"प्रतिशत",ne:"प्रतिशत",sw:"Asilimia",ar:"النسبة المئوية",zh:"百分数",es:"Porcentaje",fr:"Pourcentage",pt:"Percentagem",ru:"Проценты",id:"Persen",de:"Prozent",ja:"百分率",pa:"فیصد",mr:"टक्केवारी",te:"శాతం",fa:"درصد",tr:"Yüzde",ta:"சதவீதம்",vi:"Phần trăm",ko:"백분율",tl:"Porsyento",ha:"Kashi dari",it:"Percentuale",ps:"سلنه",ms:"Peratus",yo:"Ìpín ọgọ́rùn-ún",ig:"Pasent"},
+tools_hcf:{en:"HCF & LCM",ur:"ذواضعاف اقل و عاد اعظم",bn:"গসাগু ও লসাগু",hi:"म.स.प. और ल.स.प.",ne:"मस र लस",sw:"HCF na LCM",ar:"القاسم المشترك والمضاعف المشترك",zh:"最大公约数和最小公倍数",es:"MCD y mcm",fr:"PGCD et PPCM",pt:"MDC e MMC",ru:"НОД и НОК",id:"FPB & KPK",de:"ggT und kgV",ja:"最大公約数と最小公倍数",pa:"عاد اعظم تے ذواضعاف اقل",mr:"मसावि व लसावि",te:"గసాభా మరియు కసాగు",fa:"ب.م.م و ک.م.م",tr:"EBOB ve EKOK",ta:"மீ.பொ.வ மற்றும் மீ.சி.ம",vi:"ƯCLN và BCNN",ko:"최대공약수와 최소공배수",tl:"GCF at LCM",ha:"HCF da LCM",it:"MCD e mcm",ps:"لوی مشترک ویشونکی او کوچنی مشترک مضرب",ms:"HCF & LCM",yo:"HCF àti LCM",ig:"HCF na LCM"},
+tools_lin:{en:"Linear equation",ur:"خطی مساوات",bn:"সরল সমীকরণ",hi:"रैखिक समीकरण",ne:"रैखिक समीकरण",sw:"Mlinganyo wa Mstari",ar:"المعادلة الخطية",zh:"一元一次方程",es:"Ecuación lineal",fr:"Équation linéaire",pt:"Equação linear",ru:"Линейное уравнение",id:"Persamaan linear",de:"Lineare Gleichung",ja:"一次方程式",pa:"خطی مساوات",mr:"रेषीय समीकरण",te:"రేఖీయ సమీకరణం",fa:"معادله خطی",tr:"Doğrusal denklem",ta:"நேரியல் சமன்பாடு",vi:"Phương trình bậc nhất",ko:"일차방정식",tl:"Linear na ekwasyon",ha:"Ƙididdigar Layi",it:"Equazione lineare",ps:"خطي معادله",ms:"Persamaan linear",yo:"Ìdọ́gba Laini",ig:"Nhata ahịrị"},
+tools_quad:{en:"Quadratic equation",ur:"دو درجی مساوات",bn:"দ্বিঘাত সমীকরণ",hi:"द्विघात समीकरण",ne:"द्विघात समीकरण",sw:"Mlinganyo wa Pili",ar:"المعادلة التربيعية",zh:"一元二次方程",es:"Ecuación cuadrática",fr:"Équation du second degré",pt:"Equação quadrática",ru:"Квадратное уравнение",id:"Persamaan kuadrat",de:"Quadratische Gleichung",ja:"二次方程式",pa:"دو درجی مساوات",mr:"द्विघात समीकरण",te:"వర్గ సమీకరణం",fa:"معادله درجه دو",tr:"İkinci dereceden denklem",ta:"இருபடி சமன்பாடு",vi:"Phương trình bậc hai",ko:"이차방정식",tl:"Quadratic na ekwasyon",ha:"Ƙididdigar Murabba'i",it:"Equazione di secondo grado",ps:"دویمه درجه معادله",ms:"Persamaan kuadratik",yo:"Ìdọ́gba Onígun-mẹ́rin",ig:"Nhata nke abụọ"},
+tools_interest:{en:"Interest",ur:"سود",bn:"সুদ",hi:"ब्याज",ne:"ब्याज",sw:"Riba",ar:"الفائدة",zh:"利息",es:"Interés",fr:"Intérêt",pt:"Juros",ru:"Проценты",id:"Bunga",de:"Zinsen",ja:"利息",pa:"سود",mr:"व्याज",te:"వడ్డీ",fa:"بهره",tr:"Faiz",ta:"வட்டி",vi:"Lãi suất",ko:"이자",tl:"Interes",ha:"Riba",it:"Interesse",ps:"سود",ms:"Faedah",yo:"Èlé",ig:"Ọmụrụ nwa"},
+tools_shapes:{en:"Area, perimeter & volume",ur:"رقبہ، محیط اور حجم",bn:"ক্ষেত্রফল, পরিসীমা ও আয়তন",hi:"क्षेत्रफल, परिमाप और आयतन",ne:"क्षेत्रफल, परिमिति र आयतन",sw:"Eneo, mzunguko na ujazo",ar:"المساحة والمحيط والحجم",zh:"面积、周长和体积",es:"Área, perímetro y volumen",fr:"Aire, périmètre et volume",pt:"Área, perímetro e volume",ru:"Площадь, периметр и объём",id:"Luas, keliling & volume",de:"Fläche, Umfang und Volumen",ja:"面積・周囲・体積",pa:"رقبہ، محیط تے حجم",mr:"क्षेत्रफळ, परिमिती व घनफळ",te:"వైశాల్యం, చుట్టుకొలత మరియు ఘనపరిమాణం",fa:"مساحت، محیط و حجم",tr:"Alan, çevre ve hacim",ta:"பரப்பளவு, சுற்றளவு மற்றும் கன அளவு",vi:"Diện tích, chu vi và thể tích",ko:"넓이, 둘레와 부피",tl:"Lawak, perimeter at volume",ha:"Yanki, kewaye da ƙarfi",it:"Area, perimetro e volume",ps:"مساحت، چاپېریال او حجم",ms:"Luas, perimeter & isi padu",yo:"Àgbègbè, àyíká àti ìwọ̀n",ig:"Mpempe, okirikiri na olu"},
+tools_convert:{en:"Unit converter",ur:"اکائی بدلنے والا",bn:"একক রূপান্তর",hi:"इकाई परिवर्तक",ne:"एकाइ रूपान्तरण",sw:"Kigeuzi cha Vipimo",ar:"محوّل الوحدات",zh:"单位换算",es:"Conversor de unidades",fr:"Convertisseur d'unités",pt:"Conversor de unidades",ru:"Конвертер единиц",id:"Konverter satuan",de:"Einheiten-Umrechner",ja:"単位変換",pa:"اکائی بدلن والا",mr:"एकक रूपांतरक",te:"ప్రమాణాల మార్పిడి",fa:"تبدیل واحد",tr:"Birim dönüştürücü",ta:"அலகு மாற்றி",vi:"Bộ đổi đơn vị",ko:"단위 변환기",tl:"Converter ng Yunit",ha:"Mai canza Ƙa'ida",it:"Convertitore di unità",ps:"د واحد بدلونکی",ms:"Penukar unit",yo:"Olùyípadà Ìwọ̀n",ig:"Onye ntụgharị Unit"},
+tools_tables:{en:"Times tables",ur:"پہاڑے",bn:"নামতা",hi:"पहाड़े",ne:"पहाडा",sw:"Jedwali la Kuzidisha",ar:"جداول الضرب",zh:"乘法表",es:"Tablas de multiplicar",fr:"Tables de multiplication",pt:"Tabuadas",ru:"Таблица умножения",id:"Tabel perkalian",de:"Einmaleins",ja:"九九",pa:"پہاڑے",mr:"पाढे",te:"ఎక్కాలు",fa:"جدول ضرب",tr:"Çarpım tablosu",ta:"வாய்ப்பாடு",vi:"Bảng cửu chương",ko:"구구단",tl:"Talaan ng pagpaparami",ha:"Teburin Ninkawa",it:"Tabelline",ps:"د ضرب جدولونه",ms:"Sifir",yo:"Tábìlì ìsọdipúpọ̀",ig:"Tebụl ịmụba"},
+tools_num1:{en:"First number",ur:"پہلا نمبر",bn:"প্রথম সংখ্যা",hi:"पहली संख्या",ne:"पहिलो सङ्ख्या",sw:"Nambari ya kwanza",ar:"العدد الأول",zh:"第一个数",es:"Primer número",fr:"Premier nombre",pt:"Primeiro número",ru:"Первое число",id:"Angka pertama",de:"Erste Zahl",ja:"1番目の数",pa:"پہلا نمبر",mr:"पहिली संख्या",te:"మొదటి సంఖ్య",fa:"عدد اول",tr:"Birinci sayı",ta:"முதல் எண்",vi:"Số thứ nhất",ko:"첫 번째 수",tl:"Unang numero",ha:"Lamba ta farko",it:"Primo numero",ps:"لومړۍ شمېره",ms:"Nombor pertama",yo:"Nọ́mbà àkọ́kọ́",ig:"Ọnụọgụgụ mbụ"},
+tools_num2:{en:"Second number",ur:"دوسرا نمبر",bn:"দ্বিতীয় সংখ্যা",hi:"दूसरी संख्या",ne:"दोस्रो सङ्ख्या",sw:"Nambari ya pili",ar:"العدد الثاني",zh:"第二个数",es:"Segundo número",fr:"Deuxième nombre",pt:"Segundo número",ru:"Второе число",id:"Angka kedua",de:"Zweite Zahl",ja:"2番目の数",pa:"دوجا نمبر",mr:"दुसरी संख्या",te:"రెండవ సంఖ్య",fa:"عدد دوم",tr:"İkinci sayı",ta:"இரண்டாம் எண்",vi:"Số thứ hai",ko:"두 번째 수",tl:"Pangalawang numero",ha:"Lamba ta biyu",it:"Secondo numero",ps:"دویمه شمېره",ms:"Nombor kedua",yo:"Nọ́mbà kejì",ig:"Ọnụọgụgụ nke abụọ"},
+tools_top:{en:"Top number",ur:"اوپر والا نمبر",bn:"উপরের সংখ্যা",hi:"ऊपर की संख्या",ne:"माथिल्लो सङ्ख्या",sw:"Nambari ya juu",ar:"العدد العلوي",zh:"分子",es:"Número de arriba",fr:"Nombre du haut",pt:"Número de cima",ru:"Верхнее число",id:"Angka atas",de:"Obere Zahl",ja:"上の数",pa:"اوپر والا نمبر",mr:"वरची संख्या",te:"పై సంఖ్య",fa:"عدد بالا",tr:"Üst sayı",ta:"மேல் எண்",vi:"Số ở trên",ko:"위쪽 수",tl:"Numero sa itaas",ha:"Lamba ta sama",it:"Numero sopra",ps:"پورتنۍ شمېره",ms:"Nombor atas",yo:"Nọ́mbà òkè",ig:"Ọnụọgụgụ dị n'elu"},
+tools_bottom:{en:"Bottom number",ur:"نیچے والا نمبر",bn:"নিচের সংখ্যা",hi:"नीचे की संख्या",ne:"तल्लो सङ्ख्या",sw:"Nambari ya chini",ar:"العدد السفلي",zh:"分母",es:"Número de abajo",fr:"Nombre du bas",pt:"Número de baixo",ru:"Нижнее число",id:"Angka bawah",de:"Untere Zahl",ja:"下の数",pa:"تھلے والا نمبر",mr:"खालची संख्या",te:"క్రింది సంఖ్య",fa:"عدد پایین",tr:"Alt sayı",ta:"கீழ் எண்",vi:"Số ở dưới",ko:"아래쪽 수",tl:"Numero sa ibaba",ha:"Lamba ta ƙasa",it:"Numero sotto",ps:"لاندې شمېره",ms:"Nombor bawah",yo:"Nọ́mbà ìsàlẹ̀",ig:"Ọnụọgụgụ dị n'okpuru"},
+tools_pct_kind_of:{en:"% of a number",ur:"کسی نمبر کا %",bn:"একটি সংখ্যার %",hi:"किसी संख्या का %",ne:"कुनै सङ्ख्याको %",sw:"% ya nambari",ar:"٪ من عدد",zh:"某数的 %",es:"% de un número",fr:"% d'un nombre",pt:"% de um número",ru:"% от числа",id:"% dari suatu angka",de:"% einer Zahl",ja:"ある数の %",pa:"کسے نمبر دا %",mr:"एखाद्या संख्येचे %",te:"ఒక సంఖ్యలో %",fa:"٪ یک عدد",tr:"Bir sayının %'i",ta:"ஒரு எண்ணின் %",vi:"% của một số",ko:"어떤 수의 %",tl:"% ng isang numero",ha:"% na lamba",it:"% di un numero",ps:"د یوې شمېرې ٪",ms:"% daripada satu nombor",yo:"% nọ́mbà kan",ig:"% nke ọnụọgụgụ"},
+tools_pct_kind_what:{en:"What % is X of Y",ur:"Y کا X کتنے % ہے",bn:"Y-এর X কত %",hi:"Y का X कितने % है",ne:"Y को X कति % हो",sw:"X ni % ngapi ya Y",ar:"كم ٪ يمثل X من Y",zh:"X 是 Y 的百分之几",es:"¿Qué % es X de Y?",fr:"Quel % X représente-t-il de Y ?",pt:"Que % é X de Y",ru:"Сколько % составляет X от Y",id:"Berapa % X dari Y",de:"Wie viel % ist X von Y",ja:"X は Y の何 %",pa:"Y دا X کنے % اے",mr:"Y चा X किती % आहे",te:"Y లో X ఎంత %",fa:"X چند ٪ از Y است",tr:"X, Y'nin yüzde kaçı",ta:"Y இல் X எத்தனை %",vi:"X bằng bao nhiêu % của Y",ko:"X는 Y의 몇 %인가",tl:"Ilang % ang X ng Y",ha:"X kashi nawa ne na Y",it:"Che % è X di Y",ps:"X د Y څو سلنه دی",ms:"Berapakah % X daripada Y",yo:"X jẹ́ ìpín mélòó nínú Y",ig:"X bụ pasent ole nke Y"},
+tools_pct_kind_inc:{en:"Increase by %",ur:"% بڑھائیں",bn:"% বাড়ান",hi:"% बढ़ाएं",ne:"% ले बढाउनुहोस्",sw:"Ongeza kwa %",ar:"زيادة بنسبة ٪",zh:"增加 %",es:"Aumentar en %",fr:"Augmenter de %",pt:"Aumentar em %",ru:"Увеличить на %",id:"Naikkan sebesar %",de:"Um % erhöhen",ja:"% 増やす",pa:"% ودھاؤ",mr:"% ने वाढवा",te:"% పెంచండి",fa:"٪ افزایش بده",tr:"% artır",ta:"% அதிகரி",vi:"Tăng thêm %",ko:"% 늘리기",tl:"Dagdagan ng %",ha:"Ƙara da %",it:"Aumenta di %",ps:"٪ زیات کړئ",ms:"Tambah sebanyak %",yo:"Fi % kún",ig:"Mụbaa site na %"},
+tools_pct_kind_dec:{en:"Decrease by %",ur:"% کم کریں",bn:"% কমান",hi:"% घटाएं",ne:"% ले घटाउनुहोस्",sw:"Punguza kwa %",ar:"إنقاص بنسبة ٪",zh:"减少 %",es:"Disminuir en %",fr:"Diminuer de %",pt:"Diminuir em %",ru:"Уменьшить на %",id:"Turunkan sebesar %",de:"Um % verringern",ja:"% 減らす",pa:"% گھٹاؤ",mr:"% ने कमी करा",te:"% తగ్గించండి",fa:"٪ کم کن",tr:"% azalt",ta:"% குறை",vi:"Giảm đi %",ko:"% 줄이기",tl:"Bawasan ng %",ha:"Rage da %",it:"Diminuisci di %",ps:"٪ کم کړئ",ms:"Kurang sebanyak %",yo:"Dínkù ní %",ig:"Belata site na %"},
+tools_si_p:{en:"Principal (Rs)",ur:"اصل رقم (روپے)",bn:"আসল (টাকা)",hi:"मूलधन (रु.)",ne:"साँवा (रू.)",sw:"Mtaji (Rs)",ar:"رأس المال (روبية)",zh:"本金（卢比）",es:"Capital (Rs)",fr:"Capital (Rs)",pt:"Capital (Rs)",ru:"Сумма (Rs)",id:"Pokok (Rs)",de:"Kapital (Rs)",ja:"元金（ルピー）",pa:"اصل رقم (روپے)",mr:"मुद्दल (रु.)",te:"అసలు (రూ.)",fa:"اصل پول (روپیه)",tr:"Anapara (Rs)",ta:"அசல் (ரூ.)",vi:"Tiền gốc (Rs)",ko:"원금 (Rs)",tl:"Puhunan (Rs)",ha:"Babban kuɗi (Rs)",it:"Capitale (Rs)",ps:"اصلي پیسې (روپۍ)",ms:"Prinsipal (Rs)",yo:"Owó ìpilẹ̀ (Rs)",ig:"Isi ego (Rs)"},
+tools_si_r:{en:"Rate (% per year)",ur:"شرح (% سالانہ)",bn:"হার (% প্রতি বছর)",hi:"दर (% प्रति वर्ष)",ne:"दर (% प्रतिवर्ष)",sw:"Kiwango (% kwa mwaka)",ar:"المعدل (٪ سنويًا)",zh:"利率（每年 %）",es:"Tasa (% anual)",fr:"Taux (% par an)",pt:"Taxa (% ao ano)",ru:"Ставка (% в год)",id:"Suku bunga (% per tahun)",de:"Zinssatz (% pro Jahr)",ja:"利率（年 %）",pa:"شرح (% سالانہ)",mr:"दर (% प्रतिवर्ष)",te:"రేటు (% సంవత్సరానికి)",fa:"نرخ (٪ در سال)",tr:"Oran (yıllık %)",ta:"விகிதம் (ஆண்டுக்கு %)",vi:"Lãi suất (% mỗi năm)",ko:"이자율 (연 %)",tl:"Rate (% bawat taon)",ha:"Ƙimar (% a shekara)",it:"Tasso (% annuo)",ps:"کچه (٪ په کال کې)",ms:"Kadar (% setahun)",yo:"Ìwọ̀n (% lọ́dọ̀ọ́dún)",ig:"Ọnụego (% kwa afọ)"},
+tools_si_t:{en:"Time (years)",ur:"وقت (سال)",bn:"সময় (বছর)",hi:"समय (वर्ष)",ne:"समय (वर्ष)",sw:"Muda (miaka)",ar:"المدة (سنوات)",zh:"时间（年）",es:"Tiempo (años)",fr:"Durée (années)",pt:"Tempo (anos)",ru:"Срок (лет)",id:"Waktu (tahun)",de:"Zeit (Jahre)",ja:"期間（年）",pa:"وقت (سال)",mr:"वेळ (वर्षे)",te:"కాలం (సంవత్సరాలు)",fa:"زمان (سال)",tr:"Süre (yıl)",ta:"காலம் (ஆண்டுகள்)",vi:"Thời gian (năm)",ko:"기간 (년)",tl:"Oras (taon)",ha:"Lokaci (shekaru)",it:"Tempo (anni)",ps:"وخت (کلونه)",ms:"Masa (tahun)",yo:"Àkókò (ọdún)",ig:"Oge (afọ)"},
+tools_si_type:{en:"Type",ur:"قسم",bn:"ধরন",hi:"प्रकार",ne:"प्रकार",sw:"Aina",ar:"النوع",zh:"类型",es:"Tipo",fr:"Type",pt:"Tipo",ru:"Тип",id:"Jenis",de:"Art",ja:"種類",pa:"قسم",mr:"प्रकार",te:"రకం",fa:"نوع",tr:"Tür",ta:"வகை",vi:"Loại",ko:"종류",tl:"Uri",ha:"Nau'i",it:"Tipo",ps:"ډول",ms:"Jenis",yo:"Irú",ig:"Ụdị"},
+tools_simple:{en:"Simple",ur:"سادہ",bn:"সরল",hi:"साधारण",ne:"साधारण",sw:"Rahisi",ar:"بسيط",zh:"单利",es:"Simple",fr:"Simple",pt:"Simples",ru:"Простой",id:"Sederhana",de:"Einfach",ja:"単利",pa:"سادہ",mr:"साधे",te:"సాధారణ",fa:"ساده",tr:"Basit",ta:"எளிய",vi:"Đơn",ko:"단리",tl:"Simple",ha:"Sauƙi",it:"Semplice",ps:"ساده",ms:"Mudah",yo:"Rọ́rùn",ig:"Dị mfe"},
+tools_compound:{en:"Compound",ur:"مرکب",bn:"চক্রবৃদ্ধি",hi:"चक्रवृद्धि",ne:"चक्रवृद्धि",sw:"Mchanganyiko",ar:"مركّب",zh:"复利",es:"Compuesto",fr:"Composé",pt:"Composto",ru:"Сложный",id:"Majemuk",de:"Zusammengesetzt",ja:"複利",pa:"مرکب",mr:"चक्रवाढ",te:"చక్రవడ్డీ",fa:"مرکب",tr:"Bileşik",ta:"கூட்டு",vi:"Kép",ko:"복리",tl:"Compound",ha:"Haɗaɗɗe",it:"Composto",ps:"مرکب",ms:"Kompaun",yo:"Àpapọ̀",ig:"Ngwakọta"},
+tools_shape:{en:"Shape",ur:"شکل",bn:"আকৃতি",hi:"आकृति",ne:"आकृति",sw:"Umbo",ar:"الشكل",zh:"图形",es:"Figura",fr:"Forme",pt:"Forma",ru:"Фигура",id:"Bangun",de:"Form",ja:"図形",pa:"شکل",mr:"आकृती",te:"ఆకారం",fa:"شکل",tr:"Şekil",ta:"வடிவம்",vi:"Hình",ko:"도형",tl:"Hugis",ha:"Siffa",it:"Figura",ps:"بڼه",ms:"Bentuk",yo:"Àpẹẹrẹ",ig:"Ụdị"},
+tools_sh_rect:{en:"Rectangle",ur:"مستطیل",bn:"আয়তক্ষেত্র",hi:"आयत",ne:"आयत",sw:"Mstatili",ar:"مستطيل",zh:"长方形",es:"Rectángulo",fr:"Rectangle",pt:"Retângulo",ru:"Прямоугольник",id:"Persegi panjang",de:"Rechteck",ja:"長方形",pa:"مستطیل",mr:"आयत",te:"దీర్ఘచతురస్రం",fa:"مستطیل",tr:"Dikdörtgen",ta:"செவ்வகம்",vi:"Hình chữ nhật",ko:"직사각형",tl:"Parihaba",ha:"Murabba'i mai tsawo",it:"Rettangolo",ps:"مستطیل",ms:"Segi empat tepat",yo:"Onígun-mẹ́rin",ig:"Rektangụl"},
+tools_sh_tri:{en:"Triangle",ur:"مثلث",bn:"ত্রিভুজ",hi:"त्रिभुज",ne:"त्रिभुज",sw:"Pembetatu",ar:"مثلث",zh:"三角形",es:"Triángulo",fr:"Triangle",pt:"Triângulo",ru:"Треугольник",id:"Segitiga",de:"Dreieck",ja:"三角形",pa:"تکون",mr:"त्रिकोण",te:"త్రిభుజం",fa:"مثلث",tr:"Üçgen",ta:"முக்கோணம்",vi:"Hình tam giác",ko:"삼각형",tl:"Tatsulok",ha:"Uku-uku",it:"Triangolo",ps:"مثلث",ms:"Segi tiga",yo:"Onígun-mẹ́ta",ig:"Triaṅgụl"},
+tools_sh_circ:{en:"Circle",ur:"دائرہ",bn:"বৃত্ত",hi:"वृत्त",ne:"वृत्त",sw:"Duara",ar:"دائرة",zh:"圆形",es:"Círculo",fr:"Cercle",pt:"Círculo",ru:"Круг",id:"Lingkaran",de:"Kreis",ja:"円",pa:"دائرہ",mr:"वर्तुळ",te:"వృత్తం",fa:"دایره",tr:"Daire",ta:"வட்டம்",vi:"Hình tròn",ko:"원",tl:"Bilog",ha:"Da'ira",it:"Cerchio",ps:"دایره",ms:"Bulatan",yo:"Yíká",ig:"Okirikiri"},
+tools_sh_cube:{en:"Cube",ur:"مکعب",bn:"ঘনক",hi:"घन",ne:"घन",sw:"Mchemraba",ar:"مكعب",zh:"正方体",es:"Cubo",fr:"Cube",pt:"Cubo",ru:"Куб",id:"Kubus",de:"Würfel",ja:"立方体",pa:"مکعب",mr:"घन",te:"ఘనం",fa:"مکعب",tr:"Küp",ta:"கனசதுரம்",vi:"Hình lập phương",ko:"정육면체",tl:"Kubo",ha:"Kub",it:"Cubo",ps:"مکعب",ms:"Kubus",yo:"Kúùbù",ig:"Kubu"},
+tools_sh_cuboid:{en:"Cuboid",ur:"مکعب نما",bn:"আয়তঘন",hi:"घनाभ",ne:"घनाभ",sw:"Mchemraba mrefu",ar:"متوازي المستطيلات",zh:"长方体",es:"Cuboide",fr:"Pavé droit",pt:"Paralelepípedo",ru:"Параллелепипед",id:"Balok",de:"Quader",ja:"直方体",pa:"مکعب نما",mr:"इष्टिकाचिती",te:"దీర్ఘఘనం",fa:"مکعب‌مستطیل",tr:"Dikdörtgenler prizması",ta:"கனசெவ்வகம்",vi:"Hình hộp chữ nhật",ko:"직육면체",tl:"Cuboid",ha:"Akushi",it:"Cuboide",ps:"مکعب نما",ms:"Kuboid",yo:"Kúbọ́ọ̀dì",ig:"Kuboid"},
+tools_sh_cyl:{en:"Cylinder",ur:"سلنڈر",bn:"সিলিন্ডার",hi:"बेलन",ne:"बेलन",sw:"Silinda",ar:"أسطوانة",zh:"圆柱体",es:"Cilindro",fr:"Cylindre",pt:"Cilindro",ru:"Цилиндр",id:"Tabung",de:"Zylinder",ja:"円柱",pa:"سلنڈر",mr:"वृत्तचिती",te:"స్థూపం",fa:"استوانه",tr:"Silindir",ta:"உருளை",vi:"Hình trụ",ko:"원기둥",tl:"Silindro",ha:"Silinda",it:"Cilindro",ps:"سلنډر",ms:"Silinder",yo:"Sílíndà",ig:"Silinda"},
+tools_len:{en:"Length",ur:"لمبائی",bn:"দৈর্ঘ্য",hi:"लंबाई",ne:"लम्बाइ",sw:"Urefu",ar:"الطول",zh:"长度",es:"Longitud",fr:"Longueur",pt:"Comprimento",ru:"Длина",id:"Panjang",de:"Länge",ja:"長さ",pa:"لمبائی",mr:"लांबी",te:"పొడవు",fa:"طول",tr:"Uzunluk",ta:"நீளம்",vi:"Chiều dài",ko:"길이",tl:"Haba",ha:"Tsayi",it:"Lunghezza",ps:"اوږدوالی",ms:"Panjang",yo:"Gígùn",ig:"Ogologo"},
+tools_wid:{en:"Width",ur:"چوڑائی",bn:"প্রস্থ",hi:"चौड़ाई",ne:"चौडाइ",sw:"Upana",ar:"العرض",zh:"宽度",es:"Anchura",fr:"Largeur",pt:"Largura",ru:"Ширина",id:"Lebar",de:"Breite",ja:"幅",pa:"چوڑائی",mr:"रुंदी",te:"వెడల్పు",fa:"عرض",tr:"Genişlik",ta:"அகலம்",vi:"Chiều rộng",ko:"너비",tl:"Lapad",ha:"Faɗi",it:"Larghezza",ps:"پلنوالی",ms:"Lebar",yo:"Fífẹ̀",ig:"Obosara"},
+tools_base:{en:"Base",ur:"بنیاد",bn:"ভূমি",hi:"आधार",ne:"आधार",sw:"Msingi",ar:"القاعدة",zh:"底边",es:"Base",fr:"Base",pt:"Base",ru:"Основание",id:"Alas",de:"Grundseite",ja:"底辺",pa:"بنیاد",mr:"पाया",te:"భూమి",fa:"قاعده",tr:"Taban",ta:"அடிப்பக்கம்",vi:"Đáy",ko:"밑변",tl:"Base",ha:"Tushe",it:"Base",ps:"بنسټ",ms:"Tapak",yo:"Ìpìlẹ̀",ig:"Ntọala"},
+tools_height:{en:"Height",ur:"اونچائی",bn:"উচ্চতা",hi:"ऊंचाई",ne:"उचाइ",sw:"Urefu",ar:"الارتفاع",zh:"高度",es:"Altura",fr:"Hauteur",pt:"Altura",ru:"Высота",id:"Tinggi",de:"Höhe",ja:"高さ",pa:"اونچائی",mr:"उंची",te:"ఎత్తు",fa:"ارتفاع",tr:"Yükseklik",ta:"உயரம்",vi:"Chiều cao",ko:"높이",tl:"Taas",ha:"Tsayi",it:"Altezza",ps:"لوړوالی",ms:"Tinggi",yo:"Gíga",ig:"Elu"},
+tools_radius:{en:"Radius",ur:"رداس",bn:"ব্যাসার্ধ",hi:"त्रिज्या",ne:"अर्धव्यास",sw:"Radi",ar:"نصف القطر",zh:"半径",es:"Radio",fr:"Rayon",pt:"Raio",ru:"Радиус",id:"Jari-jari",de:"Radius",ja:"半径",pa:"رداس",mr:"त्रिज्या",te:"వ్యాసార్థం",fa:"شعاع",tr:"Yarıçap",ta:"ஆரம்",vi:"Bán kính",ko:"반지름",tl:"Radius",ha:"Radiyas",it:"Raggio",ps:"شعاع",ms:"Jejari",yo:"Rádíọ̀sì",ig:"Radịọs"},
+tools_side:{en:"Side",ur:"طرف",bn:"বাহু",hi:"भुजा",ne:"भुजा",sw:"Upande",ar:"الضلع",zh:"边",es:"Lado",fr:"Côté",pt:"Lado",ru:"Сторона",id:"Sisi",de:"Seite",ja:"辺",pa:"پاسا",mr:"बाजू",te:"భుజం",fa:"ضلع",tr:"Kenar",ta:"பக்கம்",vi:"Cạnh",ko:"변",tl:"Gilid",ha:"Gefen",it:"Lato",ps:"اړخ",ms:"Sisi",yo:"Ẹ̀gbẹ́",ig:"Akụkụ"},
+tools_depth:{en:"Depth",ur:"گہرائی",bn:"গভীরতা",hi:"गहराई",ne:"गहिराइ",sw:"Kina",ar:"العمق",zh:"深度",es:"Profundidad",fr:"Profondeur",pt:"Profundidade",ru:"Глубина",id:"Kedalaman",de:"Tiefe",ja:"深さ",pa:"گہرائی",mr:"खोली",te:"లోతు",fa:"عمق",tr:"Derinlik",ta:"ஆழம்",vi:"Chiều sâu",ko:"깊이",tl:"Lalim",ha:"Zurfi",it:"Profondità",ps:"ژوروالی",ms:"Kedalaman",yo:"Ìjìnlẹ̀",ig:"Omimi"},
+tools_area:{en:"Area",ur:"رقبہ",bn:"ক্ষেত্রফল",hi:"क्षेत्रफल",ne:"क्षेत्रफल",sw:"Eneo",ar:"المساحة",zh:"面积",es:"Área",fr:"Aire",pt:"Área",ru:"Площадь",id:"Luas",de:"Fläche",ja:"面積",pa:"رقبہ",mr:"क्षेत्रफळ",te:"వైశాల్యం",fa:"مساحت",tr:"Alan",ta:"பரப்பளவு",vi:"Diện tích",ko:"넓이",tl:"Lawak",ha:"Yanki",it:"Area",ps:"مساحت",ms:"Luas",yo:"Àgbègbè",ig:"Mpempe"},
+tools_perim:{en:"Perimeter",ur:"محیط",bn:"পরিসীমা",hi:"परिमाप",ne:"परिमिति",sw:"Mzingo",ar:"المحيط",zh:"周长",es:"Perímetro",fr:"Périmètre",pt:"Perímetro",ru:"Периметр",id:"Keliling",de:"Umfang",ja:"周囲の長さ",pa:"محیط",mr:"परिमिती",te:"చుట్టుకొలత",fa:"محیط",tr:"Çevre",ta:"சுற்றளவு",vi:"Chu vi",ko:"둘레",tl:"Perimeter",ha:"Kewaye",it:"Perimetro",ps:"چاپېریال",ms:"Perimeter",yo:"Àyíká",ig:"Okirikiri"},
+tools_vol:{en:"Volume",ur:"حجم",bn:"আয়তন",hi:"आयतन",ne:"आयतन",sw:"Ujazo",ar:"الحجم",zh:"体积",es:"Volumen",fr:"Volume",pt:"Volume",ru:"Объём",id:"Volume",de:"Volumen",ja:"体積",pa:"حجم",mr:"घनफळ",te:"ఘనపరిమాణం",fa:"حجم",tr:"Hacim",ta:"கன அளவு",vi:"Thể tích",ko:"부피",tl:"Volume",ha:"Ƙarfi",it:"Volume",ps:"حجم",ms:"Isi padu",yo:"Ìwọ̀n",ig:"Olu"},
+tools_circum:{en:"Circumference",ur:"محیط دائرہ",bn:"পরিধি",hi:"परिधि",ne:"परिधि",sw:"Mzingo wa duara",ar:"محيط الدائرة",zh:"圆周长",es:"Circunferencia",fr:"Circonférence",pt:"Circunferência",ru:"Длина окружности",id:"Keliling lingkaran",de:"Kreisumfang",ja:"円周",pa:"دائرے دا محیط",mr:"परिघ",te:"వృత్త పరిధి",fa:"محیط دایره",tr:"Çevre (daire)",ta:"வட்ட சுற்றளவு",vi:"Chu vi hình tròn",ko:"원둘레",tl:"Sirkumperensya",ha:"Kewayen da'ira",it:"Circonferenza",ps:"د دایرې چاپېریال",ms:"Lilitan",yo:"Àyíká yíká",ig:"Okirikiri gburugburu"},
+tools_surf:{en:"Surface area",ur:"سطحی رقبہ",bn:"পৃষ্ঠের ক্ষেত্রফল",hi:"पृष्ठीय क्षेत्रफल",ne:"सतह क्षेत्रफल",sw:"Eneo la uso",ar:"مساحة السطح",zh:"表面积",es:"Área de superficie",fr:"Aire de la surface",pt:"Área de superfície",ru:"Площадь поверхности",id:"Luas permukaan",de:"Oberfläche",ja:"表面積",pa:"سطحی رقبہ",mr:"पृष्ठफळ",te:"ఉపరితల వైశాల్యం",fa:"مساحت سطح",tr:"Yüzey alanı",ta:"மேற்பரப்பு",vi:"Diện tích bề mặt",ko:"겉넓이",tl:"Lawak ng ibabaw",ha:"Yankin sama",it:"Area di superficie",ps:"د سطح مساحت",ms:"Luas permukaan",yo:"Àgbègbè ojú",ig:"Mpempe elu"},
+tools_conv_from:{en:"From",ur:"سے",bn:"থেকে",hi:"से",ne:"बाट",sw:"Kutoka",ar:"من",zh:"从",es:"De",fr:"De",pt:"De",ru:"Из",id:"Dari",de:"Von",ja:"から",pa:"توں",mr:"पासून",te:"నుండి",fa:"از",tr:"Şuradan",ta:"இருந்து",vi:"Từ",ko:"부터",tl:"Mula sa",ha:"Daga",it:"Da",ps:"څخه",ms:"Dari",yo:"Láti",ig:"Site"},
+tools_conv_to:{en:"To",ur:"تک",bn:"পর্যন্ত",hi:"तक",ne:"सम्म",sw:"Hadi",ar:"إلى",zh:"到",es:"A",fr:"À",pt:"Para",ru:"В",id:"Ke",de:"Nach",ja:"へ",pa:"تک",mr:"पर्यंत",te:"కు",fa:"به",tr:"Şuraya",ta:"க்கு",vi:"Sang",ko:"까지",tl:"Hanggang sa",ha:"Zuwa",it:"A",ps:"ته",ms:"Ke",yo:"Sí",ig:"Ruo"},
+tools_conv_val:{en:"Value",ur:"قدر",bn:"মান",hi:"मान",ne:"मान",sw:"Thamani",ar:"القيمة",zh:"数值",es:"Valor",fr:"Valeur",pt:"Valor",ru:"Значение",id:"Nilai",de:"Wert",ja:"値",pa:"قدر",mr:"मूल्य",te:"విలువ",fa:"مقدار",tr:"Değer",ta:"மதிப்பு",vi:"Giá trị",ko:"값",tl:"Halaga",ha:"Ƙima",it:"Valore",ps:"ارزښت",ms:"Nilai",yo:"Iye",ig:"Uru"},
+tools_conv_cat:{en:"Convert",ur:"بدلیں",bn:"রূপান্তর",hi:"बदलें",ne:"रूपान्तरण गर्नुहोस्",sw:"Badilisha",ar:"حوّل",zh:"换算",es:"Convertir",fr:"Convertir",pt:"Converter",ru:"Перевести",id:"Konversi",de:"Umrechnen",ja:"変換",pa:"بدلو",mr:"रूपांतर करा",te:"మార్చండి",fa:"تبدیل کن",tr:"Dönüştür",ta:"மாற்று",vi:"Đổi",ko:"변환",tl:"I-convert",ha:"Canza",it:"Converti",ps:"بدل کړئ",ms:"Tukar",yo:"Yí padà",ig:"Tụgharịa"},
+tools_cat_len:{en:"Length",ur:"لمبائی",bn:"দৈর্ঘ্য",hi:"लंबाई",ne:"लम्बाइ",sw:"Urefu",ar:"الطول",zh:"长度",es:"Longitud",fr:"Longueur",pt:"Comprimento",ru:"Длина",id:"Panjang",de:"Länge",ja:"長さ",pa:"لمبائی",mr:"लांबी",te:"పొడవు",fa:"طول",tr:"Uzunluk",ta:"நீளம்",vi:"Chiều dài",ko:"길이",tl:"Haba",ha:"Tsayi",it:"Lunghezza",ps:"اوږدوالی",ms:"Panjang",yo:"Gígùn",ig:"Ogologo"},
+tools_cat_wt:{en:"Weight",ur:"وزن",bn:"ওজন",hi:"वज़न",ne:"तौल",sw:"Uzito",ar:"الوزن",zh:"重量",es:"Peso",fr:"Poids",pt:"Peso",ru:"Вес",id:"Berat",de:"Gewicht",ja:"重さ",pa:"وزن",mr:"वजन",te:"బరువు",fa:"وزن",tr:"Ağırlık",ta:"எடை",vi:"Khối lượng",ko:"무게",tl:"Timbang",ha:"Nauyi",it:"Peso",ps:"وزن",ms:"Berat",yo:"Ìwúwo",ig:"Ibu arọ"},
+tools_cat_cap:{en:"Capacity",ur:"گنجائش",bn:"ধারণক্ষমতা",hi:"क्षमता",ne:"क्षमता",sw:"Uwezo",ar:"السعة",zh:"容量",es:"Capacidad",fr:"Capacité",pt:"Capacidade",ru:"Вместимость",id:"Kapasitas",de:"Fassungsvermögen",ja:"容量",pa:"گنجائش",mr:"क्षमता",te:"సామర్థ్యం",fa:"ظرفیت",tr:"Kapasite",ta:"கொள்ளளவு",vi:"Dung tích",ko:"용량",tl:"Kapasidad",ha:"Ƙarfi",it:"Capacità",ps:"ظرفیت",ms:"Kapasiti",yo:"Agbára",ig:"Ikike"},
+tools_cat_area:{en:"Area",ur:"رقبہ",bn:"ক্ষেত্রফল",hi:"क्षेत्रफल",ne:"क्षेत्रफल",sw:"Eneo",ar:"المساحة",zh:"面积",es:"Área",fr:"Aire",pt:"Área",ru:"Площадь",id:"Luas",de:"Fläche",ja:"面積",pa:"رقبہ",mr:"क्षेत्रफळ",te:"వైశాల్యం",fa:"مساحت",tr:"Alan",ta:"பரப்பளவு",vi:"Diện tích",ko:"넓이",tl:"Lawak",ha:"Yanki",it:"Area",ps:"مساحت",ms:"Luas",yo:"Àgbègbè",ig:"Mpempe"},
+tools_cat_temp:{en:"Temperature",ur:"درجہ حرارت",bn:"তাপমাত্রা",hi:"तापमान",ne:"तापक्रम",sw:"Joto",ar:"درجة الحرارة",zh:"温度",es:"Temperatura",fr:"Température",pt:"Temperatura",ru:"Температура",id:"Suhu",de:"Temperatur",ja:"温度",pa:"درجہ حرارت",mr:"तापमान",te:"ఉష్ణోగ్రత",fa:"دما",tr:"Sıcaklık",ta:"வெப்பநிலை",vi:"Nhiệt độ",ko:"온도",tl:"Temperatura",ha:"Zafin jiki",it:"Temperatura",ps:"تودوخه",ms:"Suhu",yo:"Ìwọ̀n ooru",ig:"Okpomọkụ"},
+tools_table_n:{en:"Which table",ur:"کون سا پہاڑا",bn:"কোন নামতা",hi:"कौन सा पहाड़ा",ne:"कुन पहाडा",sw:"Jedwali gani",ar:"أي جدول",zh:"哪张乘法表",es:"¿Qué tabla?",fr:"Quelle table ?",pt:"Qual tabuada?",ru:"Какая таблица",id:"Tabel berapa",de:"Welches Einmaleins",ja:"どの九九",pa:"کےہڑا پہاڑا",mr:"कोणता पाढा",te:"ఏ ఎక్కం",fa:"کدام جدول",tr:"Hangi tablo",ta:"எந்த வாய்ப்பாடு",vi:"Bảng nào",ko:"몇 단",tl:"Aling talaan",ha:"Teburin wane",it:"Quale tabellina",ps:"کوم جدول",ms:"Sifir yang mana",yo:"Tábìlì wo",ig:"Tebụl ole"},
+tools_table_all:{en:"All tables 2–10",ur:"تمام پہاڑے 2–10",bn:"সব নামতা ২–১০",hi:"सभी पहाड़े 2–10",ne:"सबै पहाडा २–१०",sw:"Majedwali yote 2–10",ar:"كل الجداول ٢–١٠",zh:"全部乘法表 2–10",es:"Todas las tablas 2–10",fr:"Toutes les tables 2–10",pt:"Todas as tabuadas 2–10",ru:"Все таблицы 2–10",id:"Semua tabel 2–10",de:"Alle Einmaleins 2–10",ja:"九九すべて 2–10",pa:"سارے پہاڑے 2–10",mr:"सर्व पाढे २–१०",te:"అన్ని ఎక్కాలు 2–10",fa:"همه جدول‌ها ۲–۱۰",tr:"Tüm tablolar 2–10",ta:"அனைத்து வாய்ப்பாடுகளும் 2–10",vi:"Tất cả các bảng 2–10",ko:"모든 구구단 2–10",tl:"Lahat ng talaan 2–10",ha:"Dukkan teburin 2–10",it:"Tutte le tabelline 2–10",ps:"ټول جدولونه 2–10",ms:"Semua sifir 2–10",yo:"Gbogbo tábìlì 2–10",ig:"Tebụl niile 2–10"},
+tools_no_roots:{en:"No real roots",ur:"کوئی حقیقی جذر نہیں",bn:"কোনো বাস্তব মূল নেই",hi:"कोई वास्तविक मूल नहीं",ne:"कुनै वास्तविक मूल छैन",sw:"Hakuna mizizi halisi",ar:"لا جذور حقيقية",zh:"没有实数根",es:"Sin raíces reales",fr:"Pas de racines réelles",pt:"Sem raízes reais",ru:"Нет действительных корней",id:"Tidak ada akar real",de:"Keine reellen Lösungen",ja:"実数解なし",pa:"کوئی حقیقی جذر نئیں",mr:"वास्तविक मुळे नाहीत",te:"వాస్తవ మూలాలు లేవు",fa:"ریشه حقیقی ندارد",tr:"Gerçek kök yok",ta:"மெய் மூலங்கள் இல்லை",vi:"Không có nghiệm thực",ko:"실근 없음",tl:"Walang tunay na ugat",ha:"Babu tushe na gaskiya",it:"Nessuna radice reale",ps:"هېڅ ریښتینې ریښې نشته",ms:"Tiada punca nyata",yo:"Kò sí gbòǹgbò gidi",ig:"Enweghị mgbọrọgwụ n'ezie"},
+tools_disc:{en:"Discriminant",ur:"ممیز",bn:"নিরূপক",hi:"विविक्तकर",ne:"विवेचक",sw:"Kibaguzi",ar:"المميِّز",zh:"判别式",es:"Discriminante",fr:"Discriminant",pt:"Discriminante",ru:"Дискриминант",id:"Diskriminan",de:"Diskriminante",ja:"判別式",pa:"ممیز",mr:"भेदक",te:"విచక్షణి",fa:"ممیز",tr:"Diskriminant",ta:"தீர்மானி",vi:"Biệt thức",ko:"판별식",tl:"Discriminant",ha:"Mai bambancewa",it:"Discriminante",ps:"تفکیک کوونکی",ms:"Diskriminan",yo:"Àsàyàn",ig:"Nkewa"},
+tools_roots:{en:"Roots",ur:"جذریں",bn:"মূল",hi:"मूल",ne:"मूलहरू",sw:"Mizizi",ar:"الجذور",zh:"根",es:"Raíces",fr:"Racines",pt:"Raízes",ru:"Корни",id:"Akar",de:"Lösungen",ja:"解",pa:"جذراں",mr:"मुळे",te:"మూలాలు",fa:"ریشه‌ها",tr:"Kökler",ta:"மூலங்கள்",vi:"Nghiệm",ko:"근",tl:"Mga ugat",ha:"Tushe",it:"Radici",ps:"ریښې",ms:"Punca",yo:"Àwọn gbòǹgbò",ig:"Mgbọrọgwụ"},
+tools_interest_amt:{en:"Interest",ur:"سود",bn:"সুদ",hi:"ब्याज",ne:"ब्याज",sw:"Riba",ar:"الفائدة",zh:"利息",es:"Interés",fr:"Intérêt",pt:"Juros",ru:"Проценты",id:"Bunga",de:"Zinsen",ja:"利息",pa:"سود",mr:"व्याज",te:"వడ్డీ",fa:"بهره",tr:"Faiz",ta:"வட்டி",vi:"Tiền lãi",ko:"이자",tl:"Interes",ha:"Riba",it:"Interesse",ps:"سود",ms:"Faedah",yo:"Èlé",ig:"Ọmụrụ nwa"},
+tools_amount:{en:"Amount",ur:"رقم",bn:"পরিমাণ",hi:"राशि",ne:"रकम",sw:"Kiasi",ar:"المبلغ",zh:"金额",es:"Cantidad",fr:"Montant",pt:"Montante",ru:"Сумма",id:"Jumlah",de:"Betrag",ja:"金額",pa:"رقم",mr:"रक्कम",te:"మొత్తం",fa:"مبلغ",tr:"Tutar",ta:"தொகை",vi:"Số tiền",ko:"금액",tl:"Halaga",ha:"Adadi",it:"Importo",ps:"اندازه",ms:"Jumlah",yo:"Iye",ig:"Ego"},
+});
+
+Object.assign(T,{
+tools_th_pyth:{en:"Pythagoras theorem",ur:"قضیہ فیثاغورث",bn:"পিথাগোরাসের উপপাদ্য",hi:"पाइथागोरस प्रमेय",ne:"पाइथागोरस प्रमेय",sw:"Nadharia ya Pythagoras",ar:"نظرية فيثاغورس",zh:"勾股定理",es:"Teorema de Pitágoras",fr:"Théorème de Pythagore",pt:"Teorema de Pitágoras",ru:"Теорема Пифагора",id:"Teorema Pythagoras",de:"Satz des Pythagoras",ja:"ピタゴラスの定理",pa:"قضیہ فیثاغورث",mr:"पायथागोरसचे प्रमेय",te:"పైథాగరస్ సిద్ధాంతం",fa:"قضیه فیثاغورس",tr:"Pisagor teoremi",ta:"பிதாகரஸ் தேற்றம்",vi:"Định lý Pythagoras",ko:"피타고라스 정리",tl:"Teorama ni Pythagoras",ha:"Ka'idar Pythagoras",it:"Teorema di Pitagora",ps:"د فیثاغورث قضیه",ms:"Teorem Pythagoras",yo:"Ẹ̀kọ́ Pythagoras",ig:"Usoro Pythagoras"},
+tools_th_anglesum:{en:"Angles in a triangle",ur:"مثلث کے زاویے",bn:"ত্রিভুজের কোণ",hi:"त्रिभुज के कोण",ne:"त्रिभुजका कोणहरू",sw:"Pembe za pembetatu",ar:"زوايا المثلث",zh:"三角形的内角",es:"Ángulos de un triángulo",fr:"Angles d'un triangle",pt:"Ângulos de um triângulo",ru:"Углы треугольника",id:"Sudut-sudut segitiga",de:"Winkel im Dreieck",ja:"三角形の角",pa:"تکون دے زاویے",mr:"त्रिकोणाचे कोन",te:"త్రిభుజంలో కోణాలు",fa:"زاویه‌های مثلث",tr:"Üçgenin açıları",ta:"முக்கோணத்தின் கோணங்கள்",vi:"Các góc trong tam giác",ko:"삼각형의 각",tl:"Mga anggulo ng tatsulok",ha:"Kusurwoyin uku-uku",it:"Angoli di un triangolo",ps:"د مثلث زاویې",ms:"Sudut dalam segi tiga",yo:"Àwọn igun onígun-mẹ́ta",ig:"Akụkụ nke triaṅgụl"},
+tools_th_straight:{en:"Angles on a straight line",ur:"سیدھی لکیر پر زاویے",bn:"সরলরেখার কোণ",hi:"सीधी रेखा पर कोण",ne:"सिधा रेखाका कोणहरू",sw:"Pembe kwenye mstari ulionyooka",ar:"الزوايا على خط مستقيم",zh:"直线上的角",es:"Ángulos en una línea recta",fr:"Angles sur une droite",pt:"Ângulos numa linha reta",ru:"Углы на прямой",id:"Sudut pada garis lurus",de:"Winkel auf einer Geraden",ja:"直線上の角",pa:"سدھی لکیر تے زاویے",mr:"सरळ रेषेवरील कोन",te:"సరళ రేఖపై కోణాలు",fa:"زاویه‌ها روی خط مستقیم",tr:"Doğru üzerindeki açılar",ta:"நேர்கோட்டில் கோணங்கள்",vi:"Các góc trên đường thẳng",ko:"직선 위의 각",tl:"Mga anggulo sa tuwid na linya",ha:"Kusurwoyi a kan madaidaiciyar layi",it:"Angoli su una retta",ps:"په مستقیمه کرښه کې زاویې",ms:"Sudut pada garis lurus",yo:"Àwọn igun lórí ìlà tààrà",ig:"Akụkụ dị n'ahịrị kwụ ọtọ"},
+tools_th_point:{en:"Angles around a point",ur:"ایک نقطے کے گرد زاویے",bn:"একটি বিন্দুর চারপাশের কোণ",hi:"एक बिंदु के चारों ओर कोण",ne:"एउटा बिन्दु वरिपरिका कोणहरू",sw:"Pembe kuzunguka nukta",ar:"الزوايا حول نقطة",zh:"一个点周围的角",es:"Ángulos alrededor de un punto",fr:"Angles autour d'un point",pt:"Ângulos à volta de um ponto",ru:"Углы вокруг точки",id:"Sudut di sekitar titik",de:"Winkel um einen Punkt",ja:"一点のまわりの角",pa:"اک نقطے دے دوالے زاویے",mr:"एका बिंदूभोवतीचे कोन",te:"ఒక బిందువు చుట్టూ కోణాలు",fa:"زاویه‌های دور یک نقطه",tr:"Bir nokta etrafındaki açılar",ta:"ஒரு புள்ளியைச் சுற்றியுள்ள கோணங்கள்",vi:"Các góc quanh một điểm",ko:"한 점 주위의 각",tl:"Mga anggulo sa paligid ng isang punto",ha:"Kusurwoyi a kewayen wani batu",it:"Angoli intorno a un punto",ps:"د یوې نقطې شاوخوا زاویې",ms:"Sudut mengelilingi satu titik",yo:"Àwọn igun yí àmì kan ká",ig:"Akụkụ gburugburu otu isi"},
+tools_th_tritri:{en:"Area of a triangle",ur:"مثلث کا رقبہ",bn:"ত্রিভুজের ক্ষেত্রফল",hi:"त्रिभुज का क्षेत्रफल",ne:"त्रिभुजको क्षेत्रफल",sw:"Eneo la pembetatu",ar:"مساحة المثلث",zh:"三角形面积",es:"Área de un triángulo",fr:"Aire d'un triangle",pt:"Área de um triângulo",ru:"Площадь треугольника",id:"Luas segitiga",de:"Fläche eines Dreiecks",ja:"三角形の面積",pa:"تکون دا رقبہ",mr:"त्रिकोणाचे क्षेत्रफळ",te:"త్రిభుజ వైశాల్యం",fa:"مساحت مثلث",tr:"Üçgenin alanı",ta:"முக்கோணத்தின் பரப்பளவு",vi:"Diện tích tam giác",ko:"삼각형의 넓이",tl:"Lawak ng tatsulok",ha:"Yankin uku-uku",it:"Area di un triangolo",ps:"د مثلث مساحت",ms:"Luas segi tiga",yo:"Àgbègbè onígun-mẹ́ta",ig:"Mpempe triaṅgụl"},
+tools_th_circle:{en:"Circle: circumference & area",ur:"دائرہ: محیط اور رقبہ",bn:"বৃত্ত: পরিধি ও ক্ষেত্রফল",hi:"वृत्त: परिधि और क्षेत्रफल",ne:"वृत्त: परिधि र क्षेत्रफल",sw:"Duara: mzingo na eneo",ar:"الدائرة: المحيط والمساحة",zh:"圆：周长和面积",es:"Círculo: circunferencia y área",fr:"Cercle : circonférence et aire",pt:"Círculo: circunferência e área",ru:"Круг: длина окружности и площадь",id:"Lingkaran: keliling & luas",de:"Kreis: Umfang und Fläche",ja:"円：円周と面積",pa:"دائرہ: محیط تے رقبہ",mr:"वर्तुळ: परिघ व क्षेत्रफळ",te:"వృత్తం: పరిధి మరియు వైశాల్యం",fa:"دایره: محیط و مساحت",tr:"Daire: çevre ve alan",ta:"வட்டம்: சுற்றளவு மற்றும் பரப்பளவு",vi:"Hình tròn: chu vi và diện tích",ko:"원: 둘레와 넓이",tl:"Bilog: sirkumperensya at lawak",ha:"Da'ira: kewaye da yanki",it:"Cerchio: circonferenza e area",ps:"دایره: چاپېریال او مساحت",ms:"Bulatan: lilitan & luas",yo:"Yíká: àyíká àti àgbègbè",ig:"Okirikiri: okirikiri na mpempe"},
+tools_th_parallel:{en:"Parallel lines angles",ur:"متوازی لکیروں کے زاویے",bn:"সমান্তরাল রেখার কোণ",hi:"समांतर रेखाओं के कोण",ne:"समानान्तर रेखाहरूका कोणहरू",sw:"Pembe za mistari sambamba",ar:"زوايا الخطوط المتوازية",zh:"平行线角",es:"Ángulos de rectas paralelas",fr:"Angles des droites parallèles",pt:"Ângulos de retas paralelas",ru:"Углы параллельных прямых",id:"Sudut garis sejajar",de:"Winkel paralleler Geraden",ja:"平行線の角",pa:"متوازی لکیراں دے زاویے",mr:"समांतर रेषांचे कोन",te:"సమాంతర రేఖల కోణాలు",fa:"زاویه‌های خطوط موازی",tr:"Paralel doğruların açıları",ta:"இணை கோடுகளின் கோணங்கள்",vi:"Các góc của đường song song",ko:"평행선의 각",tl:"Mga anggulo ng parallel na linya",ha:"Kusurwoyin layi guda",it:"Angoli di rette parallele",ps:"د موازي کرښو زاویې",ms:"Sudut garis selari",yo:"Àwọn igun ìlà tó jọra",ig:"Akụkụ nke ahịrị yiri"},
+tools_th_cong:{en:"Congruence & similarity",ur:"مطابقت اور مشابہت",bn:"সর্বসমতা ও সদৃশতা",hi:"सर्वांगसमता और समरूपता",ne:"सर्वसमता र समानता",sw:"Usawa na Ufanano",ar:"التطابق والتشابه",zh:"全等与相似",es:"Congruencia y semejanza",fr:"Congruence et similarité",pt:"Congruência e semelhança",ru:"Равенство и подобие",id:"Kekongruenan & kesebangunan",de:"Kongruenz und Ähnlichkeit",ja:"合同と相似",pa:"مطابقت تے مشابہت",mr:"एकनिष्ठता व समरूपता",te:"సర్వసమానత మరియు సారూప్యత",fa:"تطابق و تشابه",tr:"Eşlik ve benzerlik",ta:"சமநிலை மற்றும் ஒற்றுமை",vi:"Bằng nhau và đồng dạng",ko:"합동과 닮음",tl:"Congruence at pagkakatulad",ha:"Daidaito da kamance",it:"Congruenza e similitudine",ps:"مطابقت او ورته والی",ms:"Kekongruenan & keserupaan",yo:"Ìbáramu àti ìjọra",ig:"Nkwenye na myirịta"},
+tools_th_state:{en:"In simple words",ur:"آسان الفاظ میں",bn:"সহজ কথায়",hi:"सरल शब्दों में",ne:"सरल शब्दमा",sw:"Kwa maneno rahisi",ar:"بكلمات بسيطة",zh:"用简单的话说",es:"En palabras simples",fr:"En mots simples",pt:"Em palavras simples",ru:"Простыми словами",id:"Dengan kata sederhana",de:"In einfachen Worten",ja:"簡単な言葉で",pa:"آسان لفظاں وچ",mr:"सोप्या शब्दांत",te:"సరళమైన మాటల్లో",fa:"به زبان ساده",tr:"Basit sözcüklerle",ta:"எளிய வார்த்தைகளில்",vi:"Bằng lời đơn giản",ko:"쉬운 말로",tl:"Sa simpleng salita",ha:"Da kalmomi masu sauƙi",it:"In parole semplici",ps:"په ساده ټکو کې",ms:"Dengan kata mudah",yo:"Ní ọ̀rọ̀ rọ́rùn",ig:"N'okwu dị mfe"},
+tools_th_why:{en:"Why it works",ur:"یہ کیوں کام کرتا ہے",bn:"এটা কেন কাজ করে",hi:"यह क्यों काम करता है",ne:"यो किन काम गर्छ",sw:"Kwa nini inafanya kazi",ar:"لماذا يعمل",zh:"为什么成立",es:"Por qué funciona",fr:"Pourquoi ça marche",pt:"Porque funciona",ru:"Почему это работает",id:"Mengapa berhasil",de:"Warum das funktioniert",ja:"なぜ成り立つか",pa:"ایہہ کیوں کم کردا اے",mr:"हे का चालते",te:"ఇది ఎందుకు పనిచేస్తుంది",fa:"چرا کار می‌کند",tr:"Neden işe yarıyor",ta:"ஏன் இது வேலை செய்கிறது",vi:"Vì sao nó đúng",ko:"왜 성립하는가",tl:"Bakit ito gumagana",ha:"Me ya sa yake aiki",it:"Perché funziona",ps:"ولې کار کوي",ms:"Mengapa ia berfungsi",yo:"Kí ló dé tí ó ń ṣiṣẹ́",ig:"Gịnị mere o ji arụ ọrụ"},
+tools_th_find:{en:"Find",ur:"معلوم کریں",bn:"বের করুন",hi:"ज्ञात करें",ne:"पत्ता लगाउनुहोस्",sw:"Tafuta",ar:"أوجد",zh:"求",es:"Hallar",fr:"Trouver",pt:"Encontrar",ru:"Найти",id:"Cari",de:"Finde",ja:"求める",pa:"لبھو",mr:"शोधा",te:"కనుగొనండి",fa:"پیدا کن",tr:"Bul",ta:"கண்டுபிடி",vi:"Tìm",ko:"구하기",tl:"Hanapin",ha:"Nemo",it:"Trova",ps:"ومومئ",ms:"Cari",yo:"Wá",ig:"Chọta"},
+tools_pick:{en:"Random student picker",ur:"بے ترتیب طالب علم چننے والا",bn:"এলোমেলো শিক্ষার্থী বাছাই",hi:"यादृच्छिक छात्र चयन",ne:"अनियमित विद्यार्थी छनोट",sw:"Kichaguaji cha Mwanafunzi Nasibu",ar:"اختيار طالب عشوائي",zh:"随机抽学生",es:"Selector aleatorio de alumnos",fr:"Sélecteur d'élève au hasard",pt:"Seletor aleatório de alunos",ru:"Случайный выбор ученика",id:"Pemilih siswa acak",de:"Zufallsauswahl",ja:"ランダム生徒ピッカー",pa:"بے ترتیب طالب علم چنن والا",mr:"यादृच्छिक विद्यार्थी निवड",te:"యాదృచ్ఛిక విద్యార్థి ఎంపిక",fa:"انتخاب تصادفی دانش‌آموز",tr:"Rastgele öğrenci seçici",ta:"சீரற்ற மாணவர் தேர்வு",vi:"Chọn học sinh ngẫu nhiên",ko:"무작위 학생 뽑기",tl:"Random na tagapili ng mag-aaral",ha:"Zaɓin ɗalibi ba tare da tsari ba",it:"Selettore casuale di studenti",ps:"تصادفي زده کوونکي ټاکونکی",ms:"Pemilih pelajar rawak",yo:"Ayàn ẹ̀kọ́ aláìlòtó",ig:"Onye na-ahọrọ nwa akwụkwọ n'enweghị usoro"},
+tools_pick_btn:{en:"Pick a student",ur:"ایک طالب علم چنیں",bn:"একজন শিক্ষার্থী বাছুন",hi:"एक छात्र चुनें",ne:"एक विद्यार्थी छान्नुहोस्",sw:"Chagua mwanafunzi",ar:"اختر طالبًا",zh:"抽一名学生",es:"Elegir un alumno",fr:"Choisir un élève",pt:"Escolher um aluno",ru:"Выбрать ученика",id:"Pilih seorang siswa",de:"Schüler auswählen",ja:"生徒を選ぶ",pa:"اک طالب علم چنو",mr:"एक विद्यार्थी निवडा",te:"ఒక విద్యార్థిని ఎంచుకోండి",fa:"یک دانش‌آموز انتخاب کن",tr:"Bir öğrenci seç",ta:"ஒரு மாணவரைத் தேர்ந்தெடு",vi:"Chọn một học sinh",ko:"학생 한 명 뽑기",tl:"Pumili ng isang mag-aaral",ha:"Zaɓi ɗalibi ɗaya",it:"Scegli uno studente",ps:"یو زده کوونکی وټاکئ",ms:"Pilih seorang pelajar",yo:"Yan ẹ̀kọ́ kan",ig:"Họrọ otu nwa akwụkwọ"},
+tools_pick_again:{en:"Pick again",ur:"دوبارہ چنیں",bn:"আবার বাছুন",hi:"फिर से चुनें",ne:"फेरि छान्नुहोस्",sw:"Chagua tena",ar:"اختر مجددًا",zh:"再抽一次",es:"Elegir otra vez",fr:"Choisir à nouveau",pt:"Escolher novamente",ru:"Выбрать ещё раз",id:"Pilih lagi",de:"Nochmal wählen",ja:"もう一度選ぶ",pa:"مڑ چنو",mr:"पुन्हा निवडा",te:"మళ్ళీ ఎంచుకోండి",fa:"دوباره انتخاب کن",tr:"Tekrar seç",ta:"மீண்டும் தேர்ந்தெடு",vi:"Chọn lại",ko:"다시 뽑기",tl:"Pumili ulit",ha:"Sake zaɓa",it:"Scegli di nuovo",ps:"بیا وټاکئ",ms:"Pilih lagi",yo:"Yan lẹ́ẹ̀kan sí i",ig:"Họrọ ọzọ"},
+tools_pick_done:{en:"Everyone has been picked — starting again",ur:"سب کو چن لیا گیا — دوبارہ شروع",bn:"সবাইকে বাছা হয়েছে — আবার শুরু",hi:"सबको चुन लिया गया — फिर से शुरू",ne:"सबै छानिए — फेरि सुरु",sw:"Kila mtu amechaguliwa — tunaanza tena",ar:"تم اختيار الجميع — نبدأ من جديد",zh:"所有人都已抽过——重新开始",es:"Ya se eligió a todos — empezamos de nuevo",fr:"Tout le monde a été choisi — on recommence",pt:"Todos já foram escolhidos — a recomeçar",ru:"Все выбраны — начинаем сначала",id:"Semua sudah dipilih — mulai lagi",de:"Alle wurden gewählt — wir fangen von vorne an",ja:"全員選びました——最初から",pa:"سب نوں چن لیا گیا — مڑ شروع",mr:"सर्वांना निवडले — पुन्हा सुरूवात",te:"అందరినీ ఎంచుకున్నాము — మళ్ళీ మొదలు",fa:"همه انتخاب شدند — از اول شروع می‌کنیم",tr:"Herkes seçildi — baştan başlıyoruz",ta:"அனைவரும் தேர்ந்தெடுக்கப்பட்டனர் — மீண்டும் தொடங்குகிறோம்",vi:"Đã chọn tất cả — bắt đầu lại",ko:"모두 뽑았습니다 — 다시 시작합니다",tl:"Nakuha na ang lahat — magsisimula ulit",ha:"An zaɓi kowa — mun sake farawa",it:"Tutti sono stati scelti — ricominciamo",ps:"ټول وټاکل شول — بیا پیل کوو",ms:"Semua sudah dipilih — mula semula",yo:"A ti yan gbogbo ẹni — a bẹ̀rẹ̀ lẹ́ẹ̀kan sí i",ig:"Ahọrọla onye ọ bụla — na-amalite ọzọ"},
+tools_groups:{en:"Group maker",ur:"گروپ بنانے والا",bn:"দল তৈরি",hi:"समूह निर्माता",ne:"समूह निर्माता",sw:"Kitengeneza Makundi",ar:"صانع المجموعات",zh:"分组工具",es:"Creador de grupos",fr:"Créateur de groupes",pt:"Criador de grupos",ru:"Создание групп",id:"Pembuat kelompok",de:"Gruppenbildner",ja:"グループメーカー",pa:"گروپ بنان والا",mr:"गट निर्माता",te:"గుంపులు తయారుచేసేది",fa:"گروه‌ساز",tr:"Grup oluşturucu",ta:"குழு உருவாக்கி",vi:"Tạo nhóm",ko:"모둠 만들기",tl:"Tagagawa ng grupo",ha:"Mai ƙirƙirar ƙungiya",it:"Creatore di gruppi",ps:"ډلې جوړونکی",ms:"Pembuat kumpulan",yo:"Olùṣe ẹgbẹ́",ig:"Onye na-eme otu"},
+tools_ngroups:{en:"Number of groups",ur:"گروپوں کی تعداد",bn:"দলের সংখ্যা",hi:"समूहों की संख्या",ne:"समूहहरूको सङ्ख्या",sw:"Idadi ya makundi",ar:"عدد المجموعات",zh:"组数",es:"Número de grupos",fr:"Nombre de groupes",pt:"Número de grupos",ru:"Число групп",id:"Jumlah kelompok",de:"Anzahl der Gruppen",ja:"グループ数",pa:"گروپاں دی گنتی",mr:"गटांची संख्या",te:"గుంపుల సంఖ్య",fa:"تعداد گروه‌ها",tr:"Grup sayısı",ta:"குழுக்களின் எண்ணிக்கை",vi:"Số nhóm",ko:"모둠 수",tl:"Bilang ng mga grupo",ha:"Yawan ƙungiyoyi",it:"Numero di gruppi",ps:"د ډلو شمېر",ms:"Bilangan kumpulan",yo:"Iye ẹgbẹ́",ig:"Ọnụọgụgụ otu"},
+tools_pergroup:{en:"Students in each group",ur:"ہر گروپ میں طلبہ",bn:"প্রতি দলে শিক্ষার্থী",hi:"प्रत्येक समूह में छात्र",ne:"प्रत्येक समूहमा विद्यार्थी",sw:"Wanafunzi kwa kila kundi",ar:"الطلاب في كل مجموعة",zh:"每组学生数",es:"Alumnos por grupo",fr:"Élèves par groupe",pt:"Alunos por grupo",ru:"Учеников в каждой группе",id:"Siswa per kelompok",de:"Schüler pro Gruppe",ja:"各グループの生徒数",pa:"ہر گروپ وچ طالب علم",mr:"प्रत्येक गटात विद्यार्थी",te:"ప్రతి గుంపులో విద్యార్థులు",fa:"دانش‌آموز در هر گروه",tr:"Her gruptaki öğrenci sayısı",ta:"ஒவ்வொரு குழுவிலும் மாணவர்கள்",vi:"Học sinh mỗi nhóm",ko:"각 모둠의 학생 수",tl:"Mga mag-aaral sa bawat grupo",ha:"Ɗalibai a kowace ƙungiya",it:"Studenti per gruppo",ps:"په هره ډله کې زده کوونکي",ms:"Pelajar dalam setiap kumpulan",yo:"Àwọn ẹ̀kọ́ nínú ẹgbẹ́ kọ̀ọ̀kan",ig:"Ụmụ akwụkwọ n'otu ọ bụla"},
+tools_make_groups:{en:"Make groups",ur:"گروپ بنائیں",bn:"দল তৈরি করুন",hi:"समूह बनाएं",ne:"समूह बनाउनुहोस्",sw:"Tengeneza makundi",ar:"كوّن المجموعات",zh:"分组",es:"Crear grupos",fr:"Créer les groupes",pt:"Criar grupos",ru:"Создать группы",id:"Buat kelompok",de:"Gruppen bilden",ja:"グループを作る",pa:"گروپ بناؤ",mr:"गट तयार करा",te:"గుంపులు చేయండి",fa:"گروه بساز",tr:"Grupları oluştur",ta:"குழுக்களை உருவாக்கு",vi:"Tạo nhóm",ko:"모둠 만들기",tl:"Gumawa ng mga grupo",ha:"Ƙirƙiri ƙungiyoyi",it:"Crea i gruppi",ps:"ډلې جوړې کړئ",ms:"Buat kumpulan",yo:"Ṣe àwọn ẹgbẹ́",ig:"Mee otu"},
+tools_group:{en:"Group",ur:"گروپ",bn:"দল",hi:"समूह",ne:"समूह",sw:"Kundi",ar:"مجموعة",zh:"组",es:"Grupo",fr:"Groupe",pt:"Grupo",ru:"Группа",id:"Kelompok",de:"Gruppe",ja:"グループ",pa:"گروپ",mr:"गट",te:"గుంపు",fa:"گروه",tr:"Grup",ta:"குழு",vi:"Nhóm",ko:"모둠",tl:"Grupo",ha:"Ƙungiya",it:"Gruppo",ps:"ډله",ms:"Kumpulan",yo:"Ẹgbẹ́",ig:"Otu"},
+tools_age:{en:"Age calculator",ur:"عمر کیلکولیٹر",bn:"বয়স ক্যালকুলেটর",hi:"आयु कैलकुलेटर",ne:"उमेर क्यालकुलेटर",sw:"Kikokotoo cha Umri",ar:"حاسبة العمر",zh:"年龄计算器",es:"Calculadora de edad",fr:"Calculateur d'âge",pt:"Calculadora de idade",ru:"Калькулятор возраста",id:"Kalkulator umur",de:"Altersrechner",ja:"年齢計算",pa:"عمر کیلکولیٹر",mr:"वय कॅल्क्युलेटर",te:"వయస్సు కాలిక్యులేటర్",fa:"محاسبه‌گر سن",tr:"Yaş hesaplayıcı",ta:"வயது கால்குலேட்டர்",vi:"Máy tính tuổi",ko:"나이 계산기",tl:"Calculator ng Edad",ha:"Kalkuleta na Shekaru",it:"Calcolatore di età",ps:"د عمر حساب کوونکی",ms:"Kalkulator umur",yo:"Ẹ̀rọ ìṣirò ọjọ́-orí",ig:"Ihe mgbako afọ"},
+tools_band:{en:"Age band for this class",ur:"اس جماعت کی عمر کی حد",bn:"এই শ্রেণির বয়সের সীমা",hi:"इस कक्षा की आयु सीमा",ne:"यो कक्षाको उमेर सीमा",sw:"Kiwango cha umri cha darasa hili",ar:"الفئة العمرية لهذا الصف",zh:"本班年龄段",es:"Rango de edad de esta clase",fr:"Tranche d'âge de cette classe",pt:"Faixa etária desta turma",ru:"Возрастной диапазон этого класса",id:"Kelompok usia kelas ini",de:"Altersgruppe dieser Klasse",ja:"このクラスの年齢区分",pa:"اس کلاس دی عمر دی حد",mr:"या वर्गाची वयोमर्यादा",te:"ఈ తరగతి వయస్సు పరిధి",fa:"بازه سنی این کلاس",tr:"Bu sınıfın yaş aralığı",ta:"இந்த வகுப்பின் வயது வரம்பு",vi:"Nhóm tuổi của lớp này",ko:"이 반의 연령 구간",tl:"Banda ng edad ng klaseng ito",ha:"Rukunin shekarun wannan aji",it:"Fascia di età di questa classe",ps:"د دې ټولګي د عمر کچه",ms:"Julat umur kelas ini",yo:"Ẹgbẹ́ ọjọ́-orí kíláàsì yìí",ig:"Otu afọ nke klas a"},
+tools_workdays:{en:"Working days counter",ur:"کام کے دن گننے والا",bn:"কর্মদিবস গণনা",hi:"कार्य दिवस गिनती",ne:"कार्य दिन गणना",sw:"Kihesabu cha Siku za Kazi",ar:"عدّاد أيام العمل",zh:"工作日计数",es:"Contador de días laborables",fr:"Compteur de jours ouvrés",pt:"Contador de dias úteis",ru:"Счётчик рабочих дней",id:"Penghitung hari kerja",de:"Arbeitstage-Zähler",ja:"営業日カウンター",pa:"کم دے دن گنن والا",mr:"कामाचे दिवस मोजणी",te:"పని దినాల లెక్క",fa:"شمارنده روزهای کاری",tr:"Çalışma günü sayacı",ta:"வேலை நாட்கள் எண்ணி",vi:"Bộ đếm ngày làm việc",ko:"근무일 계산기",tl:"Tagabilang ng araw ng trabaho",ha:"Ƙididdigar kwanakin aiki",it:"Contatore di giorni lavorativi",ps:"د کاري ورځو شمېرونکی",ms:"Pembilang hari bekerja",yo:"Ẹ̀rọ kíkà ọjọ́ iṣẹ́",ig:"Onye na-agụta ụbọchị ọrụ"},
+tools_start:{en:"Start date",ur:"شروع کی تاریخ",bn:"শুরুর তারিখ",hi:"प्रारंभ तिथि",ne:"सुरु मिति",sw:"Tarehe ya kuanza",ar:"تاريخ البدء",zh:"开始日期",es:"Fecha de inicio",fr:"Date de début",pt:"Data de início",ru:"Дата начала",id:"Tanggal mulai",de:"Startdatum",ja:"開始日",pa:"شروع دی تاریخ",mr:"सुरुवातीची तारीख",te:"ప్రారంభ తేదీ",fa:"تاریخ شروع",tr:"Başlangıç tarihi",ta:"தொடக்க தேதி",vi:"Ngày bắt đầu",ko:"시작일",tl:"Petsa ng simula",ha:"Ranar farawa",it:"Data di inizio",ps:"د پیل نېټه",ms:"Tarikh mula",yo:"Ọjọ́ ìbẹ̀rẹ̀",ig:"Ụbọchị mmalite"},
+tools_end:{en:"End date",ur:"ختم ہونے کی تاریخ",bn:"শেষের তারিখ",hi:"समाप्ति तिथि",ne:"अन्त्य मिति",sw:"Tarehe ya mwisho",ar:"تاريخ الانتهاء",zh:"结束日期",es:"Fecha de fin",fr:"Date de fin",pt:"Data de fim",ru:"Дата окончания",id:"Tanggal selesai",de:"Enddatum",ja:"終了日",pa:"ختم ہون دی تاریخ",mr:"शेवटची तारीख",te:"ముగింపు తేదీ",fa:"تاریخ پایان",tr:"Bitiş tarihi",ta:"முடிவு தேதி",vi:"Ngày kết thúc",ko:"종료일",tl:"Petsa ng pagtatapos",ha:"Ranar ƙarewa",it:"Data di fine",ps:"د پای نېټه",ms:"Tarikh tamat",yo:"Ọjọ́ ìparí",ig:"Ụbọchị ngwụcha"},
+tools_workdays_is:{en:"Working days",ur:"کام کے دن",bn:"কর্মদিবস",hi:"कार्य दिवस",ne:"कार्य दिनहरू",sw:"Siku za kazi",ar:"أيام العمل",zh:"工作日",es:"Días laborables",fr:"Jours ouvrés",pt:"Dias úteis",ru:"Рабочие дни",id:"Hari kerja",de:"Arbeitstage",ja:"営業日",pa:"کم دے دن",mr:"कामाचे दिवस",te:"పని దినాలు",fa:"روزهای کاری",tr:"Çalışma günleri",ta:"வேலை நாட்கள்",vi:"Ngày làm việc",ko:"근무일",tl:"Mga araw ng trabaho",ha:"Kwanakin aiki",it:"Giorni lavorativi",ps:"کاري ورځې",ms:"Hari bekerja",yo:"Ọjọ́ iṣẹ́",ig:"Ụbọchị ọrụ"},
+tools_sundays:{en:"Sundays are not counted",ur:"اتوار شمار نہیں ہوتے",bn:"রবিবার গণনা হয় না",hi:"रविवार नहीं गिने जाते",ne:"आइतबार गनिँदैन",sw:"Jumapili hazihesabiwi",ar:"لا تُحتسب أيام الأحد",zh:"星期日不计入",es:"Los domingos no se cuentan",fr:"Les dimanches ne comptent pas",pt:"Os domingos não contam",ru:"Воскресенья не считаются",id:"Hari Minggu tidak dihitung",de:"Sonntage zählen nicht",ja:"日曜日は数えません",pa:"ایوار نئیں گنے جاندے",mr:"रविवार मोजले जात नाहीत",te:"ఆదివారాలు లెక్కించబడవు",fa:"یکشنبه‌ها حساب نمی‌شوند",tr:"Pazar günleri sayılmaz",ta:"ஞாயிற்றுக்கிழமைகள் கணக்கிடப்படுவதில்லை",vi:"Chủ nhật không được tính",ko:"일요일은 세지 않습니다",tl:"Hindi binibilang ang mga Linggo",ha:"Ba a ƙidaya Lahadi",it:"Le domeniche non contano",ps:"یکشنبې نه شمېرل کېږي",ms:"Ahad tidak dikira",yo:"Ọjọ́ Àìkú kò ní kà",ig:"A naghị agụ Sọnde"},
+tools_exp_search:{en:"Search a topic",ur:"موضوع تلاش کریں",bn:"বিষয় খুঁজুন",hi:"विषय खोजें",ne:"विषय खोज्नुहोस्",sw:"Tafuta mada",ar:"ابحث عن موضوع",zh:"搜索主题",es:"Buscar un tema",fr:"Rechercher un sujet",pt:"Pesquisar um tema",ru:"Найти тему",id:"Cari topik",de:"Thema suchen",ja:"トピックを検索",pa:"موضوع لبھو",mr:"विषय शोधा",te:"అంశాన్ని వెతకండి",fa:"یک موضوع جستجو کن",tr:"Konu ara",ta:"தலைப்பைத் தேடு",vi:"Tìm một chủ đề",ko:"주제 검색",tl:"Maghanap ng paksa",ha:"Nemi batu",it:"Cerca un argomento",ps:"یوه موضوع ولټوئ",ms:"Cari topik",yo:"Wá àkòrí kan",ig:"Chọọ isiokwu"},
+tools_exp_more:{en:"Tell me more",ur:"مزید بتائیں",bn:"আরও বলুন",hi:"और बताएं",ne:"थप भन्नुहोस्",sw:"Niambie zaidi",ar:"أخبرني المزيد",zh:"告诉我更多",es:"Cuéntame más",fr:"Dis-m'en plus",pt:"Conta-me mais",ru:"Расскажи ещё",id:"Ceritakan lebih lanjut",de:"Erzähl mir mehr",ja:"もっと教えて",pa:"ہور دسو",mr:"अधिक सांगा",te:"ఇంకా చెప్పండి",fa:"بیشتر بگو",tr:"Bana daha fazlasını anlat",ta:"மேலும் சொல்",vi:"Kể thêm cho tôi",ko:"더 알려줘",tl:"Sabihin mo pa",ha:"Faɗa mini ƙari",it:"Dimmi di più",ps:"نور راته ووایه",ms:"Beritahu saya lagi",yo:"Sọ sí i",ig:"Gwa m karịa"},
+tools_sub_maths:{en:"Maths",ur:"ریاضی",bn:"গণিত",hi:"गणित",ne:"गणित",sw:"Hisabati",ar:"الرياضيات",zh:"数学",es:"Matemáticas",fr:"Maths",pt:"Matemática",ru:"Математика",id:"Matematika",de:"Mathe",ja:"算数・数学",pa:"ریاضی",mr:"गणित",te:"గణితం",fa:"ریاضی",tr:"Matematik",ta:"கணிதம்",vi:"Toán",ko:"수학",tl:"Math",ha:"Lissafi",it:"Matematica",ps:"ریاضی",ms:"Matematik",yo:"Ìṣirò",ig:"Mgbakọ"},
+tools_sub_english:{en:"English",ur:"انگریزی",bn:"ইংরেজি",hi:"अंग्रेज़ी",ne:"अङ्ग्रेजी",sw:"Kiingereza",ar:"الإنجليزية",zh:"英语",es:"Inglés",fr:"Anglais",pt:"Inglês",ru:"Английский",id:"Bahasa Inggris",de:"Englisch",ja:"英語",pa:"انگریزی",mr:"इंग्रजी",te:"ఇంగ్లీష్",fa:"انگلیسی",tr:"İngilizce",ta:"ஆங்கிலம்",vi:"Tiếng Anh",ko:"영어",tl:"Ingles",ha:"Turanci",it:"Inglese",ps:"انګلیسي",ms:"Bahasa Inggeris",yo:"Èdè Gẹ̀ẹ́sì",ig:"Bekee"},
+tools_sub_science:{en:"Science",ur:"سائنس",bn:"বিজ্ঞান",hi:"विज्ञान",ne:"विज्ञान",sw:"Sayansi",ar:"العلوم",zh:"科学",es:"Ciencias",fr:"Sciences",pt:"Ciências",ru:"Естествознание",id:"Sains",de:"Naturwissenschaft",ja:"理科",pa:"سائنس",mr:"विज्ञान",te:"సైన్స్",fa:"علوم",tr:"Fen Bilimleri",ta:"அறிவியல்",vi:"Khoa học",ko:"과학",tl:"Agham",ha:"Kimiyya",it:"Scienze",ps:"ساینس",ms:"Sains",yo:"Sáyẹ́nsì",ig:"Sayensị"},
+tools_sub_islamiat:{en:"Islamiat",ur:"اسلامیات",bn:"ইসলামিয়াত",hi:"इस्लामियात",ne:"इस्लामियत",sw:"Elimu ya Kiislamu",ar:"الإسلاميات",zh:"伊斯兰学",es:"Islamiat",fr:"Islamiat",pt:"Islamiat",ru:"Исламоведение",id:"Pendidikan Agama Islam",de:"Islamiat",ja:"イスラーム学",pa:"اسلامیات",mr:"इस्लामियात",te:"ఇస్లామియత్",fa:"اسلامیات",tr:"Din Bilgisi",ta:"இஸ்லாமியத்",vi:"Hồi giáo",ko:"이슬람학",tl:"Islamiat",ha:"Addinin Musulunci",it:"Islamiat",ps:"اسلامیات",ms:"Pendidikan Islam",yo:"Ìmọ̀ Ẹ̀sìn Mùsùlùmí",ig:"Islamiat"},
+tools_sub_urdu:{en:"Urdu",ur:"اردو",bn:"উর্দু",hi:"उर्दू",ne:"उर्दू",sw:"Kiurdu",ar:"الأردية",zh:"乌尔都语",es:"Urdu",fr:"Ourdou",pt:"Urdu",ru:"Урду",id:"Bahasa Urdu",de:"Urdu",ja:"ウルドゥー語",pa:"اردو",mr:"उर्दू",te:"ఉర్దూ",fa:"اردو",tr:"Urduca",ta:"உருது",vi:"Tiếng Urdu",ko:"우르두어",tl:"Urdu",ha:"Urdu",it:"Urdu",ps:"اردو",ms:"Bahasa Urdu",yo:"Èdè Urdu",ig:"Urdu"},
+tools_sub_social:{en:"Social Studies",ur:"معاشرتی علوم",bn:"সমাজবিজ্ঞান",hi:"सामाजिक अध्ययन",ne:"सामाजिक अध्ययन",sw:"Masomo ya Jamii",ar:"الدراسات الاجتماعية",zh:"社会研究",es:"Estudios sociales",fr:"Études sociales",pt:"Estudos sociais",ru:"Обществоведение",id:"Ilmu Sosial",de:"Sozialkunde",ja:"社会科",pa:"معاشرتی علوم",mr:"सामाजिक अध्ययन",te:"సామాజిక అధ్యయనాలు",fa:"مطالعات اجتماعی",tr:"Sosyal Bilgiler",ta:"சமூக அறிவியல்",vi:"Nghiên cứu xã hội",ko:"사회",tl:"Araling Panlipunan",ha:"Nazarin Al'umma",it:"Studi sociali",ps:"ټولنیزې زده کړې",ms:"Kajian Sosial",yo:"Ẹ̀kọ́ Àwùjọ",ig:"Ọmụmụ ọha"},
+tools_sub_art:{en:"Art",ur:"آرٹ",bn:"শিল্প",hi:"कला",ne:"कला",sw:"Sanaa",ar:"الفن",zh:"美术",es:"Arte",fr:"Art",pt:"Arte",ru:"Искусство",id:"Seni",de:"Kunst",ja:"美術",pa:"آرٹ",mr:"कला",te:"కళ",fa:"هنر",tr:"Sanat",ta:"கலை",vi:"Mỹ thuật",ko:"미술",tl:"Sining",ha:"Fasaha",it:"Arte",ps:"هنر",ms:"Seni",yo:"Iṣẹ́ ọnà",ig:"Nka"},
+tools_all:{en:"All",ur:"سب",bn:"সব",hi:"सभी",ne:"सबै",sw:"Zote",ar:"الكل",zh:"全部",es:"Todo",fr:"Tout",pt:"Tudo",ru:"Все",id:"Semua",de:"Alle",ja:"すべて",pa:"سب",mr:"सर्व",te:"అన్నీ",fa:"همه",tr:"Tümü",ta:"அனைத்தும்",vi:"Tất cả",ko:"전체",tl:"Lahat",ha:"Duka",it:"Tutto",ps:"ټول",ms:"Semua",yo:"Gbogbo",ig:"Niile"},
+tools_exp_none:{en:"No topic matches your search.",ur:"آپ کی تلاش سے کوئی موضوع نہیں ملا۔",bn:"আপনার অনুসন্ধানে কোনো বিষয় মেলেনি।",hi:"आपकी खोज से कोई विषय नहीं मिला।",ne:"तपाईंको खोजसँग कुनै विषय मिलेन।",sw:"Hakuna mada inayolingana na utafutaji wako.",ar:"لا يوجد موضوع يطابق بحثك.",zh:"没有与您的搜索匹配的主题。",es:"Ningún tema coincide con tu búsqueda.",fr:"Aucun sujet ne correspond à votre recherche.",pt:"Nenhum tema corresponde à tua pesquisa.",ru:"Ни одна тема не подходит под поиск.",id:"Tidak ada topik yang cocok dengan pencarian Anda.",de:"Kein Thema passt zu Ihrer Suche.",ja:"検索に合うトピックがありません。",pa:"تہاڈی تلاش نال کوئی موضوع نئیں ملیا۔",mr:"तुमच्या शोधाशी कोणताही विषय जुळत नाही.",te:"మీ శోధనకు ఏ అంశం సరిపోలలేదు.",fa:"هیچ موضوعی با جستجوی شما مطابقت ندارد.",tr:"Aramanızla eşleşen konu yok.",ta:"உங்கள் தேடலுக்கு எந்தத் தலைப்பும் பொருந்தவில்லை.",vi:"Không có chủ đề nào khớp với tìm kiếm của bạn.",ko:"검색과 일치하는 주제가 없습니다.",tl:"Walang paksang tumutugma sa iyong paghahanap.",ha:"Babu wani batu da ya dace da bincikenku.",it:"Nessun argomento corrisponde alla tua ricerca.",ps:"هېڅ موضوع ستاسو له لټون سره سمون نه خوري.",ms:"Tiada topik yang sepadan dengan carian anda.",yo:"Kò sí àkòrí tó bá ìwádìí rẹ mu.",ig:"Ọ dịghị isiokwu dabara na nchọ gị."},
+tools_pract_need:{en:"What you need",ur:"آپ کو کیا چاہیے",bn:"যা লাগবে",hi:"आपको क्या चाहिए",ne:"तपाईंलाई के चाहिन्छ",sw:"Unachohitaji",ar:"ما تحتاجه",zh:"你需要什么",es:"Lo que necesitas",fr:"Ce qu'il faut",pt:"O que precisas",ru:"Что понадобится",id:"Yang kamu butuhkan",de:"Was du brauchst",ja:"必要なもの",pa:"توانوں کی چاہیدا",mr:"तुम्हाला काय लागेल",te:"మీకు ఏం కావాలి",fa:"چه چیزی لازم داری",tr:"Neye ihtiyacın var",ta:"உனக்கு என்ன தேவை",vi:"Bạn cần gì",ko:"필요한 것",tl:"Ano ang kailangan mo",ha:"Abin da kake buƙata",it:"Cosa ti serve",ps:"څه ته اړتیا لرې",ms:"Apa yang anda perlukan",yo:"Kí ni o nílò",ig:"Ihe ị chọrọ"},
+tools_pract_steps:{en:"Steps",ur:"مراحل",bn:"ধাপ",hi:"चरण",ne:"चरणहरू",sw:"Hatua",ar:"الخطوات",zh:"步骤",es:"Pasos",fr:"Étapes",pt:"Passos",ru:"Шаги",id:"Langkah",de:"Schritte",ja:"手順",pa:"مراحل",mr:"पायऱ्या",te:"దశలు",fa:"مراحل",tr:"Adımlar",ta:"படிகள்",vi:"Các bước",ko:"단계",tl:"Mga hakbang",ha:"Matakai",it:"Passaggi",ps:"ګامونه",ms:"Langkah",yo:"Àwọn ìgbésẹ̀",ig:"Usoro"},
+tools_pract_happens:{en:"What happens",ur:"کیا ہوتا ہے",bn:"কী হয়",hi:"क्या होता है",ne:"के हुन्छ",sw:"Nini hutokea",ar:"ماذا يحدث",zh:"会发生什么",es:"Qué pasa",fr:"Ce qui se passe",pt:"O que acontece",ru:"Что происходит",id:"Apa yang terjadi",de:"Was passiert",ja:"何が起こるか",pa:"کی ہوندا اے",mr:"काय होते",te:"ఏమి జరుగుతుంది",fa:"چه اتفاقی می‌افتد",tr:"Ne olur",ta:"என்ன நடக்கும்",vi:"Điều gì xảy ra",ko:"무슨 일이 일어나는가",tl:"Ano ang nangyayari",ha:"Me ke faruwa",it:"Cosa succede",ps:"څه پېښېږي",ms:"Apa yang berlaku",yo:"Kí ni ó ń ṣẹlẹ̀",ig:"Gịnị na-eme"},
+tools_pract_why:{en:"Why it happens",ur:"یہ کیوں ہوتا ہے",bn:"কেন হয়",hi:"ऐसा क्यों होता है",ne:"यो किन हुन्छ",sw:"Kwa nini hutokea",ar:"لماذا يحدث",zh:"为什么会这样",es:"Por qué pasa",fr:"Pourquoi ça arrive",pt:"Porque acontece",ru:"Почему так происходит",id:"Mengapa terjadi",de:"Warum das passiert",ja:"なぜ起こるか",pa:"ایہہ کیوں ہوندا اے",mr:"हे का होते",te:"ఇది ఎందుకు జరుగుతుంది",fa:"چرا اتفاق می‌افتد",tr:"Neden olur",ta:"ஏன் நடக்கிறது",vi:"Vì sao xảy ra",ko:"왜 일어나는가",tl:"Bakit ito nangyayari",ha:"Me ya sa yake faruwa",it:"Perché succede",ps:"ولې پېښېږي",ms:"Mengapa ia berlaku",yo:"Kí ló dé tí ó ń ṣẹlẹ̀",ig:"Gịnị mere o ji eme"},
+});
+
+Object.assign(T,{
+tools_days:{en:"days",ur:"دن",bn:"দিন",hi:"दिन",ne:"दिनहरू",sw:"siku",ar:"أيام",zh:"天",es:"días",fr:"jours",pt:"dias",ru:"дней",id:"hari",de:"Tage",ja:"日",pa:"دن",mr:"दिवस",te:"రోజులు",fa:"روز",tr:"gün",ta:"நாட்கள்",vi:"ngày",ko:"일",tl:"araw",ha:"kwanaki",it:"giorni",ps:"ورځې",ms:"hari",yo:"ọjọ́",ig:"ụbọchị"},
+});
+
+const TABS=[["home","nav_home"],["adm","nav_adm"],["dob","nav_dob"],["exam","nav_exam"],["result","nav_result"],["att","nav_att"],["fee","nav_fee"],["staff","nav_staff"],["bc","nav_bc"],["hw","nav_hw"],["tr","nav_transport"],["lib","nav_library"],["cmp","nav_complaints"],["tt","nav_tt"],["he","nav_highered"],["lab","nav_lab"],["cert","nav_cert"],["tools","nav_tools"],["admin","nav_admin"],["settings","nav_settings"]];
 /* Which tab each module toggle controls (Round 22). Shared by renderTabs and quickLinksHTML. */
 const TAB_ON={fee:feesOn,att:attOn,staff:staffOn,bc:bcOn,hw:hwOn,tr:transportOn,lib:libOn,cmp:cmpOn,tt:ttOn,lab:labOn,cert:certOn,he:heOn,admin:function(){return typeof Cloud!=="undefined"&&!!Cloud.isSuperAdmin;}};
 function renderTabs(){
@@ -16124,8 +16267,8 @@ function render(){
   const demoBanner=demoMode?'<div class="msg warnm" style="margin:.5rem 0">🎓 <b>'+esc(t("demo_school"))+'</b> — '+esc(t("demo_banner"))+' <button type="button" class="btn btn-sm" id="demo-leave" style="margin-left:.4rem">'+esc(t("demo_leave"))+"</button></div>":"";
   v.innerHTML = demoBanner+roBanner+(curTab==="home"?viewHome():curTab==="adm"?viewAdm():curTab==="dob"?viewDob():
     curTab==="exam"?viewExam():curTab==="result"?viewResult():curTab==="att"?viewAtt():curTab==="fee"?viewFee():curTab==="staff"?viewStaff():curTab==="bc"?viewBroadcast():curTab==="hw"?viewHomework():curTab==="tr"?viewTransport():curTab==="lib"?viewLibrary():curTab==="cmp"?viewComplaints():curTab==="tt"?viewTimetable():curTab==="he"?viewHigherEd():curTab==="lab"?viewLab():
-    curTab==="cert"?viewCert():curTab==="admin"?viewAdmin():viewSettings());
-  const fns={home:afterHome,adm:afterAdm,dob:afterDob,exam:afterExam,result:afterResult,att:afterAtt,fee:afterFee,staff:afterStaff,bc:afterBroadcast,hw:afterHomework,tr:afterTransport,lib:afterLibrary,cmp:afterComplaints,tt:afterTimetable,he:afterHigherEd,lab:afterLab,cert:afterCert,admin:afterAdmin,settings:afterSettings};
+    curTab==="tools"?viewTools():curTab==="cert"?viewCert():curTab==="admin"?viewAdmin():viewSettings());
+  const fns={home:afterHome,adm:afterAdm,dob:afterDob,exam:afterExam,result:afterResult,att:afterAtt,fee:afterFee,staff:afterStaff,bc:afterBroadcast,hw:afterHomework,tr:afterTransport,lib:afterLibrary,cmp:afterComplaints,tt:afterTimetable,he:afterHigherEd,lab:afterLab,cert:afterCert,tools:afterTools,admin:afterAdmin,settings:afterSettings};
   if(fns[curTab])fns[curTab]();
   const dl=$("demo-leave");if(dl)dl.onclick=function(){leaveDemo();render();};
   v.scrollTop=0;if(typeof window!=="undefined")window.scrollTo(0,0);
@@ -19669,6 +19812,767 @@ function seedDemo(){
   Store.save();
 }
 /* ================= public API + bootstrap ================= */
+
+/* ================= Round 68: Teacher Tools =================
+   One tab, four independent modules. Calculator, solvers and theorem
+   solvers are pure functions (node-testable, exposed on SRS). The
+   explainer/practicals/theorem text is local EN+UR data. Only
+   "Tell me more" needs a network call (Gemini, via geminiCall). */
+let toolsCalcExpr="", toolsCalcDeg=true, toolsCalcMem=0, toolsCalcHist=[];
+let toolsPickState={cls:"",picked:[]};
+let toolsExpQuery="", toolsExpSub="all", toolsExpMore={};
+let toolsStepsOpen={};
+function toolsL(en,ur){return lang()==="ur"?ur:en;}
+function toolsSteps(pairs){return pairs.map(function(p){return lang()==="ur"?p[1]:p[0];});}
+function toolsFmtNum(v){if(v===0)return "0";var a=Math.abs(v);if(a>=1e12||a<1e-9)return v.toExponential(6).replace(/\.?0+e/,"e");return String(Number(v.toPrecision(10)));}
+function toolsMoney(v){return (Math.round(v*100)/100).toFixed(2);}
+function toolsGcd(a,b){a=Math.abs(Math.round(a));b=Math.abs(Math.round(b));while(b){var t=a%b;a=b;b=t;}return a||1;}
+function toolsNum(v){if(v===null||v===undefined||String(v).trim()==="")return null;var n=Number(v);return isFinite(n)?n:null;}
+/* ---- scientific calculator: recursive-descent parser, never eval() ---- */
+function toolsCalcFact(n){if(n<0||n>170||Math.floor(n)!==n){var e=new Error("fact");e.code="fact";throw e;}var r=1;for(var k=2;k<=n;k++)r*=k;return r;}
+function toolsCalcFn(name,a,deg){
+  var rad=deg?a*Math.PI/180:a, v;
+  if(name==="sin")return Math.sin(rad);
+  if(name==="cos")return Math.cos(rad);
+  if(name==="tan"){v=Math.tan(rad);if(!isFinite(v)||Math.abs(v)>1e15){var e=new Error("bad");e.code="bad";throw e;}return v;}
+  if(name==="asin"){if(a<-1||a>1){var e2=new Error("bad");e2.code="bad";throw e2;}v=Math.asin(a);return deg?v*180/Math.PI:v;}
+  if(name==="acos"){if(a<-1||a>1){var e3=new Error("bad");e3.code="bad";throw e3;}v=Math.acos(a);return deg?v*180/Math.PI:v;}
+  if(name==="atan"){v=Math.atan(a);return deg?v*180/Math.PI:v;}
+  if(name==="log"){if(a<=0){var e4=new Error("bad");e4.code="bad";throw e4;}return Math.log10(a);}
+  if(name==="ln"){if(a<=0){var e5=new Error("bad");e5.code="bad";throw e5;}return Math.log(a);}
+  if(name==="exp")return Math.exp(a);
+  if(name==="sqrt"){if(a<0){var e6=new Error("bad");e6.code="bad";throw e6;}return Math.sqrt(a);}
+  if(name==="cbrt")return Math.cbrt(a);
+  if(name==="inv"){if(a===0){var e7=new Error("div0");e7.code="div0";throw e7;}return 1/a;}
+  var e8=new Error("bad");e8.code="bad";throw e8;
+}
+function toolsCalcEval(src,deg){
+  var s=String(src||""), i=0;
+  function err(c){var e=new Error(c);e.code=c;throw e;}
+  function skip(){while(i<s.length&&/\s/.test(s[i]))i++;}
+  function parseExpr(){var v=parseTerm();for(;;){skip();var c=s[i];if(c==="+"||c==="-"){i++;var r=parseTerm();v=c==="+"?v+r:v-r;}else break;}return v;}
+  function parseTerm(){var v=parseFactor();for(;;){skip();var c=s[i];if(c==="*"||c==="/"){i++;var r=parseFactor();if(c==="/"){if(r===0)err("div0");v=v/r;}else v=v*r;}else if(c==="("||(c&&/[0-9.]/.test(c))||c==="π"){var r2=parseFactor();v=v*r2;}else break;}return v;}
+  function parseFactor(){var v=parseUnary();skip();if(s[i]==="^"){i++;var e=parseFactor();v=Math.pow(v,e);}return v;}
+  function parseUnary(){skip();var c=s[i];if(c==="-"){i++;return -parseUnary();}if(c==="+"){i++;return parseUnary();}return parsePostfix();}
+  function parsePostfix(){var v=parsePrimary();for(;;){skip();var c=s[i];if(c==="!"){i++;v=toolsCalcFact(v);}else if(c==="%"){i++;v=v/100;}else if(c==="²"){i++;v=v*v;}else if(c==="³"){i++;v=v*v*v;}else break;}return v;}
+  function parsePrimary(){
+    skip();var c=s[i];
+    if(c==="("){i++;var v=parseExpr();skip();if(s[i]!==")")err("brackets");i++;return v;}
+    if(c&&/[0-9.]/.test(c)){var m=/^[0-9]*\.?[0-9]+/.exec(s.slice(i));if(!m)err("bad");i+=m[0].length;return parseFloat(m[0]);}
+    if(c==="π"){i++;return Math.PI;}
+    var m2=/^[a-zA-Z]+/.exec(s.slice(i));
+    if(m2){var name=m2[0];i+=name.length;
+      if(name==="e")return Math.E;
+      if(name==="pi")return Math.PI;
+      skip();if(s[i]!=="(")err("bad");i++;var a=parseExpr();skip();if(s[i]!==")")err("brackets");i++;
+      return toolsCalcFn(name,a,deg);}
+    err("bad");
+  }
+  var v;
+  try{v=parseExpr();skip();if(i<s.length)err("bad");}catch(e){return {ok:false,err:e.code||"bad"};}
+  if(typeof v!=="number"||!isFinite(v))return {ok:false,err:"bad"};
+  return {ok:true,value:toolsCalcRound(v)};
+}
+function toolsCalcRound(v){if(!isFinite(v))return v;if(Math.abs(v)>=1e10)return v;return Math.round(v*1e10)/1e10;}
+/* ---- maths solvers: short answer first, one-sentence steps ---- */
+function solveArith(a,op,b){
+  if(a==null||b==null)return {ok:false,err:"bad"};
+  if(op==="/"&&b===0)return {ok:false,err:"div0"};
+  var ans, steps, ai=Number.isInteger(a)&&Number.isInteger(b)&&a>=0&&b>=0;
+  if(op==="+"){ans=a+b;
+    if(ai&&a>=10&&b>=10){var o1=a%10+ b%10, t1=Math.floor(a/10)+Math.floor(b/10);
+      steps=toolsSteps([["Add the ones: "+(a%10)+" + "+(b%10)+" = "+o1+".","اکائی جمع کریں: "+(a%10)+" + "+(b%10)+" = "+o1+"۔"],["Add the tens: "+Math.floor(a/10)+" + "+Math.floor(b/10)+" = "+t1+".","دہائی جمع کریں: "+Math.floor(a/10)+" + "+Math.floor(b/10)+" = "+t1+"۔"],["Answer: "+toolsFmtNum(ans)+".","جواب: "+toolsFmtNum(ans)+"۔"]]);
+    }else steps=toolsSteps([[a+" + "+b+" = "+toolsFmtNum(ans)+".",a+" + "+b+" = "+toolsFmtNum(ans)+"۔"]]);
+  }else if(op==="-"){ans=a-b;
+    if(ai&&a>=10&&b>=10&&(a%10)<(b%10)){steps=toolsSteps([["Borrow 1 ten: the ones become "+(a%10+10)+".","ایک دہائی ادھار لیں: اکائی "+(a%10+10)+" ہو جاتی ہے۔"],["Subtract the ones: "+(a%10+10)+" − "+(b%10)+" = "+((a%10+10)-(b%10))+".","اکائی گھٹائیں: "+(a%10+10)+" − "+(b%10)+" = "+((a%10+10)-(b%10))+"۔"],["Subtract the tens: "+(Math.floor(a/10)-1)+" − "+Math.floor(b/10)+" = "+(Math.floor(a/10)-1-Math.floor(b/10))+".","دہائی گھٹائیں: "+(Math.floor(a/10)-1)+" − "+Math.floor(b/10)+" = "+(Math.floor(a/10)-1-Math.floor(b/10))+"۔"],["Answer: "+toolsFmtNum(ans)+".","جواب: "+toolsFmtNum(ans)+"۔"]]);
+    }else steps=toolsSteps([[a+" − "+b+" = "+toolsFmtNum(ans)+".",a+" − "+b+" = "+toolsFmtNum(ans)+"۔"]]);
+  }else if(op==="*"){ans=a*b;
+    if(ai&&b>1&&b<100&&Math.floor(b/10)>0){var d1=b%10,d2=Math.floor(b/10);
+      steps=toolsSteps([["Multiply "+a+" by "+d1+" = "+(a*d1)+".",a+" کو "+d1+" سے ضرب دیں = "+(a*d1)+"۔"],["Multiply "+a+" by "+(d2*10)+" = "+(a*d2*10)+".",a+" کو "+(d2*10)+" سے ضرب دیں = "+(a*d2*10)+"۔"],["Add them: "+(a*d1)+" + "+(a*d2*10)+" = "+ans+".","دونوں جمع کریں: "+(a*d1)+" + "+(a*d2*10)+" = "+ans+"۔"]]);
+    }else steps=toolsSteps([[a+" × "+b+" = "+toolsFmtNum(ans)+".",a+" × "+b+" = "+toolsFmtNum(ans)+"۔"]]);
+  }else{ // division
+    if(ai){var q=Math.floor(a/b), r=a-q*b;ans=q;
+      steps=toolsSteps([["How many "+b+"s in "+a+"? "+q+".",a+" میں "+b+" کتنی بار ہے؟ "+q+"۔"],[a+" ÷ "+b+" = "+q+(r?", remainder "+r:"")+".",a+" ÷ "+b+" = "+q+(r?"، باقی "+r:"")+"۔"]]);
+      return {ok:true,answer:toolsFmtNum(q)+(r?" remainder "+r:""),steps:steps};
+    }
+    ans=a/b;steps=toolsSteps([[a+" ÷ "+b+" = "+toolsFmtNum(ans)+".",a+" ÷ "+b+" = "+toolsFmtNum(ans)+"۔"]]);
+  }
+  return {ok:true,answer:toolsFmtNum(ans),steps:steps};
+}
+function toolsFmtFrac(n,d){
+  if(d<0){n=-n;d=-d;}
+  var g=toolsGcd(n,d);n=n/g;d=d/g;
+  if(d===1)return ""+n;
+  if(Math.abs(n)>d){var w=Math.trunc(n/d), r=Math.abs(n%d);return n+"/"+d+" = "+w+" "+r+"/"+d;}
+  return n+"/"+d;
+}
+function solveFraction(n1,d1,n2,d2,op){
+  if(n1==null||d1==null||n2==null||d2==null)return {ok:false,err:"bad"};
+  if(!Number.isInteger(n1)||!Number.isInteger(d1)||!Number.isInteger(n2)||!Number.isInteger(d2))return {ok:false,err:"bad"};
+  if(d1===0||d2===0)return {ok:false,err:"div0"};
+  if(op==="/"&&n2===0)return {ok:false,err:"div0"};
+  var steps, ans;
+  if(op==="+"||op==="-"){
+    var lcm=d1*d2/toolsGcd(d1,d2), m1=n1*(lcm/d1), m2=n2*(lcm/d2), r=op==="+"?m1+m2:m1-m2;
+    steps=toolsSteps([["Make the bottoms the same: "+lcm+".","نیچے والے نمبر ایک جیسے بنائیں: "+lcm+"۔"],[n1+"/"+d1+" = "+m1+"/"+lcm+", "+n2+"/"+d2+" = "+m2+"/"+lcm+".",n1+"/"+d1+" = "+m1+"/"+lcm+"، "+n2+"/"+d2+" = "+m2+"/"+lcm+"۔"],[(op==="+"?"Add the tops: ":"Subtract the tops: ")+m1+(op==="+"?" + ":" − ")+m2+" = "+r+".",(op==="+"?"اوپر والے نمبر جمع کریں: ":"اوپر والے نمبر گھٹائیں: ")+m1+(op==="+"?" + ":" − ")+m2+" = "+r+"۔"],["Simplify: "+toolsFmtFrac(r,lcm)+".","سادہ کریں: "+toolsFmtFrac(r,lcm)+"۔"]]);
+    ans=toolsFmtFrac(r,lcm);
+  }else if(op==="*"){
+    var rn=n1*n2, rd=d1*d2;
+    steps=toolsSteps([["Top × top: "+n1+" × "+n2+" = "+rn+".","اوپر × اوپر: "+n1+" × "+n2+" = "+rn+"۔"],["Bottom × bottom: "+d1+" × "+d2+" = "+rd+".","نیچے × نیچے: "+d1+" × "+d2+" = "+rd+"۔"],["Simplify: "+toolsFmtFrac(rn,rd)+".","سادہ کریں: "+toolsFmtFrac(rn,rd)+"۔"]]);
+    ans=toolsFmtFrac(rn,rd);
+  }else{
+    var rn2=n1*d2, rd2=d1*n2;
+    steps=toolsSteps([["Flip the second fraction: "+n2+"/"+d2+" becomes "+d2+"/"+n2+".","دوسری کسر الٹ دیں: "+n2+"/"+d2+" بن جاتی ہے "+d2+"/"+n2+"۔"],["Multiply: "+n1+"/"+d1+" × "+d2+"/"+n2+" = "+rn2+"/"+rd2+".","ضرب دیں: "+n1+"/"+d1+" × "+d2+"/"+n2+" = "+rn2+"/"+rd2+"۔"],["Simplify: "+toolsFmtFrac(rn2,rd2)+".","سادہ کریں: "+toolsFmtFrac(rn2,rd2)+"۔"]]);
+    ans=toolsFmtFrac(rn2,rd2);
+  }
+  return {ok:true,answer:ans,steps:steps};
+}
+function solvePercent(kind,x,y){
+  if(x==null||y==null)return {ok:false,err:"bad"};
+  var ans, steps;
+  if(kind==="of"){ans=x*y/100;
+    steps=toolsSteps([[x+"% of "+y+" = "+x+" ÷ 100 × "+y+" = "+toolsFmtNum(ans)+".",y+" کا "+x+"% = "+x+" ÷ 100 × "+y+" = "+toolsFmtNum(ans)+"۔"]]);
+  }else if(kind==="what"){if(y===0)return {ok:false,err:"div0"};ans=x/y*100;
+    steps=toolsSteps([[x+" out of "+y+".",y+" میں سے "+x+"۔"],[x+" ÷ "+y+" × 100 = "+toolsFmtNum(ans)+"%.",x+" ÷ "+y+" × 100 = "+toolsFmtNum(ans)+"%۔"]]);
+  }else if(kind==="inc"){var inc=y*x/100;ans=y+inc;
+    steps=toolsSteps([["Increase = "+y+" × "+x+" ÷ 100 = "+toolsFmtNum(inc)+".","اضافہ = "+y+" × "+x+" ÷ 100 = "+toolsFmtNum(inc)+"۔"],["New value = "+y+" + "+toolsFmtNum(inc)+" = "+toolsFmtNum(ans)+".","نئی قیمت = "+y+" + "+toolsFmtNum(inc)+" = "+toolsFmtNum(ans)+"۔"]]);
+  }else{var dec=y*x/100;ans=y-dec;
+    steps=toolsSteps([["Decrease = "+y+" × "+x+" ÷ 100 = "+toolsFmtNum(dec)+".","کمی = "+y+" × "+x+" ÷ 100 = "+toolsFmtNum(dec)+"۔"],["New value = "+y+" − "+toolsFmtNum(dec)+" = "+toolsFmtNum(ans)+".","نئی قیمت = "+y+" − "+toolsFmtNum(dec)+" = "+toolsFmtNum(ans)+"۔"]]);
+  }
+  return {ok:true,answer:toolsFmtNum(ans)+(kind==="what"?"%":""),steps:steps};
+}
+function solveHcfLcm(a,b){
+  if(a==null||b==null||!Number.isInteger(a)||!Number.isInteger(b)||a<=0||b<=0)return {ok:false,err:"bad"};
+  var steps=[], x=a, y=b;
+  while(y!==0){var q=Math.floor(x/y), r=x-q*y;
+    steps.push([x+" ÷ "+y+" = "+q+", remainder "+r+".",x+" ÷ "+y+" = "+q+"، باقی "+r+"۔"]);
+    x=y;y=r;}
+  var hcf=x, lcm=a*b/hcf;
+  steps.push(["The last non-zero remainder is the HCF: "+hcf+".","آخری غیر صفر باقی عاد اعظم ہے: "+hcf+"۔"]);
+  steps.push(["LCM = "+a+" × "+b+" ÷ "+hcf+" = "+lcm+".","ذواضعاف اقل = "+a+" × "+b+" ÷ "+hcf+" = "+lcm+"۔"]);
+  return {ok:true,answer:"HCF: "+hcf+" • LCM: "+lcm,steps:toolsSteps(steps)};
+}
+function solveLinear(a,b,c){
+  if(a==null||b==null||c==null)return {ok:false,err:"bad"};
+  if(a===0)return {ok:false,err:"bad"};
+  var x=(c-b)/a, bs=b>=0?"+ "+b:"− "+Math.abs(b), cs=c-b;
+  var steps=toolsSteps([[a+"x "+bs+" = "+c+".",a+"x "+bs+" = "+c+"۔"],[a+"x = "+c+(b>=0?" − ":" + ")+Math.abs(b)+" = "+toolsFmtNum(cs)+".",a+"x = "+c+(b>=0?" − ":" + ")+Math.abs(b)+" = "+toolsFmtNum(cs)+"۔"],["x = "+toolsFmtNum(cs)+" ÷ "+a+" = "+toolsFmtNum(x)+".","x = "+toolsFmtNum(cs)+" ÷ "+a+" = "+toolsFmtNum(x)+"۔"]]);
+  return {ok:true,answer:"x = "+toolsFmtNum(x),steps:steps};
+}
+function solveQuad(a,b,c){
+  if(a==null||b==null||c==null)return {ok:false,err:"bad"};
+  if(a===0)return {ok:false,err:"bad"};
+  var d=b*b-4*a*c;
+  var steps=toolsSteps([["Discriminant = b² − 4ac = "+b+"² − 4 × "+a+" × "+c+" = "+toolsFmtNum(d)+".","ممیز = b² − 4ac = "+b+"² − 4 × "+a+" × "+c+" = "+toolsFmtNum(d)+"۔"]]);
+  if(d<0){steps.push(toolsL("The discriminant is negative, so there is no real root.","ممیز منفی ہے، اس لیے کوئی حقیقی جذر نہیں ہے۔"));return {ok:true,answer:t("tools_no_roots"),steps:steps};}
+  if(d===0){var x=-b/(2*a);steps.push(toolsL("One root: x = −b ÷ 2a = "+toolsFmtNum(x)+".","ایک جذر: x = −b ÷ 2a = "+toolsFmtNum(x)+"۔"));return {ok:true,answer:"x = "+toolsFmtNum(x),steps:steps};}
+  var r=Math.sqrt(d), x1=(-b+r)/(2*a), x2=(-b-r)/(2*a);
+  var lo=Math.min(x1,x2), hi=Math.max(x1,x2);
+  steps.push(toolsL("x = (−b ± √"+toolsFmtNum(d)+") ÷ 2a = "+toolsFmtNum(lo)+" or "+toolsFmtNum(hi)+".","x = (−b ± √"+toolsFmtNum(d)+") ÷ 2a = "+toolsFmtNum(lo)+" یا "+toolsFmtNum(hi)+"۔"));
+  return {ok:true,answer:"x = "+toolsFmtNum(lo)+" or "+toolsFmtNum(hi),steps:steps};
+}
+function solveInterest(p,r,yrs,simple){
+  if(p==null||r==null||yrs==null||p<0||r<0||yrs<0)return {ok:false,err:"bad"};
+  var steps, ans;
+  if(simple){var I=p*r*yrs/100, A=p+I;
+    steps=toolsSteps([["Interest = P × R × T ÷ 100 = "+p+" × "+r+" × "+yrs+" ÷ 100 = "+toolsMoney(I)+".","سود = P × R × T ÷ 100 = "+p+" × "+r+" × "+yrs+" ÷ 100 = "+toolsMoney(I)+"۔"],["Amount = "+p+" + "+toolsMoney(I)+" = "+toolsMoney(A)+".","رقم = "+p+" + "+toolsMoney(I)+" = "+toolsMoney(A)+"۔"]]);
+    ans=t("tools_interest_amt")+": "+toolsMoney(I)+" • "+t("tools_amount")+": "+toolsMoney(A);
+  }else{var A2=p*Math.pow(1+r/100,yrs), I2=A2-p;
+    steps=toolsSteps([["Amount = P × (1 + R ÷ 100)^T = "+p+" × (1 + "+r+" ÷ 100)^"+yrs+" = "+toolsMoney(A2)+".","رقم = P × (1 + R ÷ 100)^T = "+p+" × (1 + "+r+" ÷ 100)^"+yrs+" = "+toolsMoney(A2)+"۔"],["Interest = "+toolsMoney(A2)+" − "+p+" = "+toolsMoney(I2)+".","سود = "+toolsMoney(A2)+" − "+p+" = "+toolsMoney(I2)+"۔"]]);
+    ans=t("tools_interest_amt")+": "+toolsMoney(I2)+" • "+t("tools_amount")+": "+toolsMoney(A2);
+  }
+  return {ok:true,answer:ans,steps:steps};
+}
+function solveShape(shape,d){
+  var need={rectangle:["l","w"],triangle:["b","h","s1","s2"],circle:["r"],cube:["s"],cuboid:["l","w","h"],cylinder:["r","h"]}[shape];
+  if(!need)return {ok:false,err:"bad"};
+  for(var i=0;i<need.length;i++){if(d[need[i]]==null||d[need[i]]<0)return {ok:false,err:"bad"};}
+  var out=[], steps=[];
+  function two(v){return toolsFmtNum(Math.round(v*100)/100);}
+  if(shape==="rectangle"){var A=d.l*d.w, P=2*(d.l+d.w);
+    out.push(t("tools_area")+": "+two(A));out.push(t("tools_perim")+": "+two(P));
+    steps=toolsSteps([["Area = length × width = "+d.l+" × "+d.w+" = "+two(A)+".","رقبہ = لمبائی × چوڑائی = "+d.l+" × "+d.w+" = "+two(A)+"۔"],["Perimeter = 2 × (length + width) = 2 × ("+d.l+" + "+d.w+") = "+two(P)+".","محیط = 2 × (لمبائی + چوڑائی) = 2 × ("+d.l+" + "+d.w+") = "+two(P)+"۔"]]);
+  }else if(shape==="triangle"){var A2=0.5*d.b*d.h, P2=d.b+d.s1+d.s2;
+    out.push(t("tools_area")+": "+two(A2));out.push(t("tools_perim")+": "+two(P2));
+    steps=toolsSteps([["Area = ½ × base × height = ½ × "+d.b+" × "+d.h+" = "+two(A2)+".","رقبہ = ½ × بنیاد × اونچائی = ½ × "+d.b+" × "+d.h+" = "+two(A2)+"۔"],["Perimeter = base + side + side = "+d.b+" + "+d.s1+" + "+d.s2+" = "+two(P2)+".","محیط = بنیاد + طرف + طرف = "+d.b+" + "+d.s1+" + "+d.s2+" = "+two(P2)+"۔"]]);
+  }else if(shape==="circle"){var A3=Math.PI*d.r*d.r, C=2*Math.PI*d.r;
+    out.push(t("tools_area")+": "+two(A3));out.push(t("tools_circum")+": "+two(C));
+    steps=toolsSteps([["Area = π × r² = 3.14 × "+d.r+"² = "+two(A3)+".","رقبہ = π × r² = 3.14 × "+d.r+"² = "+two(A3)+"۔"],["Circumference = 2 × π × r = 2 × 3.14 × "+d.r+" = "+two(C)+".","محیط دائرہ = 2 × π × r = 2 × 3.14 × "+d.r+" = "+two(C)+"۔"]]);
+  }else if(shape==="cube"){var V=Math.pow(d.s,3), S=6*d.s*d.s;
+    out.push(t("tools_vol")+": "+two(V));out.push(t("tools_surf")+": "+two(S));
+    steps=toolsSteps([["Volume = side³ = "+d.s+"³ = "+two(V)+".","حجم = طرف³ = "+d.s+"³ = "+two(V)+"۔"],["Surface area = 6 × side² = 6 × "+d.s+"² = "+two(S)+".","سطحی رقبہ = 6 × طرف² = 6 × "+d.s+"² = "+two(S)+"۔"]]);
+  }else if(shape==="cuboid"){var V2=d.l*d.w*d.h, S2=2*(d.l*d.w+d.l*d.h+d.w*d.h);
+    out.push(t("tools_vol")+": "+two(V2));out.push(t("tools_surf")+": "+two(S2));
+    steps=toolsSteps([["Volume = length × width × height = "+d.l+" × "+d.w+" × "+d.h+" = "+two(V2)+".","حجم = لمبائی × چوڑائی × اونچائی = "+d.l+" × "+d.w+" × "+d.h+" = "+two(V2)+"۔"],["Surface area = 2 × (lw + lh + wh) = "+two(S2)+".","سطحی رقبہ = 2 × (lw + lh + wh) = "+two(S2)+"۔"]]);
+  }else{var V3=Math.PI*d.r*d.r*d.h, S3=2*Math.PI*d.r*(d.r+d.h);
+    out.push(t("tools_vol")+": "+two(V3));out.push(t("tools_surf")+": "+two(S3));
+    steps=toolsSteps([["Volume = π × r² × h = 3.14 × "+d.r+"² × "+d.h+" = "+two(V3)+".","حجم = π × r² × h = 3.14 × "+d.r+"² × "+d.h+" = "+two(V3)+"۔"],["Surface area = 2 × π × r × (r + h) = 2 × 3.14 × "+d.r+" × ("+d.r+" + "+d.h+") = "+two(S3)+".","سطحی رقبہ = 2 × π × r × (r + h) = 2 × 3.14 × "+d.r+" × ("+d.r+" + "+d.h+") = "+two(S3)+"۔"]]);
+  }
+  return {ok:true,answer:out.join(" • "),steps:steps};
+}
+/* ---- unit converter ---- */
+var CONV_UNITS=[
+ ["length","Length","لمبائی",[["mm","Millimetre","ملی میٹر",0.001],["cm","Centimetre","سینٹی میٹر",0.01],["m","Metre","میٹر",1],["km","Kilometre","کلومیٹر",1000],["in","Inch","انچ",0.0254],["ft","Foot","فٹ",0.3048],["yd","Yard","گز",0.9144],["mi","Mile","میل",1609.34]]],
+ ["weight","Weight","وزن",[["mg","Milligram","ملی گرام",0.001],["g","Gram","گرام",1],["kg","Kilogram","کلوگرام",1000],["t","Tonne","ٹن",1000000],["oz","Ounce","اونس",28.3495],["lb","Pound","پاؤنڈ",453.592]]],
+ ["capacity","Capacity","گنجائش",[["ml","Millilitre","ملی لیٹر",0.001],["l","Litre","لیٹر",1],["kl","Kilolitre","کلو لیٹر",1000],["tsp","Teaspoon","چائے کا چمچ",0.005],["tbsp","Tablespoon","کھانے کا چمچ",0.015],["cup","Cup","کپ",0.25],["gal","Gallon","گیلن",3.78541]]],
+ ["area","Area","رقبہ",[["cm2","Square centimetre","مربع سینٹی میٹر",0.0001],["m2","Square metre","مربع میٹر",1],["km2","Square kilometre","مربع کلومیٹر",1000000],["ft2","Square foot","مربع فٹ",0.092903],["acre","Acre","ایکڑ",4046.86],["ha","Hectare","ہیکٹر",10000]]],
+ ["temp","Temperature","درجہ حرارت",[["C","Celsius","سیلسیس"],["F","Fahrenheit","فارن ہائیٹ"],["K","Kelvin","کیلون"]]]
+];
+function toolsConvCat(id){var r=null;CONV_UNITS.forEach(function(c){if(c[0]===id)r=c;});return r;}
+function toolsConvUnit(cat,id){var u=null;var c=toolsConvCat(cat);if(!c)return null;c[3].forEach(function(x){if(x[0]===id)u=x;});return u;}
+function convertUnits(cat,val,from,to){
+  if(!isFinite(val))return{ok:false,err:"bad"};
+  var c=toolsConvCat(cat);if(!c)return{ok:false,err:"bad"};
+  if(cat==="temp"){
+    var c0=from==="F"?(val-32)*5/9:from==="K"?val-273.15:val;
+    var out=to==="F"?c0*9/5+32:to==="K"?c0+273.15:c0;
+    return{ok:true,answer:toolsFmtNum(Math.round(out*100)/100)+" "+to,steps:[toolsL("Change "+from+" to Celsius first, then to "+to+".","پہلے "+from+" کو سیلسیس میں بدلیں، پھر "+to+" میں۔")]};
+  }
+  var f=toolsConvUnit(cat,from),t2=toolsConvUnit(cat,to);
+  if(!f||!t2)return{ok:false,err:"bad"};
+  var base=val*f[3],out=base/t2[3];
+  return{ok:true,answer:toolsFmtNum(Math.round(out*10000)/10000)+" "+to,steps:[toolsL("Multiply by "+f[3]+" to get the base unit, then divide by "+t2[3]+".","بنیادی اکائی پانے کے لیے "+f[3]+" سے ضرب دیں، پھر "+t2[3]+" سے تقسیم کریں۔")]};
+}
+function tablesData(n){var r=[];for(var i=1;i<=10;i++)r.push(n+" × "+i+" = "+(n*i));return r;}
+function tablesAllData(){var r=[];for(var n=2;n<=10;n++)r.push({n:n,rows:tablesData(n)});return r;}
+function tablesPrintHTML(mode,n){
+  var h=schoolHead(t("tools_tables"));
+  if(mode==="all"){for(var k=2;k<=10;k++){h+="<h3>"+k+"</h3><p>"+tablesData(k).join("<br>")+"</p>";}}
+  else h+="<h3>"+n+"</h3><p>"+tablesData(n).join("<br>")+"</p>";
+  return h;
+}
+/* ---- class utilities (pure) ---- */
+function countWorkingDays(s,e){
+  var p1=String(s||"").slice(0,10).split("-").map(Number), p2=String(e||"").slice(0,10).split("-").map(Number);
+  var d1=new Date(p1[0],p1[1]-1,p1[2]), d2=new Date(p2[0],p2[1]-1,p2[2]);
+  if(isNaN(d1.getTime())||isNaN(d2.getTime())||d2<d1)return {ok:false,err:"bad"};
+  var n=0, cur=new Date(d1);
+  while(cur<=d2){if(cur.getDay()!==0)n++;cur.setDate(cur.getDate()+1);}
+  return {ok:true,working:n,total:Math.round((d2-d1)/86400000)+1};
+}
+function calcAgeYMD(dobISO,asOfISO){
+  var a=String(dobISO).slice(0,10).split("-").map(Number);
+  var b=String(asOfISO).slice(0,10).split("-").map(Number);
+  var base=calcAge(dobISO,asOfISO);
+  var d0=new Date(a[0]+base.y,a[1]-1+base.m,a[2]);
+  var d1=new Date(b[0],b[1]-1,b[2]);
+  var d=Math.round((d1-d0)/86400000);
+  return {y:base.y,m:base.m,d:d};
+}
+function toolsPickNext(list,pickedIds){
+  var rest=list.filter(function(s){return pickedIds.indexOf(s.id)<0;});
+  if(!rest.length)return null;
+  return rest[Math.floor(Math.random()*rest.length)];
+}
+function makeGroups(students,mode,n){
+  var list=students.slice();
+  for(var i=list.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var tmp=list[i];list[i]=list[j];list[j]=tmp;}
+  var groups=[];
+  if(mode==="count"){for(var g=0;g<n;g++)groups.push([]);list.forEach(function(s,idx){groups[idx%n].push(s);});}
+  else{for(var k=0;k<list.length;k+=n)groups.push(list.slice(k,k+n));}
+  return groups;
+}
+/* ---- theorem solvers (pure) ---- */
+function solvePythagoras(find,sides){
+  var a=sides.a, b=sides.b, c=sides.c;
+  if(find==="c"){if(a==null||b==null||a<=0||b<=0)return {ok:false,err:"bad"};
+    var cc=Math.sqrt(a*a+b*b);
+    return {ok:true,answer:"c = "+toolsFmtNum(cc),steps:toolsSteps([["c² = a² + b² = "+a+"² + "+b+"² = "+toolsFmtNum(a*a+b*b)+".","c² = a² + b² = "+a+"² + "+b+"² = "+toolsFmtNum(a*a+b*b)+"۔"],["c = √"+toolsFmtNum(a*a+b*b)+" = "+toolsFmtNum(cc)+".","c = √"+toolsFmtNum(a*a+b*b)+" = "+toolsFmtNum(cc)+"۔"]])};}
+  if(find==="a"){if(b==null||c==null||b<=0||c<=0||c<=b)return {ok:false,err:"bad"};
+    var aa=Math.sqrt(c*c-b*b);
+    return {ok:true,answer:"a = "+toolsFmtNum(aa),steps:toolsSteps([["a² = c² − b² = "+c+"² − "+b+"² = "+toolsFmtNum(c*c-b*b)+".","a² = c² − b² = "+c+"² − "+b+"² = "+toolsFmtNum(c*c-b*b)+"۔"],["a = √"+toolsFmtNum(c*c-b*b)+" = "+toolsFmtNum(aa)+".","a = √"+toolsFmtNum(c*c-b*b)+" = "+toolsFmtNum(aa)+"۔"]])};}
+  if(b==null||c==null||a==null||a<=0||c<=0||c<=a)return {ok:false,err:"bad"};
+  var bb=Math.sqrt(c*c-a*a);
+  return {ok:true,answer:"b = "+toolsFmtNum(bb),steps:toolsSteps([["b² = c² − a² = "+c+"² − "+a+"² = "+toolsFmtNum(c*c-a*a)+".","b² = c² − a² = "+c+"² − "+a+"² = "+toolsFmtNum(c*c-a*a)+"۔"],["b = √"+toolsFmtNum(c*c-a*a)+" = "+toolsFmtNum(bb)+".","b = √"+toolsFmtNum(c*c-a*a)+" = "+toolsFmtNum(bb)+"۔"]])};
+}
+function solveAngleSum(a,b){
+  if(a==null||b==null||a<=0||b<=0||a+b>=180)return {ok:false,err:"bad"};
+  var c=180-a-b;
+  return {ok:true,answer:toolsFmtNum(c)+"°",steps:toolsSteps([["Angles in a triangle add to 180°.","مثلث کے زاویے مل کر 180° ہوتے ہیں۔"],["Third angle = 180° − "+a+"° − "+b+"° = "+c+"°.","تیسرا زاویہ = 180° − "+a+"° − "+b+"° = "+c+"°۔"]])};
+}
+function solveStraightLine(a){
+  if(a==null||a<=0||a>=180)return {ok:false,err:"bad"};
+  var o=180-a;
+  return {ok:true,answer:toolsFmtNum(o)+"°",steps:toolsSteps([["Angles on a straight line add to 180°.","سیدھی لکیر پر زاویے مل کر 180° ہوتے ہیں۔"],["Other angle = 180° − "+a+"° = "+o+"°.","دوسرا زاویہ = 180° − "+a+"° = "+o+"°۔"]])};
+}
+function solveAroundPoint(a,b){
+  if(a==null||b==null||a<=0||b<=0||a+b>=360)return {ok:false,err:"bad"};
+  var c=360-a-b;
+  return {ok:true,answer:toolsFmtNum(c)+"°",steps:toolsSteps([["Angles around a point add to 360°.","ایک نقطے کے گرد زاویے مل کر 360° ہوتے ہیں۔"],["Third angle = 360° − "+a+"° − "+b+"° = "+c+"°.","تیسرا زاویہ = 360° − "+a+"° − "+b+"° = "+c+"°۔"]])};
+}
+function solveTriangleArea(b,h){
+  if(b==null||h==null||b<=0||h<=0)return {ok:false,err:"bad"};
+  var A=0.5*b*h;
+  return {ok:true,answer:t("tools_area")+": "+toolsFmtNum(A),steps:toolsSteps([["Area = ½ × base × height = ½ × "+b+" × "+h+" = "+toolsFmtNum(A)+".","رقبہ = ½ × بنیاد × اونچائی = ½ × "+b+" × "+h+" = "+toolsFmtNum(A)+"۔"]])};
+}
+function solveCircleTh(r){
+  if(r==null||r<=0)return {ok:false,err:"bad"};
+  var C=2*Math.PI*r, A=Math.PI*r*r;
+  return {ok:true,answer:t("tools_circum")+": "+toolsFmtNum(Math.round(C*100)/100)+" • "+t("tools_area")+": "+toolsFmtNum(Math.round(A*100)/100),
+    steps:toolsSteps([["Circumference = 2 × π × r = 2 × 3.14 × "+r+" = "+toolsFmtNum(Math.round(C*100)/100)+".","محیط دائرہ = 2 × π × r = 2 × 3.14 × "+r+" = "+toolsFmtNum(Math.round(C*100)/100)+"۔"],["Area = π × r² = 3.14 × "+r+"² = "+toolsFmtNum(Math.round(A*100)/100)+".","رقبہ = π × r² = 3.14 × "+r+"² = "+toolsFmtNum(Math.round(A*100)/100)+"۔"]])};
+}
+function solveParallel(ang){
+  if(ang==null||ang<=0||ang>=180)return {ok:false,err:"bad"};
+  var co=180-ang;
+  return {ok:true,answer:"Corresponding: "+ang+"° • Alternate: "+ang+"° • Co-interior: "+co+"°",
+    steps:toolsSteps([["Corresponding angles are equal: "+ang+"°.","مطابق زاویے برابر ہوتے ہیں: "+ang+"°۔"],["Alternate angles are equal: "+ang+"°.","متبادل زاویے برابر ہوتے ہیں: "+ang+"°۔"],["Co-interior angles add to 180°: 180° − "+ang+"° = "+co+"°.","ساتھ والے اندرونی زاویے مل کر 180° ہوتے ہیں: 180° − "+ang+"° = "+co+"°۔"]])};
+}
+function checkCongSim(t1,t2){
+  if(!t1||!t2||t1.length!==3||t2.length!==3)return {ok:false,err:"bad"};
+  var a=t1.slice().sort(function(x,y){return x-y;}), b=t2.slice().sort(function(x,y){return x-y;});
+  for(var i=0;i<3;i++){if(a[i]==null||b[i]==null||a[i]<=0||b[i]<=0)return {ok:false,err:"bad"};}
+  var cong=a[0]===b[0]&&a[1]===b[1]&&a[2]===b[2];
+  var r0=b[0]/a[0], r1=b[1]/a[1], r2=b[2]/a[2];
+  var sim=Math.abs(r0-r1)<0.01&&Math.abs(r1-r2)<0.01;
+  var steps=toolsSteps([["First triangle sides: "+a[0]+", "+a[1]+", "+a[2]+".","پہلی مثلث کی طرفیں: "+a[0]+"، "+a[1]+"، "+a[2]+"۔"],["Second triangle sides: "+b[0]+", "+b[1]+", "+b[2]+".","دوسری مثلث کی طرفیں: "+b[0]+"، "+b[1]+"، "+b[2]+"۔"],["Ratios: "+toolsFmtNum(r0)+", "+toolsFmtNum(r1)+", "+toolsFmtNum(r2)+".","نسبتیں: "+toolsFmtNum(r0)+"، "+toolsFmtNum(r1)+"، "+toolsFmtNum(r2)+"۔"]]);
+  if(cong)return {ok:true,answer:toolsL("Congruent — all three sides match (SSS).","مطابق — تینوں طرف برابر ہیں (SSS)۔"),steps:steps};
+  if(sim)return {ok:true,answer:toolsL("Similar — all three sides are in the same ratio ("+toolsFmtNum(r0)+").","مشابہ — تینوں طرفیں ایک ہی نسبت میں ہیں ("+toolsFmtNum(r0)+")۔"),steps:steps};
+  return {ok:true,answer:toolsL("Neither congruent nor similar.","نہ مطابق ہے نہ مشابہ۔"),steps:steps};
+}
+
+var THEOREMS=[
+{id:"pyth",titleKey:"tools_th_pyth",solver:"pyth",
+ state:["In a right-angled triangle, the square on the longest side (c) equals the sum of the squares on the other two sides: c² = a² + b².","قائمۃ الزاویہ مثلث میں سب سے لمبی طرف (c) کا مربع باقی دو طرفوں کے مربعوں کے مجموعے کے برابر ہوتا ہے: c² = a² + b²۔"],
+ why:["Draw a square on each side. The big square has the same area as the two small squares put together.","ہر طرف پر ایک مربع بنائیں۔ بڑے مربع کا رقبہ دو چھوٹے مربعوں کے مجموعے کے برابر ہوتا ہے۔"]},
+{id:"anglesum",titleKey:"tools_th_anglesum",solver:"anglesum",
+ state:["The three inside angles of any triangle add up to 180°.","کسی بھی مثلث کے تین اندرونی زاویے مل کر 180° ہوتے ہیں۔"],
+ why:["Tear off the three corners of a paper triangle and put them together — they make a straight line, which is 180°.","کاغذ کی مثلث کے تینوں کونے پھاڑ کر ساتھ رکھیں — وہ سیدھی لکیر بناتے ہیں، جو 180° ہوتی ہے۔"]},
+{id:"straight",titleKey:"tools_th_straight",solver:"straight",
+ state:["Angles on a straight line add up to 180°.","سیدھی لکیر پر زاویے مل کر 180° ہوتے ہیں۔"],
+ why:["A straight line is half a full turn, and a full turn is 360°.","سیدھی لکیر پورے چکر کا آدھا ہے، اور پورا چکر 360° ہوتا ہے۔"]},
+{id:"point",titleKey:"tools_th_point",solver:"point",
+ state:["Angles around a point add up to 360°.","ایک نقطے کے گرد زاویے مل کر 360° ہوتے ہیں۔"],
+ why:["A full turn around a point is 360°, so all the angles around it must add to 360°.","ایک نقطے کے گرد پورا چکر 360° ہوتا ہے، اس لیے اس کے گرد تمام زاویے مل کر 360° ہوتے ہیں۔"]},
+{id:"triarea",titleKey:"tools_th_tritri",solver:"triarea",
+ state:["Area of a triangle = ½ × base × height. The height is measured straight up from the base, at a right angle.","مثلث کا رقبہ = ½ × بنیاد × اونچائی۔ اونچائی بنیاد سے سیدھا اوپر، قائم زاویے پر ناپی جاتی ہے۔"],
+ why:["Two identical triangles make a rectangle. Half of that rectangle is one triangle, so we take half.","دو ایک جیسی مثلثیں مل کر مستطیل بناتی ہیں۔ اس مستطیل کا آدھا ایک مثلث ہے، اس لیے ہم آدھا لیتے ہیں۔"]},
+{id:"circle",titleKey:"tools_th_circle",solver:"circle",
+ state:["Circumference = 2 × π × r. Area = π × r². π is about 3.14.","محیط دائرہ = 2 × π × r۔ رقبہ = π × r²۔ π تقریباً 3.14 ہے۔"],
+ why:["The circumference is about 3.14 times the diameter, for every circle, big or small.","محیط دائرہ قطر کا تقریباً 3.14 گنا ہوتا ہے، ہر دائرے کے لیے، بڑا ہو یا چھوٹا۔"]},
+{id:"parallel",titleKey:"tools_th_parallel",solver:"parallel",
+ state:["When a line crosses two parallel lines: corresponding angles are equal, alternate angles are equal, and co-interior angles add to 180°.","جب ایک لکیر دو متوازی لکیروں کو کاٹے: مطابق زاویے برابر، متبادل زاویے برابر، اور ساتھ والے اندرونی زاویے مل کر 180° ہوتے ہیں۔"],
+ why:["Parallel lines never meet, so the pattern of angles repeats exactly at each crossing.","متوازی لکیریں کبھی نہیں ملتیں، اس لیے زاویوں کا نمونہ ہر کٹاؤ پر بالکل دہرایا جاتا ہے۔"]},
+{id:"cong",titleKey:"tools_th_cong",solver:"cong",
+ state:["Two triangles are congruent if all three sides match (SSS). They are similar if all three sides are in the same ratio — same shape, different size.","دو مثلثیں مطابق ہوتی ہیں اگر تینوں طرفیں برابر ہوں (SSS)۔ وہ مشابہ ہوتی ہیں اگر تینوں طرفیں ایک ہی نسبت میں ہوں — شکل ایک جیسی، سائز مختلف۔"],
+ why:["Same sides make the same triangle. Same ratios stretch the triangle evenly, so the angles stay the same.","ایک جیسی طرفیں ایک جیسی مثلث بناتی ہیں۔ ایک جیسی نسبتیں مثلث کو برابر کھینچتی ہیں، اس لیے زاویے ایک جیسے رہتے ہیں۔"]}
+];
+/* ---- subject explainer topics (EN+UR data, 56 topics) ---- */
+var EXPLAIN_TOPICS=[
+{id:"m-frac",sub:"maths",en:{t:"Fractions",b:"A fraction is a part of a whole. The top number tells how many parts we have. The bottom number tells how many equal parts the whole is cut into."},ur:{t:"کسریں",b:"کسر کسی پورے کا حصہ ہوتی ہے۔ اوپر والا نمبر بتاتا ہے کہ ہمارے پاس کتنے حصے ہیں۔ نیچے والا نمبر بتاتا ہے کہ پورا کتنے برابر حصوں میں کٹا ہے۔"}},
+{id:"m-pct",sub:"maths",en:{t:"Percentage",b:"Percent means out of 100. 25% means 25 out of every 100. To find a percent, divide by 100 and multiply."},ur:{t:"فیصد",b:"فیصد کا مطلب ہے 100 میں سے۔ 25% کا مطلب ہے ہر 100 میں سے 25۔ فیصد نکالنے کے لیے 100 سے تقسیم کریں اور ضرب دیں۔"}},
+{id:"m-hcf",sub:"maths",en:{t:"HCF",b:"HCF is the biggest number that divides two numbers exactly. Find the factors of both numbers. The biggest factor they share is the HCF."},ur:{t:"عاد اعظم",b:"عاد اعظم وہ بڑا نمبر ہے جو دونوں نمبروں کو پورا تقسیم کرے۔ دونوں نمبروں کے اجزائے ضربی نکالیں۔ جو سب سے بڑا جزو دونوں میں مشترک ہو وہ عاد اعظم ہے۔"}},
+{id:"m-lcm",sub:"maths",en:{t:"LCM",b:"LCM is the smallest number that both numbers divide into exactly. List the multiples of both numbers. The smallest multiple they share is the LCM."},ur:{t:"ذواضعاف اقل",b:"ذواضعاف اقل وہ چھوٹا نمبر ہے جس میں دونوں نمبر پورے آ جائیں۔ دونوں نمبروں کے اضعاف لکھیں۔ جو سب سے چھوٹا ضعف دونوں میں مشترک ہو وہ ذواضعاف اقل ہے۔"}},
+{id:"m-area",sub:"maths",en:{t:"Area",b:"Area is the space inside a shape. We measure it in square units. For a rectangle, area = length × width."},ur:{t:"رقبہ",b:"رقبہ کسی شکل کے اندر کی جگہ ہوتی ہے۔ اسے مربع اکائیوں میں ناپتے ہیں۔ مستطیل کا رقبہ = لمبائی × چوڑائی۔"}},
+{id:"m-perim",sub:"maths",en:{t:"Perimeter",b:"Perimeter is the distance around a shape. Add all the sides together. We measure it in units like cm or m."},ur:{t:"محیط",b:"محیط کسی شکل کے گرد فاصلہ ہوتا ہے۔ تمام طرفیں جمع کریں۔ اسے سینٹی میٹر یا میٹر جیسی اکائیوں میں ناپتے ہیں۔"}},
+{id:"m-avg",sub:"maths",en:{t:"Average",b:"Average is the middle value of a group of numbers. Add all the numbers, then divide by how many there are. It tells us the typical value."},ur:{t:"اوسط",b:"اوسط اعداد کے گروپ کی درمیانی قیمت ہوتی ہے۔ تمام نمبر جمع کریں، پھر ان کی تعداد سے تقسیم کریں۔ یہ عام قیمت بتاتا ہے۔"}},
+{id:"m-ratio",sub:"maths",en:{t:"Ratio",b:"A ratio compares two amounts. 2:3 means 2 parts to 3 parts. Ratios tell us how things relate to each other."},ur:{t:"نسبت",b:"نسبت دو مقداروں کا موازنہ کرتی ہے۔ 2:3 کا مطلب ہے 2 حصے مقابل 3 حصے۔ نسبتیں بتاتی ہیں کہ چیزیں ایک دوسرے سے کیسے تعلق رکھتی ہیں۔"}},
+{id:"m-si",sub:"maths",en:{t:"Simple interest",b:"Simple interest is the extra money paid for borrowing. It is found by principal × rate × time ÷ 100. The amount is principal + interest."},ur:{t:"سادہ سود",b:"سادہ سود ادھار لینے پر ادا کی جانے والی اضافی رقم ہے۔ اسے اصل رقم × شرح × وقت ÷ 100 سے نکالتے ہیں۔ کل رقم = اصل رقم + سود۔"}},
+{id:"m-sqrt",sub:"maths",en:{t:"Square root",b:"The square root undoes squaring. The square root of 25 is 5, because 5 × 5 = 25. The symbol is √."},ur:{t:"جذر",b:"جذر مربع کو الٹ دیتا ہے۔ 25 کا جذر 5 ہے، کیونکہ 5 × 5 = 25۔ اس کی علامت √ ہے۔"}},
+{id:"e-noun",sub:"english",en:{t:"Noun",b:"A noun is a naming word. It names a person, place, animal or thing. Ali, school, cat and book are nouns."},ur:{t:"اسم",b:"اسم نام بتانے والا لفظ ہے۔ یہ کسی شخص، جگہ، جانور یا چیز کا نام بتاتا ہے۔ علی، اسکول، بلی اور کتاب اسم ہیں۔"}},
+{id:"e-verb",sub:"english",en:{t:"Verb",b:"A verb is an action word. It tells what someone does. Run, eat, read and play are verbs."},ur:{t:"فعل",b:"فعل کام بتانے والا لفظ ہے۔ یہ بتاتا ہے کہ کوئی کیا کرتا ہے۔ دوڑنا، کھانا، پڑھنا اور کھیلنا فعل ہیں۔"}},
+{id:"e-adj",sub:"english",en:{t:"Adjective",b:"An adjective describes a noun. It tells what kind, how many, or which one. Big, red, three and happy are adjectives."},ur:{t:"صفت",b:"صفت اسم کی وضاحت کرتی ہے۔ یہ بتاتی ہے کہ کیسا، کتنے یا کون سا۔ بڑا، لال، تین اور خوش صفت ہیں۔"}},
+{id:"e-tense",sub:"english",en:{t:"Tense",b:"Tense tells the time of an action. Past is done, present is now, future is later. 'I played, I play, I will play' shows all three."},ur:{t:"زمانہ",b:"زمانہ کام کا وقت بتاتا ہے۔ ماضی گزر چکا، حال ابھی ہے، مستقبل بعد میں ہے۔ 'میں نے کھیلا، میں کھیلتا ہوں، میں کھیلوں گا' تینوں دکھاتا ہے۔"}},
+{id:"e-sent",sub:"english",en:{t:"Sentence",b:"A sentence is a group of words that makes sense. It starts with a capital letter. It ends with a full stop, a question mark or an exclamation mark."},ur:{t:"جملہ",b:"جملہ الفاظ کا ایسا گروپ ہے جو مکمل مطلب دے۔ یہ بڑے حرف سے شروع ہوتا ہے۔ یہ مکمل وقفے، سوالیہ نشان یا تعجبیہ نشان سے ختم ہوتا ہے۔"}},
+{id:"e-para",sub:"english",en:{t:"Paragraph",b:"A paragraph is a group of sentences about one idea. It starts on a new line. The first sentence tells the main idea."},ur:{t:"پیراگراف",b:"پیراگراف ایک خیال کے بارے میں جملوں کا گروپ ہے۔ یہ نئی لائن سے شروع ہوتا ہے۔ پہلا جملہ اصل خیال بتاتا ہے۔"}},
+{id:"e-punct",sub:"english",en:{t:"Punctuation",b:"Punctuation marks help us read clearly. A full stop ends a sentence. A comma gives a short pause, and a question mark asks a question."},ur:{t:"اوقاف",b:"اوقاف کے نشان ہمیں صاف پڑھنے میں مدد دیتے ہیں۔ مکمل وقفہ جملہ ختم کرتا ہے۔ کاما چھوٹا وقفہ دیتا ہے، اور سوالیہ نشان سوال پوچھتا ہے۔"}},
+{id:"e-letter",sub:"english",en:{t:"Letter writing",b:"A letter has a greeting, a body and a closing. Start with Dear..., write your message clearly. End with your name."},ur:{t:"خط نویسی",b:"خط میں سلام، اصل پیغام اور اختتام ہوتا ہے۔ 'پیارے...' سے شروع کریں، اپنا پیغام صاف لکھیں۔ اپنے نام سے ختم کریں۔"}},
+{id:"e-essay",sub:"english",en:{t:"Essay",b:"An essay is a short piece of writing about one topic. It has an introduction, a body and a conclusion. Write in your own simple words."},ur:{t:"مضمون",b:"مضمون ایک موضوع پر مختصر تحریر ہے۔ اس میں تعارف، اصل حصہ اور اختتام ہوتا ہے۔ اپنے سادہ الفاظ میں لکھیں۔"}},
+{id:"e-comp",sub:"english",en:{t:"Comprehension",b:"Comprehension means understanding what you read. Read the passage slowly. Then answer the questions in your own words."},ur:{t:"تفہیم",b:"تفہیم کا مطلب ہے جو پڑھا اسے سمجھنا۔ عبارت آہستہ پڑھیں۔ پھر سوالوں کے جواب اپنے الفاظ میں دیں۔"}},
+{id:"s-photo",sub:"science",en:{t:"Photosynthesis",b:"Plants make their own food by photosynthesis. They use sunlight, water and air. The green part of the leaf catches the sunlight."},ur:{t:"ضیائی تالیف",b:"پودے ضیائی تالیف سے اپنا کھانا خود بناتے ہیں۔ وہ سورج کی روشنی، پانی اور ہوا استعمال کرتے ہیں۔ پتے کا سبز حصہ روشنی پکڑتا ہے۔"}},
+{id:"s-grav",sub:"science",en:{t:"Gravity",b:"Gravity is the force that pulls things down to the Earth. It keeps us on the ground. Without gravity, everything would float away."},ur:{t:"کشش ثقل",b:"کشش ثقل وہ قوت ہے جو چیزوں کو زمین کی طرف کھینچتی ہے۔ یہ ہمیں زمین پر رکھتی ہے۔ اس کے بغیر سب کچھ تیرتا پھرتا۔"}},
+{id:"s-water",sub:"science",en:{t:"Water cycle",b:"Water moves in a cycle: it evaporates, condenses and falls as rain. The Sun heats water from seas and lakes. The water vapour cools and forms clouds."},ur:{t:"آبی چکر",b:"پانی چکر میں گھومتا ہے: یہ بخارات بنتا ہے، گاڑھا ہوتا ہے اور بارش بن کر گرتا ہے۔ سورج سمندر اور جھیلوں کا پانی گرم کرتا ہے۔ بخارات ٹھنڈے ہو کر بادل بنتے ہیں۔"}},
+{id:"s-elec",sub:"science",en:{t:"Electricity",b:"Electricity is a flow of tiny charges through a wire. A battery pushes the charges around a circuit. A bulb lights up when the circuit is complete."},ur:{t:"بجلی",b:"بجلی تار میں چھوٹے چارجز کا بہاؤ ہے۔ بیٹری چارجز کو سرکٹ میں دھکیلتی ہے۔ سرکٹ مکمل ہو تو بلب جلتا ہے۔"}},
+{id:"s-mag",sub:"science",en:{t:"Magnets",b:"A magnet pulls iron, nickel and cobalt. Every magnet has a north pole and a south pole. Like poles push away; unlike poles pull together."},ur:{t:"مقناطیس",b:"مقناطیس لوہا، نکل اور کوبالٹ کھینچتا ہے۔ ہر مقناطیس کا شمالی اور جنوبی سرا ہوتا ہے۔ ایک جیسے سرے دھکیلتے ہیں؛ مختلف سرے کھینچتے ہیں۔"}},
+{id:"s-digest",sub:"science",en:{t:"Digestion",b:"Digestion breaks food into small parts the body can use. It starts in the mouth with chewing. The stomach and intestines finish the job."},ur:{t:"ہضم",b:"ہضم کھانے کو چھوٹے حصوں میں توڑتا ہے جنہیں جسم استعمال کر سکے۔ یہ منہ میں چبانے سے شروع ہوتا ہے۔ معدہ اور آنتیں کام مکمل کرتے ہیں۔"}},
+{id:"s-air",sub:"science",en:{t:"Air",b:"Air is all around us, but we cannot see it. Air takes up space and has weight. We need air to breathe and live."},ur:{t:"ہوا",b:"ہوا ہمارے ارد گرد ہے، لیکن ہم اسے دیکھ نہیں سکتے۔ ہوا جگہ لیتی ہے اور اس کا وزن ہے۔ ہمیں سانس لینے اور جینے کے لیے ہوا چاہیے۔"}},
+{id:"s-seasons",sub:"science",en:{t:"Seasons",b:"Seasons change because the Earth tilts as it goes around the Sun. Summer is hot, winter is cold. Spring and autumn are in between."},ur:{t:"موسم",b:"موسم بدلتے ہیں کیونکہ زمین سورج کے گرد گھومتے ہوئے جھکی رہتی ہے۔ گرمی گرم، سردی ٹھنڈی ہوتی ہے۔ بہار اور خزاں درمیان میں ہیں۔"}},
+{id:"s-force",sub:"science",en:{t:"Force",b:"A force is a push or a pull. Forces can move things, stop them, or change their shape. Friction is a force that slows things down."},ur:{t:"قوت",b:"قوت دھکا یا کھینچ ہے۔ قوتیں چیزوں کو حرکت دے سکتی ہیں، روک سکتی ہیں یا ان کی شکل بدل سکتی ہیں۔ رگڑ ایک قوت ہے جو چیزوں کو سست کرتی ہے۔"}},
+{id:"s-plants",sub:"science",en:{t:"Plants",b:"Plants need sunlight, water and air to grow. Roots take water from the soil. Leaves make food from sunlight."},ur:{t:"پودے",b:"پودوں کو بڑھنے کے لیے سورج کی روشنی، پانی اور ہوا چاہیے۔ جڑیں مٹی سے پانی لیتی ہیں۔ پتے سورج کی روشنی سے کھانا بناتے ہیں۔"}},
+{id:"i-namaz",sub:"islamiat",en:{t:"Prayer (Namaz)",b:"Namaz is the prayer Muslims offer five times a day. We face the Kaaba in Makkah. Prayer keeps us close to Allah."},ur:{t:"نماز",b:"نماز وہ عبادت ہے جو مسلمان دن میں پانچ بار پڑھتے ہیں۔ ہم مکہ میں کعبہ کی طرف منہ کرتے ہیں۔ نماز ہمیں اللہ کے قریب رکھتی ہے۔"}},
+{id:"i-zakat",sub:"islamiat",en:{t:"Zakat",b:"Zakat is giving a part of our wealth to the poor. It is one of the five pillars of Islam. It cleans our wealth and helps others."},ur:{t:"زکوٰۃ",b:"زکوٰۃ اپنے مال کا ایک حصہ غریبوں کو دینا ہے۔ یہ اسلام کے پانچ ستونوں میں سے ایک ہے۔ یہ ہمارے مال کو پاک کرتی ہے اور دوسروں کی مدد کرتی ہے۔"}},
+{id:"i-honest",sub:"islamiat",en:{t:"Honesty",b:"Honesty means telling the truth always. A truthful person is trusted by everyone. Allah loves those who speak the truth."},ur:{t:"ایمانداری",b:"ایمانداری کا مطلب ہے ہمیشہ سچ بولنا۔ سچے انسان پر سب بھروسہ کرتے ہیں۔ اللہ سچ بولنے والوں کو پسند کرتا ہے۔"}},
+{id:"i-kind",sub:"islamiat",en:{t:"Kindness",b:"Kindness means being gentle and helpful to others. A kind word can make someone happy. The Prophet (PBUH) was kind to everyone."},ur:{t:"مہربانی",b:"مہربانی کا مطلب ہے دوسروں سے نرمی اور مدد سے پیش آنا۔ ایک مہربان لفظ کسی کو خوش کر سکتا ہے۔ نبی ﷺ سب سے مہربان تھے۔"}},
+{id:"i-clean",sub:"islamiat",en:{t:"Cleanliness",b:"Cleanliness is half of faith. We keep our body, clothes and home clean. Wudu before prayer is a part of cleanliness."},ur:{t:"صفائی",b:"صفائی نصف ایمان ہے۔ ہم اپنے جسم، کپڑے اور گھر صاف رکھتے ہیں۔ نماز سے پہلے وضو صفائی کا حصہ ہے۔"}},
+{id:"i-parents",sub:"islamiat",en:{t:"Respect for parents",b:"We must respect and obey our parents. They care for us day and night. Allah tells us to be kind to our parents."},ur:{t:"والدین کا احترام",b:"ہمیں اپنے والدین کا احترام اور اطاعت کرنی چاہیے۔ وہ دن رات ہماری دیکھ بھال کرتے ہیں۔ اللہ ہمیں والدین سے اچھا سلوک کرنے کا حکم دیتا ہے۔"}},
+{id:"u-ism",sub:"urdu",en:{t:"Noun (Ism)",b:"Ism is a naming word. It names a person, place or thing. Ali, Lahore and book are nouns."},ur:{t:"اسم",b:"اسم کسی شخص، جگہ یا چیز کا نام ہوتا ہے۔ جیسے علی، لاہور، کتاب۔ اسم جملے میں نام بتانے کا کام کرتا ہے۔"}},
+{id:"u-fail",sub:"urdu",en:{t:"Verb (Fail)",b:"Fail is an action word. It tells what someone does. Khaana, jaana and parhna are verbs."},ur:{t:"فعل",b:"فعل وہ لفظ ہے جو کام بتائے۔ جیسے کھانا، جانا، پڑھنا۔ فعل سے پتہ چلتا ہے کہ کوئی کیا کر رہا ہے۔"}},
+{id:"u-sifat",sub:"urdu",en:{t:"Adjective (Sifat)",b:"Sifat describes a noun. It tells the quality of a thing. Bara, acha and laal are adjectives."},ur:{t:"صفت",b:"صفت اسم کی خوبی یا خامی بتاتی ہے۔ جیسے بڑا، اچھا، لال۔ صفت اسم کو خوبصورت بناتی ہے۔"}},
+{id:"u-jumla",sub:"urdu",en:{t:"Sentence (Jumla)",b:"A jumla is a group of words that gives a complete meaning. It starts with a capital letter. It ends with a full stop."},ur:{t:"جملہ",b:"جملہ الفاظ کا ایسا مجموعہ ہے جو مکمل مطلب دے۔ جملہ بڑے حرف سے شروع ہوتا ہے۔ اس کے آخر میں ختمے کا نشان آتا ہے۔"}},
+{id:"u-mazmoon",sub:"urdu",en:{t:"Essay (Mazmoon)",b:"A mazmoon is a short piece of writing on one topic. It has an introduction, a body and an ending. Write it in simple, clear words."},ur:{t:"مضمون",b:"مضمون ایک موضوع پر مختصر تحریر ہوتا ہے۔ اس میں تعارف، اصل حصہ اور اختتام ہوتا ہے۔ مضمون سادہ اور صاف الفاظ میں لکھیں۔"}},
+{id:"u-khat",sub:"urdu",en:{t:"Letter (Khat)",b:"A khat has a greeting, a message and an ending. Start with 'Pyaare...'. End with your name."},ur:{t:"خط",b:"خط میں سلام، اصل پیغام اور اختتام ہوتا ہے۔ خط 'پیارے...' سے شروع کریں۔ آخر میں اپنا نام لکھیں۔"}},
+{id:"so-map",sub:"social",en:{t:"Map",b:"A map is a drawing of a place seen from above. It uses symbols to show roads, rivers and towns. The compass rose shows north, south, east and west."},ur:{t:"نقشہ",b:"نقشہ کسی جگہ کی اوپر سے تصویر ہوتا ہے۔ یہ سڑکیں، دریا اور قصبے دکھانے کے لیے علامتیں استعمال کرتا ہے۔ قطب نما شمال، جنوب، مشرق اور مغرب دکھاتا ہے۔"}},
+{id:"so-gov",sub:"social",en:{t:"Government",b:"A government is the group that runs a country. It makes laws and keeps people safe. In Pakistan, people vote to choose their government."},ur:{t:"حکومت",b:"حکومت وہ گروپ ہے جو ملک چلاتا ہے۔ یہ قانون بناتی ہے اور لوگوں کو محفوظ رکھتی ہے۔ پاکستان میں لوگ ووٹ دے کر اپنی حکومت چنتے ہیں۔"}},
+{id:"so-comm",sub:"social",en:{t:"Community",b:"A community is a group of people who live together. Neighbours, teachers and shopkeepers are part of our community. We help each other in a community."},ur:{t:"برادری",b:"برادری لوگوں کا گروپ ہے جو ساتھ رہتے ہیں۔ پڑوسی، اساتذہ اور دکاندار ہماری برادری کا حصہ ہیں۔ برادری میں ہم ایک دوسرے کی مدد کرتے ہیں۔"}},
+{id:"so-hist",sub:"social",en:{t:"History",b:"History is the story of the past. We learn about people and events long ago. History helps us understand today."},ur:{t:"تاریخ",b:"تاریخ ماضی کی کہانی ہے۔ ہم پرانے زمانے کے لوگوں اور واقعات کے بارے میں سیکھتے ہیں۔ تاریخ آج کو سمجھنے میں مدد دیتی ہے۔"}},
+{id:"so-geo",sub:"social",en:{t:"Geography",b:"Geography is the study of the Earth and its places. We learn about mountains, rivers, deserts and towns. Maps help us study geography."},ur:{t:"جغرافیہ",b:"جغرافیہ زمین اور اس کی جگہوں کا علم ہے۔ ہم پہاڑوں، دریاؤں، صحراؤں اور قصبوں کے بارے میں سیکھتے ہیں۔ نقشے جغرافیہ پڑھنے میں مدد دیتے ہیں۔"}},
+{id:"so-cit",sub:"social",en:{t:"Citizenship",b:"A citizen is a member of a country. Citizens follow the law and respect others. Good citizens help their community."},ur:{t:"شہریت",b:"شہریت کسی ملک کا رکن ہوتا ہے۔ شہری قانون کی پیروی کرتے ہیں اور دوسروں کا احترام کرتے ہیں۔ اچھے شہری اپنی برادری کی مدد کرتے ہیں۔"}},
+{id:"a-colour",sub:"art",en:{t:"Colour mixing",b:"Three colours are primary: red, yellow and blue. Red + yellow makes orange. Blue + yellow makes green, and red + blue makes purple."},ur:{t:"رنگ ملانا",b:"تین رنگ بنیادی ہیں: لال، پیلا اور نیلا۔ لال + پیلا = نارنجی۔ نیلا + پیلا = سبز، اور لال + نیلا = جامنی۔"}},
+{id:"a-shapes",sub:"art",en:{t:"Basic shapes and patterns",b:"Shapes are the building blocks of drawing. Circles, squares and triangles make pictures. A pattern repeats the same shapes again and again."},ur:{t:"بنیادی شکلیں اور نمونے",b:"شکلیں ڈرائنگ کی بنیادی اکائیاں ہیں۔ دائرے، چوکور اور مثلث تصویریں بناتے ہیں۔ نمونہ ایک ہی شکلوں کو بار بار دہراتا ہے۔"}},
+{id:"a-tree",sub:"art",en:{t:"Drawing a tree",b:"Draw a tree in four steps. First, a tall trunk. Then, big round leaves on top. Last, add roots and a few apples."},ur:{t:"درخت بنانا",b:"درخت چار مراحل میں بنائیں۔ پہلے، لمبا تنا۔ پھر، اوپر بڑے گول پتے۔ آخر میں، جڑیں اور چند سیب شامل کریں۔"}},
+{id:"a-house",sub:"art",en:{t:"Drawing a house",b:"Draw a house in four steps. First, a square for the walls. Then, a triangle roof on top. Last, a door and two windows."},ur:{t:"گھر بنانا",b:"گھر چار مراحل میں بنائیں۔ پہلے، دیواروں کے لیے چوکور۔ پھر، اوپر مثلث چھت۔ آخر میں، دروازہ اور دو کھڑکیاں۔"}},
+{id:"a-face",sub:"art",en:{t:"Drawing a face",b:"Draw a face in four steps. First, a round circle. Then, two eyes and a small nose. Last, a smiling mouth and hair."},ur:{t:"چہرہ بنانا",b:"چہرہ چار مراحل میں بنائیں۔ پہلے، گول دائرہ۔ پھر، دو آنکھیں اور چھوٹی ناک۔ آخر میں، مسکراتا منہ اور بال۔"}},
+{id:"a-craft",sub:"art",en:{t:"Paper craft",b:"Paper craft turns simple paper into art. Fold it, cut it, and glue it. You can make a greeting card, a flower, or a paper boat."},ur:{t:"کاغذی دستکاری",b:"کاغذی دستکاری سادہ کاغذ کو فن میں بدل دیتی ہے۔ اسے موڑیں، کاٹیں اور چپکائیں۔ آپ گریٹنگ کارڈ، پھول یا کاغذی کشتی بنا سکتے ہیں۔"}},
+{id:"a-geo",sub:"art",en:{t:"Islamic geometric patterns",b:"Islamic patterns use stars and shapes, never faces. Start with a grid of squares or triangles. Repeat the pattern to fill the page."},ur:{t:"اسلامی ہندسی نمونے",b:"اسلامی نمونوں میں ستارے اور شکلیں ہوتی ہیں، چہرے نہیں۔ چوکور یا مثلث کی جالی سے شروع کریں۔ صفحہ بھرنے کے لیے نمونہ دہرائیں۔"}},
+{id:"a-callig",sub:"art",en:{t:"Calligraphy basics",b:"Calligraphy is beautiful handwriting. Hold the pen at one angle and keep the strokes steady. Start with single letters, then join them into words."},ur:{t:"خطاطی کی بنیادی باتیں",b:"خطاطی خوبصورت ہاتھ کی تحریر ہے۔ قلم کو ایک زاویے پر پکڑیں اور حرکات مستحکم رکھیں۔ پہلے اکیلے حروف، پھر انہیں جوڑ کر الفاظ بنائیں۔"}}
+];
+
+var PRACTICALS=[
+{id:"p-water",en:{t:"Water cycle in a glass",need:["A clear glass","Hot water","A small plate","Ice cubes"],steps:["Pour hot water into the glass (half full).","Cover the glass with the plate.","Put ice cubes on the plate.","Wait 5 minutes and watch."],hap:"Drops of water form under the plate and fall back down.",why:"The hot water makes vapour, the cold plate cools it, and it turns back into water — like rain from clouds."},ur:{t:"گلاس میں آبی چکر",need:["ایک صاف گلاس","گرم پانی","ایک چھوٹی پلیٹ","برف کے ٹکڑے"],steps:["گلاس میں آدھا گرم پانی ڈالیں۔","گلاس کو پلیٹ سے ڈھک دیں۔","پلیٹ پر برف کے ٹکڑے رکھیں۔","5 منٹ انتظار کریں اور دیکھیں۔"],hap:"پلیٹ کے نیچے پانی کے قطرے بنتے ہیں اور نیچے گرتے ہیں۔",why:"گرم پانی بخارات بناتا ہے، ٹھنڈی پلیٹ اسے ٹھنڈا کرتی ہے، اور یہ دوبارہ پانی بن جاتا ہے — جیسے بادلوں سے بارش۔"}},
+{id:"p-magnet",en:{t:"Magnet test — what sticks?",need:["A magnet","A nail","A coin","A key","A pencil","A piece of cloth","A plastic bottle cap"],steps:["Hold the magnet near each thing.","See which things stick.","Sort them into two groups: sticks and does not stick."],hap:"The nail, coin and key stick. The pencil, cloth and cap do not.",why:"A magnet pulls iron, nickel and cobalt. Things without these metals do not stick."},ur:{t:"مقناطیس کی آزمائش — کیا چپکتا ہے؟",need:["ایک مقناطیس","ایک کیل","ایک سکہ","ایک چابی","ایک پنسل","کپڑے کا ٹکڑا","پلاسٹک بوتل کا ڈھکن"],steps:["مقناطیس کو ہر چیز کے قریب لائیں۔","دیکھیں کون سی چیزیں چپکتی ہیں۔","انہیں دو گروپوں میں بانٹیں: چپکنے والی اور نہ چپکنے والی۔"],hap:"کیل، سکہ اور چابی چپکتی ہیں۔ پنسل، کپڑا اور ڈھکن نہیں چپکتے۔",why:"مقناطیس لوہا، نکل اور کوبالٹ کھینچتا ہے۔ جن چیزوں میں یہ دھاتیں نہیں ہوتیں وہ نہیں چپکتیں۔"}},
+{id:"p-plant",en:{t:"Growing a plant from a seed",need:["A bean seed","A small pot or cup","Soil","Water"],steps:["Fill the pot with soil.","Push the seed 2 cm deep.","Water it a little every day.","Put it in sunlight and watch it grow."],hap:"After a few days a small green shoot comes out. The plant grows taller every day.",why:"The seed uses water, air and sunlight to grow. Roots take water, leaves make food."},ur:{t:"بیج سے پودا اگانا",need:["لوبیا کا بیج","ایک چھوٹا گملا یا کپ","مٹی","پانی"],steps:["گملے میں مٹی بھریں۔","بیج کو 2 سینٹی میٹر گہرا دبائیں۔","ہر روز تھوڑا پانی دیں۔","اسے دھوپ میں رکھیں اور بڑھتے دیکھیں۔"],hap:"چند دن بعد چھوٹی سبز کونپل نکلتی ہے۔ پودا ہر روز لمبا ہوتا ہے۔",why:"بیج بڑھنے کے لیے پانی، ہوا اور سورج کی روشنی استعمال کرتا ہے۔ جڑیں پانی لیتی ہیں، پتے کھانا بناتے ہیں۔"}},
+{id:"p-circuit",en:{t:"Simple circuit (battery + bulb)",need:["A battery","A small bulb","Two wires","Tape"],steps:["Tape one wire to each end of the battery.","Touch the other ends to the bulb.","The bulb lights up.","Take one wire away — the light goes off."],hap:"The bulb lights when both wires touch it. It goes off when the circle is broken.",why:"Electricity flows in a circle called a circuit. If the circle breaks, the flow stops."},ur:{t:"سادہ سرکٹ (بیٹری + بلب)",need:["ایک بیٹری","ایک چھوٹا بلب","دو تاریں","ٹیپ"],steps:["ایک تار بیٹری کے ہر سرے پر ٹیپ کریں۔","دوسرے سروں کو بلب سے لگائیں۔","بلب جل اٹھتا ہے۔","ایک تار ہٹائیں — روشنی بند ہو جاتی ہے۔"],hap:"جب دونوں تاریں بلب کو چھوتی ہیں تو بلب جلتا ہے۔ دائرہ ٹوٹنے پر بجھ جاتا ہے۔",why:"بجلی ایک دائرے میں بہتی ہے جسے سرکٹ کہتے ہیں۔ دائرہ ٹوٹ جائے تو بہاؤ رک جاتا ہے۔"}},
+{id:"p-float",en:{t:"Floating and sinking",need:["A bowl of water","A stone","A leaf","A coin","A piece of wood","A plastic cap"],steps:["Put each thing in the water one by one.","Watch which ones float and which sink.","Sort them into two groups."],hap:"The leaf, wood and cap float. The stone and coin sink.",why:"Light things with air inside float. Heavy, solid things sink."},ur:{t:"تیرنا اور ڈوبنا",need:["پانی کا پیالہ","ایک پتھر","ایک پتا","ایک سکہ","لکڑی کا ٹکڑا","پلاسٹک کا ڈھکن"],steps:["ہر چیز کو ایک ایک کر کے پانی میں ڈالیں۔","دیکھیں کون سی تیرتی ہیں اور کون سی ڈوبتی ہیں۔","انہیں دو گروپوں میں بانٹیں۔"],hap:"پتا، لکڑی اور ڈھکن تیرتے ہیں۔ پتھر اور سکہ ڈوبتے ہیں۔",why:"ہلکی چیزیں جن کے اندر ہوا ہوتی ہے تیرتی ہیں۔ بھاری، ٹھوس چیزیں ڈوب جاتی ہیں۔"}},
+{id:"p-dissolve",en:{t:"Dissolving salt and sugar",need:["Two glasses of water","Salt","Sugar","A spoon"],steps:["Put a spoon of salt in one glass.","Put a spoon of sugar in the other.","Stir both.","Taste the water (small sip)."],hap:"Both disappear into the water. The water tastes salty in one glass and sweet in the other.",why:"Salt and sugar break into tiny pieces too small to see. They mix with the water but do not vanish."},ur:{t:"نمک اور چینی گھولنا",need:["پانی کے دو گلاس","نمک","چینی","ایک چمچ"],steps:["ایک گلاس میں ایک چمچ نمک ڈالیں۔","دوسرے گلاس میں ایک چمچ چینی ڈالیں۔","دونوں کو ہلائیں۔","پانی چکھیں (چھوٹا گھونٹ)۔"],hap:"دونوں پانی میں غائب ہو جاتے ہیں۔ ایک گلاس کا پانی نمکین اور دوسرے کا میٹھا لگتا ہے۔",why:"نمک اور چینی اتنے چھوٹے ٹکڑوں میں ٹوٹتے ہیں کہ نظر نہیں آتے۔ وہ پانی میں مل جاتے ہیں لیکن ختم نہیں ہوتے۔"}},
+{id:"p-shadow",en:{t:"Shadows and light",need:["A torch","A book","A wall"],steps:["Shine the torch at the wall.","Hold the book between the torch and the wall.","Move the book closer to the torch.","Move it closer to the wall."],hap:"A dark shadow appears on the wall. The shadow grows when the book is near the torch.",why:"Light travels in straight lines. The book blocks the light, so a dark shape appears behind it."},ur:{t:"سائے اور روشنی",need:["ایک ٹارچ","ایک کتاب","ایک دیوار"],steps:["ٹارچ دیوار کی طرف کریں۔","کتاب کو ٹارچ اور دیوار کے درمیان رکھیں۔","کتاب کو ٹارچ کے قریب لائیں۔","اسے دیوار کے قریب لائیں۔"],hap:"دیوار پر گہرا سایہ بنتا ہے۔ کتاب ٹارچ کے قریب ہو تو سایہ بڑا ہوتا ہے۔",why:"روشنی سیدھی لکیروں میں چلتی ہے۔ کتاب روشنی روکتی ہے، اس لیے اس کے پیچھے گہرا سایہ بنتا ہے۔"}},
+{id:"p-air",en:{t:"Air takes up space",need:["A glass","A bowl of water","A tissue"],steps:["Push the tissue into the bottom of the glass.","Turn the glass upside down.","Push it straight down into the water.","Lift it out and check the tissue."],hap:"The tissue stays dry. The water cannot get in.",why:"The glass is full of air. Air takes up space, so the water cannot enter."},ur:{t:"ہوا جگہ لیتی ہے",need:["ایک گلاس","پانی کا پیالہ","ایک ٹشو"],steps:["ٹشو کو گلاس کے نیچے دبائیں۔","گلاس کو الٹا کریں۔","اسے سیدھا پانی میں دبائیں۔","باہر نکال کر ٹشو دیکھیں۔"],hap:"ٹشو خشک رہتا ہے۔ پانی اندر نہیں جا سکتا۔",why:"گلاس ہوا سے بھرا ہے۔ ہوا جگہ لیتی ہے، اس لیے پانی اندر نہیں جا سکتا۔"}},
+{id:"p-rust",en:{t:"Rusting nail",need:["Two nails","Two small cups","Water"],steps:["Put one nail in a dry cup.","Put the other nail in a cup with water.","Leave both for three days.","Look at the nails."],hap:"The wet nail turns brown and rough. The dry nail stays shiny.",why:"Iron + water + air makes rust. The dry nail has no water, so it does not rust."},ur:{t:"کیل کو زنگ لگنا",need:["دو کیل","دو چھوٹے کپ","پانی"],steps:["ایک کیل خشک کپ میں رکھیں۔","دوسرا کیل پانی والے کپ میں رکھیں۔","دونوں کو تین دن چھوڑ دیں۔","کیلوں کو دیکھیں۔"],hap:"گیلا کیل بھورا اور کھردرا ہو جاتا ہے۔ خشک کیل چمکدار رہتا ہے۔",why:"لوہا + پانی + ہوا = زنگ۔ خشک کیل میں پانی نہیں ہوتا، اس لیے اسے زنگ نہیں لگتا۔"}},
+{id:"p-lever",en:{t:"Making a simple lever",need:["A ruler","A pencil","A small stone","A book"],steps:["Put the pencil under the middle of the ruler.","Put the stone on one end.","Push the other end down.","Move the pencil closer to the stone and push again."],hap:"The stone lifts up. It is easier to lift when the pencil is close to the stone.",why:"A lever turns a small push into a big lift. The pencil is the turning point."},ur:{t:"سادہ لیور بنانا",need:["ایک فٹا","ایک پنسل","ایک چھوٹا پتھر","ایک کتاب"],steps:["پنسل کو فٹے کے درمیان میں رکھیں۔","پتھر کو ایک سرے پر رکھیں۔","دوسرا سرا نیچے دبائیں۔","پنسل کو پتھر کے قریب لائیں اور دوبارہ دبائیں۔"],hap:"پتھر اوپر اٹھتا ہے۔ پنسل پتھر کے قریب ہو تو اٹھانا آسان ہوتا ہے۔",why:"لیور چھوٹے دھکے کو بڑے اٹھاؤ میں بدل دیتا ہے۔ پنسل گھومنے کا نقطہ ہے۔"}}
+];
+
+function toolsCalcPaint(){
+  var ex=$("tl-expr");if(ex)ex.textContent=toolsCalcExpr||" ";
+  var dg=$("tl-deg");if(dg)dg.textContent=toolsCalcDeg?"DEG":"RAD";
+  var hi=$("tl-hist");
+  if(hi)hi.innerHTML=toolsCalcHist.map(function(h){return "<div>"+esc(h.e)+" = <b>"+esc(h.r)+"</b></div>";}).join("");
+}
+function toolsCalcEvalShow(){
+  var rs=$("tl-res");if(!rs)return;
+  if(!toolsCalcExpr.trim()){rs.textContent=t("tools_calc_empty");return;}
+  var r=toolsCalcEval(toolsCalcExpr,toolsCalcDeg);
+  if(!r.ok){rs.textContent=t(r.err==="div0"?"tools_calc_div0":r.err==="brackets"?"tools_calc_brackets":r.err==="fact"?"tools_calc_fact":"tools_calc_bad");return;}
+  var v=toolsFmtNum(r.value);
+  rs.textContent=v;
+  toolsCalcHist.unshift({e:toolsCalcExpr,r:v});toolsCalcHist=toolsCalcHist.slice(0,10);
+  toolsCalcExpr=String(r.value);toolsCalcPaint();
+}
+function toolsCalcHTML(){
+  var keys=[["7","7"],["8","8"],["9","9"],["÷","/"],["C","C"],["4","4"],["5","5"],["6","6"],["×","*"],["⌫","B"],["1","1"],["2","2"],["3","3"],["−","-"],["M+","M+"],["0","0"],[".","."],["%","%"],["+","+"],["MR","MR"],["(","("],[")",")"],["xʸ","^"],["√","sqrt("],["MC","MC"],["sin","sin("],["cos","cos("],["tan","tan("],["x²","²"],["1/x","inv("],["π","π"],["e","e"],["!","!"],["log","log("],["ln","ln("],["exp","exp("],["∛","cbrt("],["sin⁻¹","asin("],["cos⁻¹","acos("],["tan⁻¹","atan("]];
+  var h='<div class="card"><h3>'+esc(t("tools_calc"))+'</h3>';
+  h+='<div class="calc-disp"><div class="expr" id="tl-expr"></div><div class="res" id="tl-res">0</div></div>';
+  h+='<div class="calc-keys" id="tl-keys">'+keys.map(function(k){return '<button type="button" class="btn calc-key" data-k="'+esc(k[1])+'">'+esc(k[0])+'</button>';}).join("")+'</div>';
+  h+='<div class="toolbar"><button type="button" class="btn btn-primary" id="tl-eq" style="flex:1">=</button><button type="button" class="btn" id="tl-deg">DEG</button></div>';
+  h+='<div id="tl-hist" class="muted"></div></div>';
+  return h;
+}
+function toolsPaintResult(pfx,r,key){
+  var ans=$(pfx+"-ans"),st=$(pfx+"-steps"),tog=$(pfx+"-tog");
+  if(!ans)return;
+  if(!r.ok){ans.textContent=t(r.err==="div0"?"tools_calc_div0":"tools_calc_bad");if(st)st.style.display="none";if(tog)tog.style.display="none";return;}
+  ans.textContent=t("tools_answer")+": "+r.answer;
+  if(r.steps&&r.steps.length&&st){st.innerHTML="<ol>"+r.steps.map(function(s){return "<li>"+esc(s)+"</li>";}).join("")+"</ol>";if(tog){tog.style.display="";tog.textContent=t(toolsStepsOpen[key]?"tools_hide_steps":"tools_steps");}st.style.display=toolsStepsOpen[key]?"":"none";}
+  else{if(st)st.style.display="none";if(tog)tog.style.display="none";}
+}
+function toolsBindToggle(pfx,key){
+  var tog=$(pfx+"-tog");if(!tog)return;
+  tog.onclick=function(){toolsStepsOpen[key]=!toolsStepsOpen[key];var st=$(pfx+"-steps");if(st)st.style.display=toolsStepsOpen[key]?"":"none";tog.textContent=t(toolsStepsOpen[key]?"tools_hide_steps":"tools_steps");};
+}
+var SOLVER_DEFS=[
+ {id:"arith",titleKey:"tools_arith",fields:[{k:"a",labelKey:"tools_num1",type:"number"},{k:"op",labelKey:null,type:"select",opts:[{lit:"+",v:"+"},{lit:"−",v:"-"},{lit:"×",v:"*"},{lit:"÷",v:"/"}]},{k:"b",labelKey:"tools_num2",type:"number"}],solve:function(v){return solveArith(v.a,v.op,v.b);}},
+ {id:"pct",titleKey:"tools_pct",fields:[{k:"kind",labelKey:null,type:"select",opts:[{key:"tools_pct_kind_of",v:"of"},{key:"tools_pct_kind_what",v:"what"},{key:"tools_pct_kind_inc",v:"inc"},{key:"tools_pct_kind_dec",v:"dec"}]},{k:"x",labelKey:"tools_num1",type:"number"},{k:"y",labelKey:"tools_num2",type:"number"}],solve:function(v){return solvePercent(v.kind,v.x,v.y);}},
+ {id:"hcf",titleKey:"tools_hcf",fields:[{k:"a",labelKey:"tools_num1",type:"number"},{k:"b",labelKey:"tools_num2",type:"number"}],solve:function(v){return solveHcfLcm(v.a,v.b);}},
+ {id:"lin",titleKey:"tools_lin",fields:[{k:"a",labelKey:"a",type:"number"},{k:"b",labelKey:"b",type:"number"},{k:"c",labelKey:"c",type:"number"}],solve:function(v){return solveLinear(v.a,v.b,v.c);}},
+ {id:"quad",titleKey:"tools_quad",fields:[{k:"a",labelKey:"a",type:"number"},{k:"b",labelKey:"b",type:"number"},{k:"c",labelKey:"c",type:"number"}],solve:function(v){return solveQuad(v.a,v.b,v.c);}},
+ {id:"interest",titleKey:"tools_interest",fields:[{k:"p",labelKey:"tools_si_p",type:"number"},{k:"r",labelKey:"tools_si_r",type:"number"},{k:"t",labelKey:"tools_si_t",type:"number"},{k:"type",labelKey:"tools_si_type",type:"select",opts:[{key:"tools_simple",v:"simple"},{key:"tools_compound",v:"compound"}]}],solve:function(v){return solveInterest(v.p,v.r,v.t,v.type==="simple");}}
+];
+function toolsSolverCardHTML(def){
+  var h='<div class="card"><h3>'+esc(t(def.titleKey))+'</h3>';
+  def.fields.forEach(function(f){
+    if(f.type==="select"){
+      var opts=f.opts.map(function(o){return '<option value="'+esc(o.v)+'">'+esc(o.key?t(o.key):o.lit)+'</option>';}).join("");
+      h+=f.labelKey?'<div class="field"><label>'+esc(t(f.labelKey))+'</label><select id="tl-sv-'+def.id+'-'+f.k+'">'+opts+'</select></div>':'<div class="field"><select id="tl-sv-'+def.id+'-'+f.k+'">'+opts+'</select></div>';
+    }else{
+      h+=fld(f.labelKey,'<input id="tl-sv-'+def.id+'-'+f.k+'" inputmode="decimal">');
+    }
+  });
+  h+='<button type="button" class="btn btn-primary" id="tl-sv-'+def.id+'-go">'+esc(t("tools_solve"))+'</button> <button type="button" class="btn btn-sm" id="tl-sv-'+def.id+'-tog" style="display:none">'+esc(t("tools_steps"))+'</button><div class="tools-ans" id="tl-sv-'+def.id+'-ans"></div><div class="tools-steps" id="tl-sv-'+def.id+'-steps" style="display:none"></div></div>';
+  return h;
+}
+function toolsBindSolver(def){
+  var go=$("tl-sv-"+def.id+"-go");if(!go)return;
+  go.onclick=function(){
+    var v={};
+    def.fields.forEach(function(f){
+      var el=$("tl-sv-"+def.id+"-"+f.k);
+      v[f.k]=f.type==="select"?el.value:toolsNum(el.value);
+    });
+    toolsPaintResult("tl-sv-"+def.id,def.solve(v),"sv-"+def.id);
+  };
+  toolsBindToggle("tl-sv-"+def.id,"sv-"+def.id);
+}
+function toolsFracHTML(){
+  var h='<div class="card"><h3>'+esc(t("tools_frac"))+'</h3><div class="grid2">';
+  h+='<div><b>1</b>'+fld("tools_top",'<input id="tl-fr-n1" inputmode="numeric">')+fld("tools_bottom",'<input id="tl-fr-d1" inputmode="numeric">')+'</div>';
+  h+='<div><b>2</b>'+fld("tools_top",'<input id="tl-fr-n2" inputmode="numeric">')+fld("tools_bottom",'<input id="tl-fr-d2" inputmode="numeric">')+'</div></div>';
+  h+='<div class="field"><select id="tl-fr-op"><option value="+">+</option><option value="-">−</option><option value="*">×</option><option value="/">÷</option></select></div>';
+  h+='<button type="button" class="btn btn-primary" id="tl-fr-go">'+esc(t("tools_solve"))+'</button> <button type="button" class="btn btn-sm" id="tl-fr-tog" style="display:none">'+esc(t("tools_steps"))+'</button><div class="tools-ans" id="tl-fr-ans"></div><div class="tools-steps" id="tl-fr-steps" style="display:none"></div></div>';
+  return h;
+}
+function toolsBindFrac(){
+  var go=$("tl-fr-go");if(!go)return;
+  go.onclick=function(){toolsPaintResult("tl-fr",solveFraction(toolsNum($("tl-fr-n1").value),toolsNum($("tl-fr-d1").value),toolsNum($("tl-fr-n2").value),toolsNum($("tl-fr-d2").value),$("tl-fr-op").value),"fr");};
+  toolsBindToggle("tl-fr","fr");
+}
+var SHAPE_FIELDS={rectangle:[["l","tools_len"],["w","tools_wid"]],triangle:[["b","tools_base"],["h","tools_height"],["s1","tools_side"],["s2","tools_side"]],circle:[["r","tools_radius"]],cube:[["s","tools_side"]],cuboid:[["l","tools_len"],["w","tools_wid"],["h","tools_depth"]],cylinder:[["r","tools_radius"],["h","tools_height"]]};
+function toolsShapeFieldsHTML(shape){
+  return SHAPE_FIELDS[shape].map(function(f){return fld(f[1],'<input id="tl-sh-'+f[0]+'" inputmode="decimal">');}).join("");
+}
+function toolsShapesHTML(){
+  var h='<div class="card"><h3>'+esc(t("tools_shapes"))+'</h3>';
+  h+='<div class="field"><label>'+esc(t("tools_shape"))+'</label><select id="tl-sh-shape">'+
+    [["rectangle","tools_sh_rect"],["triangle","tools_sh_tri"],["circle","tools_sh_circ"],["cube","tools_sh_cube"],["cuboid","tools_sh_cuboid"],["cylinder","tools_sh_cyl"]].map(function(o){return '<option value="'+o[0]+'">'+esc(t(o[1]))+'</option>';}).join("")+'</select></div>';
+  h+='<div id="tl-sh-fields"></div>';
+  h+='<button type="button" class="btn btn-primary" id="tl-sh-go">'+esc(t("tools_solve"))+'</button> <button type="button" class="btn btn-sm" id="tl-sh-tog" style="display:none">'+esc(t("tools_steps"))+'</button><div class="tools-ans" id="tl-sh-ans"></div><div class="tools-steps" id="tl-sh-steps" style="display:none"></div></div>';
+  return h;
+}
+function toolsBindShapes(){
+  var sel=$("tl-sh-shape");if(!sel)return;
+  $("tl-sh-fields").innerHTML=toolsShapeFieldsHTML(sel.value);
+  sel.onchange=function(){$("tl-sh-fields").innerHTML=toolsShapeFieldsHTML(sel.value);};
+  $("tl-sh-go").onclick=function(){
+    var shape=sel.value,dims={};
+    SHAPE_FIELDS[shape].forEach(function(f){dims[f[0]]=toolsNum(($(("tl-sh-"+f[0]))||{}).value);});
+    toolsPaintResult("tl-sh",solveShape(shape,dims),"sh");
+  };
+  toolsBindToggle("tl-sh","sh");
+}
+function toolsConvUnitsHTML(cat){
+  var c=toolsConvCat(cat);if(!c)return "";
+  return c[3].map(function(u){return '<option value="'+u[0]+'">'+esc(u[0]+" ("+toolsL(u[1],u[2])+")")+'</option>';}).join("");
+}
+function toolsConvertHTML(){
+  var h='<div class="card"><h3>'+esc(t("tools_convert"))+'</h3>';
+  h+='<div class="field"><label>'+esc(t("tools_conv_cat"))+'</label><select id="tl-cv-cat">'+
+    [["length","tools_cat_len"],["weight","tools_cat_wt"],["capacity","tools_cat_cap"],["area","tools_cat_area"],["temp","tools_cat_temp"]].map(function(o){return '<option value="'+o[0]+'">'+esc(t(o[1]))+'</option>';}).join("")+'</select></div>';
+  h+=fld("tools_conv_val",'<input id="tl-cv-val" inputmode="decimal">');
+  h+='<div class="grid2"><div class="field"><label>'+esc(t("tools_conv_from"))+'</label><select id="tl-cv-from"></select></div><div class="field"><label>'+esc(t("tools_conv_to"))+'</label><select id="tl-cv-to"></select></div></div>';
+  h+='<button type="button" class="btn btn-primary" id="tl-cv-go">'+esc(t("tools_solve"))+'</button> <button type="button" class="btn btn-sm" id="tl-cv-tog" style="display:none">'+esc(t("tools_steps"))+'</button><div class="tools-ans" id="tl-cv-ans"></div><div class="tools-steps" id="tl-cv-steps" style="display:none"></div></div>';
+  return h;
+}
+function toolsBindConvert(){
+  var cat=$("tl-cv-cat");if(!cat)return;
+  function fill(){var html=toolsConvUnitsHTML(cat.value);$("tl-cv-from").innerHTML=html;$("tl-cv-to").innerHTML=html;$("tl-cv-to").selectedIndex=1;}
+  fill();
+  cat.onchange=fill;
+  $("tl-cv-go").onclick=function(){toolsPaintResult("tl-cv",convertUnits(cat.value,toolsNum($("tl-cv-val").value),$("tl-cv-from").value,$("tl-cv-to").value),"cv");};
+  toolsBindToggle("tl-cv","cv");
+}
+function toolsTablesHTML(){
+  var h='<div class="card"><h3>'+esc(t("tools_tables"))+'</h3>';
+  h+='<div class="field"><label>'+esc(t("tools_table_n"))+'</label><select id="tl-tb-n">';
+  for(var n=2;n<=20;n++)h+='<option value="'+n+'">'+n+'</option>';
+  h+='<option value="all">'+esc(t("tools_table_all"))+'</option></select></div>';
+  h+='<button type="button" class="btn btn-primary" id="tl-tb-go">'+esc(t("tools_solve"))+'</button> <button type="button" class="btn btn-sm" id="tl-tb-print">'+esc(t("print"))+'</button><div id="tl-tb-out"></div></div>';
+  return h;
+}
+function toolsBindTables(){
+  var go=$("tl-tb-go");if(!go)return;
+  go.onclick=function(){
+    var v=$("tl-tb-n").value;
+    var html=v==="all"?tablesAllData().map(function(tb){return "<h4>"+esc(t("tools_table_of"))+" "+tb.n+"</h4><p>"+tb.rows.map(function(r){return esc(r);}).join("<br>")+"</p>";}).join(""):"<h4>"+esc(t("tools_table_of"))+" "+v+"</h4><p>"+tablesData(Number(v)).map(function(r){return esc(r);}).join("<br>")+"</p>";
+    $("tl-tb-out").innerHTML=html;
+  };
+  $("tl-tb-print").onclick=function(){doPrint(tablesPrintHTML($("tl-tb-n").value));};
+}
+function toolsSolversHTML(){
+  var h='<div class="card"><h2>'+esc(t("tools_maths"))+'</h2></div>';
+  SOLVER_DEFS.forEach(function(def){h+=toolsSolverCardHTML(def);});
+  h+=toolsFracHTML()+toolsShapesHTML()+toolsConvertHTML()+toolsTablesHTML();
+  return h;
+}
+function toolsTheoremInputsHTML(th){
+  var h="";
+  if(th.id==="pyth"){
+    h+='<div class="field"><label>'+esc(t("tools_th_find"))+'</label><select id="tl-th-pyth-find"><option value="c">c</option><option value="a">a</option><option value="b">b</option></select></div>';
+    h+='<div class="grid2">'+fld("a",'<input id="tl-th-pyth-a" inputmode="decimal">')+fld("b",'<input id="tl-th-pyth-b" inputmode="decimal">')+'</div>'+fld("c",'<input id="tl-th-pyth-c" inputmode="decimal">');
+  }else if(th.id==="anglesum"){
+    h+='<div class="grid2">'+fld("tools_num1",'<input id="tl-th-anglesum-a1" inputmode="decimal">')+fld("tools_num2",'<input id="tl-th-anglesum-a2" inputmode="decimal">')+'</div>';
+  }else if(th.id==="straight"){
+    h+=fld("tools_num1",'<input id="tl-th-straight-a1" inputmode="decimal">');
+  }else if(th.id==="point"){
+    h+='<div class="grid2">'+fld("tools_num1",'<input id="tl-th-point-a1" inputmode="decimal">')+fld("tools_num2",'<input id="tl-th-point-a2" inputmode="decimal">')+'</div>';
+  }else if(th.id==="triarea"){
+    h+='<div class="grid2">'+fld("tools_base",'<input id="tl-th-triarea-b" inputmode="decimal">')+fld("tools_height",'<input id="tl-th-triarea-h" inputmode="decimal">')+'</div>';
+  }else if(th.id==="circle"){
+    h+=fld("tools_radius",'<input id="tl-th-circle-r" inputmode="decimal">');
+  }else if(th.id==="parallel"){
+    h+=fld("tools_num1",'<input id="tl-th-parallel-a1" inputmode="decimal">');
+  }else if(th.id==="cong"){
+    h+='<b>1</b><div class="grid2">'+fld("tools_side",'<input id="tl-th-cong-a1" inputmode="decimal">')+fld("tools_side",'<input id="tl-th-cong-a2" inputmode="decimal">')+fld("tools_side",'<input id="tl-th-cong-a3" inputmode="decimal">')+'</div>';
+    h+='<b>2</b><div class="grid2">'+fld("tools_side",'<input id="tl-th-cong-b1" inputmode="decimal">')+fld("tools_side",'<input id="tl-th-cong-b2" inputmode="decimal">')+fld("tools_side",'<input id="tl-th-cong-b3" inputmode="decimal">')+'</div>';
+  }
+  return h;
+}
+function toolsTheoremsHTML(){
+  var h='<div class="card"><h2>'+esc(t("tools_theorems"))+'</h2>';
+  THEOREMS.forEach(function(th){
+    h+='<hr class="sep"><h3>'+esc(t(th.titleKey))+'</h3><p><b>'+esc(t("tools_th_state"))+':</b> '+esc(toolsL(th.state[0],th.state[1]))+'</p>';
+    h+=toolsTheoremInputsHTML(th);
+    h+='<button type="button" class="btn btn-primary" id="tl-th-'+th.id+'-go">'+esc(t("tools_solve"))+'</button> <button type="button" class="btn btn-sm" id="tl-th-'+th.id+'-tog" style="display:none">'+esc(t("tools_steps"))+'</button><div class="tools-ans" id="tl-th-'+th.id+'-ans"></div><div class="tools-steps" id="tl-th-'+th.id+'-steps" style="display:none"></div>';
+    h+='<p><b>'+esc(t("tools_th_why"))+':</b> '+esc(toolsL(th.why[0],th.why[1]))+'</p>';
+  });
+  return h+'</div>';
+}
+function toolsBindTheorem(th){
+  var go=$("tl-th-"+th.id+"-go");if(!go)return;
+  go.onclick=function(){
+    var r=null,n=function(id){return toolsNum(($(id)||{}).value);};
+    if(th.id==="pyth")r=solvePythagoras($("tl-th-pyth-find").value,{a:n("tl-th-pyth-a"),b:n("tl-th-pyth-b"),c:n("tl-th-pyth-c")});
+    else if(th.id==="anglesum")r=solveAngleSum(n("tl-th-anglesum-a1"),n("tl-th-anglesum-a2"));
+    else if(th.id==="straight")r=solveStraightLine(n("tl-th-straight-a1"));
+    else if(th.id==="point")r=solveAroundPoint(n("tl-th-point-a1"),n("tl-th-point-a2"));
+    else if(th.id==="triarea")r=solveTriangleArea(n("tl-th-triarea-b"),n("tl-th-triarea-h"));
+    else if(th.id==="circle")r=solveCircleTh(n("tl-th-circle-r"));
+    else if(th.id==="parallel")r=solveParallel(n("tl-th-parallel-a1"));
+    else if(th.id==="cong")r=checkCongSim([n("tl-th-cong-a1"),n("tl-th-cong-a2"),n("tl-th-cong-a3")],[n("tl-th-cong-b1"),n("tl-th-cong-b2"),n("tl-th-cong-b3")]);
+    toolsPaintResult("tl-th-"+th.id,r,"th-"+th.id);
+  };
+  toolsBindToggle("tl-th-"+th.id,"th-"+th.id);
+}
+function toolsClassHTML(){
+  var clsList=[];studentsOfAll().forEach(function(s){if(s.cls&&clsList.indexOf(s.cls)<0)clsList.push(s.cls);});clsList.sort();
+  var opts=clsList.map(function(c){return '<option value="'+esc(c)+'">'+esc(clsLabel(c))+'</option>';}).join("");
+  var h='<div class="card"><h2>'+esc(t("tools_class"))+'</h2>';
+  h+='<h3>'+esc(t("tools_pick"))+'</h3><div class="field"><label>'+esc(t("cls"))+'</label><select id="tl-pick-cls">'+opts+'</select></div><button type="button" class="btn btn-primary" id="tl-pick-btn">'+esc(t("tools_pick_btn"))+'</button><div class="tools-big" id="tl-pick-name"></div><div class="muted" id="tl-pick-note"></div>';
+  h+='<hr class="sep"><h3>'+esc(t("tools_groups"))+'</h3><div class="field"><label>'+esc(t("cls"))+'</label><select id="tl-grp-cls">'+opts+'</select></div><div class="grid2"><div class="field"><label>'+esc(t("tools_ngroups"))+'</label><select id="tl-grp-mode"><option value="count">'+esc(t("tools_ngroups"))+'</option><option value="size">'+esc(t("tools_pergroup"))+'</option></select></div><div class="field"><label>&nbsp;</label><input id="tl-grp-n" inputmode="numeric" value="3"></div></div><button type="button" class="btn btn-primary" id="tl-grp-btn">'+esc(t("tools_make_groups"))+'</button><div id="tl-grp-out"></div>';
+  h+='<hr class="sep"><h3>'+esc(t("tools_age"))+'</h3><div class="grid2">'+fld("dob",'<input id="tl-age-dob" type="date" max="'+todayISO()+'">')+'<div class="field"><label>'+esc(t("cls"))+'</label><select id="tl-age-cls"><option value="">—</option>'+opts+'</select></div></div><button type="button" class="btn btn-primary" id="tl-age-btn">'+esc(t("tools_solve"))+'</button><div class="tools-ans" id="tl-age-out"></div>';
+  h+='<hr class="sep"><h3>'+esc(t("tools_workdays"))+'</h3><p class="muted">'+esc(t("tools_sundays"))+'</p><div class="grid2">'+fld("tools_start",'<input id="tl-wd-start" type="date" value="'+todayISO()+'">')+fld("tools_end",'<input id="tl-wd-end" type="date" value="'+todayISO()+'">')+'</div><button type="button" class="btn btn-primary" id="tl-wd-btn">'+esc(t("tools_solve"))+'</button><div class="tools-ans" id="tl-wd-out"></div>';
+  return h+'</div>';
+}
+function toolsBindClass(){
+  var pb=$("tl-pick-btn");
+  if(pb)pb.onclick=function(){
+    var cls=$("tl-pick-cls").value;
+    if(toolsPickState.cls!==cls)toolsPickState={cls:cls,picked:[]};
+    var list=studentsOfAll().filter(function(s){return String(s.cls)===String(cls);});
+    var st=toolsPickNext(list,toolsPickState.picked);
+    var note=$("tl-pick-note");
+    if(!st){toolsPickState.picked=[];if(note)note.textContent=t("tools_pick_done");st=toolsPickNext(list,toolsPickState.picked);}
+    else if(note)note.textContent="";
+    if(st){toolsPickState.picked.push(st.id);$("tl-pick-name").textContent=displayName(st);}
+  };
+  var gb=$("tl-grp-btn");
+  if(gb)gb.onclick=function(){
+    var cls=$("tl-grp-cls").value;
+    var list=studentsOfAll().filter(function(s){return String(s.cls)===String(cls);});
+    var n=parseInt($("tl-grp-n").value,10);
+    var out=$("tl-grp-out");
+    if(!list.length||!n||n<1){out.textContent=t("tools_calc_bad");return;}
+    var groups=makeGroups(list,$("tl-grp-mode").value,n);
+    out.innerHTML=groups.map(function(g,i){return "<div style='margin:.4rem 0'><b>"+esc(t("tools_group"))+" "+(i+1)+"</b><br>"+g.map(function(s){return esc(displayName(s));}).join("<br>")+"</div>";}).join("");
+  };
+  var ab=$("tl-age-btn");
+  if(ab)ab.onclick=function(){
+    var dob=$("tl-age-dob").value,cls=$("tl-age-cls").value,out=$("tl-age-out");
+    if(!dob){out.textContent=t("tools_calc_bad");return;}
+    var a=calcAgeYMD(dob,todayISO());
+    var txt=a.y+" "+t("years")+", "+a.m+" "+t("months")+", "+a.d+" "+t("tools_days");
+    if(cls){
+      var band=(db().settings.ageBands||{})[cls]||defaultAgeBands[cls];
+      if(band){
+        var bandTxt=band.minY+" "+t("years")+" "+band.minM+" "+t("months")+" – "+band.maxY+" "+t("years")+" "+band.maxM+" "+t("months");
+        txt+="<br>"+t("tools_band")+": "+bandTxt+" — "+(inBand(calcAge(dob,todayISO()),band)?t("eligible"):t("not_eligible"));
+      }
+    }
+    out.innerHTML=esc(txt);
+  };
+  var wb=$("tl-wd-btn");
+  if(wb)wb.onclick=function(){
+    var s=$("tl-wd-start").value,e=$("tl-wd-end").value,out=$("tl-wd-out");
+    if(!s||!e){out.textContent=t("tools_calc_bad");return;}
+    var r=countWorkingDays(s,e);
+    if(!r.ok){out.textContent=t("tools_calc_bad");return;}
+    out.textContent=t("tools_workdays_is")+": "+r.working+" "+t("tools_days")+" ("+r.total+" "+t("tools_days")+")";
+  };
+}
+function toolsExpChipsHTML(){
+  var subs=[["all","tools_all"],["maths","tools_sub_maths"],["english","tools_sub_english"],["science","tools_sub_science"],["islamiat","tools_sub_islamiat"],["urdu","tools_sub_urdu"],["social","tools_sub_social"],["art","tools_sub_art"]];
+  return subs.map(function(s){return '<button type="button" class="btn btn-sm'+(toolsExpSub===s[0]?" btn-primary":"")+'" data-sub="'+s[0]+'">'+esc(t(s[1]))+'</button>';}).join("");
+}
+function toolsExpListHTML(){
+  var q=toolsExpQuery.trim().toLowerCase();
+  var list=EXPLAIN_TOPICS.filter(function(tp){
+    if(toolsExpSub!=="all"&&tp.sub!==toolsExpSub)return false;
+    if(!q)return true;
+    var hay=(tp.en.t+" "+tp.en.b+" "+tp.ur.t+" "+tp.ur.b).toLowerCase();
+    return hay.indexOf(q)>=0;
+  });
+  if(!list.length)return '<p class="muted">'+esc(t("tools_exp_none"))+'</p>';
+  return list.map(function(tp){
+    return '<div class="card" style="margin-bottom:.6rem"><b>'+esc(toolsL(tp.en.t,tp.ur.t))+'</b> <span class="chip">'+esc(t("tools_sub_"+tp.sub))+'</span><p>'+esc(toolsL(tp.en.b,tp.ur.b))+'</p><button type="button" class="btn btn-sm" data-more="'+tp.id+'">'+esc(t("tools_exp_more"))+'</button><div id="tl-exp-more-'+tp.id+'"></div></div>';
+  }).join("");
+}
+function toolsExpMoreClick(id){
+  var tp=null;EXPLAIN_TOPICS.forEach(function(x){if(x.id===id)tp=x;});if(!tp)return;
+  var box=$("tl-exp-more-"+id);if(!box)return;
+  if(!geminiKey()){box.innerHTML='<div class="muted">'+esc(t("ask_nomatch"))+'</div><p class="muted">✨ '+esc(t("gemini_hint_short"))+'</p>';return;}
+  box.innerHTML='<p class="muted">⏳</p>';
+  var title=toolsL(tp.en.t,tp.ur.t);
+  geminiCall(geminiKey(),{contents:[{parts:[{text:"Explain briefly in simple words for a primary school teacher in Pakistan: "+title+". Keep it short, 4 to 6 short sentences."}]}],generationConfig:{temperature:0.3}})
+  .then(function(r){
+    if(r.status!==200){var rs=geminiReason(r.status,r.body);box.innerHTML='<div class="msg err">'+esc(t(rs==="invalid_key"||rs==="not_allowed"?"gemini_key_bad":rs==="model"?"gemini_model":rs==="busy"?"gemini_busy":"gemini_offline"))+'</div>';return;}
+    var parts=((((r.body||{}).candidates||[])[0]||{}).content||{}).parts||[];
+    var txt=parts.map(function(p){return p.text||"";}).join("").trim();
+    if(!txt){box.innerHTML='<div class="msg err">'+esc(t("gemini_empty"))+'</div>';return;}
+    box.innerHTML='<div style="white-space:pre-wrap">'+esc(txt)+'</div>';
+  }).catch(function(){box.innerHTML='<div class="msg err">'+esc(t("gemini_offline"))+'</div>';});
+}
+function toolsBindExpMore(){
+  Array.prototype.forEach.call(document.querySelectorAll("[data-more]"),function(b){
+    b.onclick=function(){toolsExpMoreClick(b.getAttribute("data-more"));};
+  });
+}
+function toolsBindExpChips(){
+  Array.prototype.forEach.call(document.querySelectorAll("#tl-exp-chips [data-sub]"),function(b){
+    b.onclick=function(){toolsExpSub=b.getAttribute("data-sub");$("tl-exp-chips").innerHTML=toolsExpChipsHTML();$("tl-exp-list").innerHTML=toolsExpListHTML();toolsBindExpChips();toolsBindExpMore();};
+  });
+}
+function toolsExplainerHTML(){
+  var h='<div class="card"><h2>'+esc(t("tools_exp"))+'</h2>';
+  h+='<div class="toolbar"><input class="search" id="tl-exp-q" placeholder="'+esc(t("tools_exp_search"))+'" value="'+esc(toolsExpQuery)+'"></div>';
+  h+='<div class="toolbar" id="tl-exp-chips">'+toolsExpChipsHTML()+'</div>';
+  h+='<div id="tl-exp-list">'+toolsExpListHTML()+'</div></div>';
+  return h;
+}
+function toolsPracticalsHTML(){
+  var h='<div class="card"><h2>'+esc(t("tools_pract"))+'</h2>';
+  PRACTICALS.forEach(function(p){
+    var d=lang()==="ur"?p.ur:p.en;
+    h+='<details style="margin-bottom:.6rem"><summary><b>'+esc(d.t)+'</b></summary>'+
+      '<p><b>'+esc(t("tools_pract_need"))+':</b></p><ul>'+d.need.map(function(n){return "<li>"+esc(n)+"</li>";}).join("")+'</ul>'+
+      '<p><b>'+esc(t("tools_pract_steps"))+':</b></p><ol>'+d.steps.map(function(s){return "<li>"+esc(s)+"</li>";}).join("")+'</ol>'+
+      '<p><b>'+esc(t("tools_pract_happens"))+':</b> '+esc(d.hap)+'</p>'+
+      '<p><b>'+esc(t("tools_pract_why"))+':</b> '+esc(d.why)+'</p></details>';
+  });
+  return h+'</div>';
+}
+function viewTools(){
+  var h='<div class="card"><h2>'+esc(t("tools_title"))+'</h2><p class="muted">'+esc(t("tools_sub"))+'</p></div>';
+  h+=toolsCalcHTML()+toolsSolversHTML()+toolsTheoremsHTML()+toolsClassHTML()+toolsExplainerHTML()+toolsPracticalsHTML();
+  return h;
+}
+function afterTools(){
+  toolsCalcPaint();
+  Array.prototype.forEach.call(document.querySelectorAll("#tl-keys .btn"),function(b){
+    b.onclick=function(){var k=b.getAttribute("data-k");
+      if(k==="C"){toolsCalcExpr="";toolsCalcPaint();var rs=$("tl-res");if(rs)rs.textContent="0";return;}
+      if(k==="B"){toolsCalcExpr=toolsCalcExpr.slice(0,-1);toolsCalcPaint();return;}
+      if(k==="M+"){var r=toolsCalcEval(toolsCalcExpr,toolsCalcDeg);if(r.ok)toolsCalcMem+=r.value;return;}
+      if(k==="MR"){toolsCalcExpr+=String(toolsCalcMem);toolsCalcPaint();return;}
+      if(k==="MC"){toolsCalcMem=0;return;}
+      toolsCalcExpr+=k;toolsCalcPaint();
+    };
+  });
+  var eq=$("tl-eq");if(eq)eq.onclick=function(){toolsCalcEvalShow();};
+  var dg=$("tl-deg");if(dg)dg.onclick=function(){toolsCalcDeg=!toolsCalcDeg;toolsCalcPaint();};
+  SOLVER_DEFS.forEach(function(def){toolsBindSolver(def);});
+  toolsBindFrac();toolsBindShapes();toolsBindConvert();toolsBindTables();
+  THEOREMS.forEach(function(th){toolsBindTheorem(th);});
+  toolsBindClass();
+  var q=$("tl-exp-q");
+  if(q)q.oninput=function(){toolsExpQuery=q.value;$("tl-exp-list").innerHTML=toolsExpListHTML();toolsBindExpMore();};
+  toolsBindExpChips();toolsBindExpMore();
+}
+
 const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,LANGS:LANGS,langDir:langDir,langOrder:langOrder,
   calcAge:calcAge,fmtAge:fmtAge,inBand:inBand,displayName:displayName,
   addStudent:addStudent,updateStudent:updateStudent,deleteStudent:deleteStudent,
@@ -19713,7 +20617,8 @@ const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,LAN
   studentPhotoHTML:studentPhotoHTML,setStudentPhoto:setStudentPhoto,
   captureStudentPhoto:captureStudentPhoto,storageBytes:storageBytes,storageMeterHTML:storageMeterHTML,
   scanFromText:scanFromText,docImpPrompt:docImpPrompt,docImpParseResponse:docImpParseResponse,docImpNormDate:docImpNormDate,docImpNormAdm:docImpNormAdm,docImpNormMarks:docImpNormMarks,docImpNormAtt:docImpNormAtt,findStudentByName:findStudentByName,docImpFlagRows:docImpFlagRows,docImpCommit:docImpCommit,docImpUndo:docImpUndo,docImpLastBatch:docImpLastBatch,docImpFileParts:docImpFileParts,docImpExtract:docImpExtract,docImpExtractFromParts:docImpExtractFromParts,docImpCardHTML:docImpCardHTML,docImpPaint:docImpPaint,bindDocImp:bindDocImp,docImpUndoClick:docImpUndoClick,
-  viewDossier:viewDossier};
+  viewDossier:viewDossier,
+  toolsCalcEval:toolsCalcEval,toolsFmtNum:toolsFmtNum,solveArith:solveArith,solveFraction:solveFraction,solvePercent:solvePercent,solveHcfLcm:solveHcfLcm,solveLinear:solveLinear,solveQuad:solveQuad,solveInterest:solveInterest,solveShape:solveShape,convertUnits:convertUnits,tablesData:tablesData,tablesAllData:tablesAllData,countWorkingDays:countWorkingDays,calcAgeYMD:calcAgeYMD,toolsPickNext:toolsPickNext,makeGroups:makeGroups,solvePythagoras:solvePythagoras,solveAngleSum:solveAngleSum,solveStraightLine:solveStraightLine,solveAroundPoint:solveAroundPoint,solveTriangleArea:solveTriangleArea,solveCircleTh:solveCircleTh,solveParallel:solveParallel,checkCongSim:checkCongSim,EXPLAIN_TOPICS:EXPLAIN_TOPICS,PRACTICALS:PRACTICALS,THEOREMS:THEOREMS,CONV_UNITS:CONV_UNITS,viewTools:viewTools};
 function initApp(){db();takeSnapshot("auto");applyLang();
   if(parentHashFromURL()){parentMode=true;parentSchoolId=parentSchoolFromURL();}
   if(verifyHashFromURL()||verifyCodeFromURL()){verifyMode=true;}
