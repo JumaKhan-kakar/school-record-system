@@ -11243,8 +11243,68 @@ const Cloud = {
   ready: false, authResolved: false, user: null, teacher: null, authError: "",
   schoolId: "", school: null, readOnly: false, isSuperAdmin: false, platformKey: "",
   fb: null, fs: null, auth: null,
-  applyingRemote: false, lastSyncedJSON: "", localBeforeSync: "", unsubs: [],
+  applyingRemote: false, lastSyncedJSON: "", localBeforeSync: "", lastSyncError: null, lastSyncOk: "", lastSyncTest: null, syncTimeoutMs: 20000, unsubs: [],
   firstSeen: {}, firstDone: false, seedChecked: false, cloudFirst: {},
+  /* Round 64: sync diagnostics. lastSyncError is the last cloud failure
+     (code + message + where + when), recorded at every point that used to
+     swallow errors silently; lastSyncOk is the last confirmed good write
+     or listener delivery. The sync-status card and the honest sync line
+     read these — the app never claims live sync while an error is
+     recorded. */
+  syncErrCode: function(e){
+    if(!e)return "unknown";
+    if(typeof e==="string")return e;
+    if(e.code)return String(e.code);
+    if(e.status)return "http-"+String(e.status);
+    if(e.message&&/timeout/i.test(e.message))return "timeout";
+    return "unknown";
+  },
+  recordSyncError: function(where,e){
+    try{
+      const code=this.syncErrCode(e);
+      const msg=(e&&e.message)?String(e.message):(typeof e==="string"?e:String(e||""));
+      this.lastSyncError={code:code,message:msg,at:tsNow(),where:String(where||"")};
+      try{audit("sync-error",String(where||"cloud")+": "+code+(msg?" — "+msg:""));}catch(err){}
+    }catch(err){}
+    return this.lastSyncError;
+  },
+  markSyncOk: function(){
+    this.lastSyncOk=tsNow();
+    return this.lastSyncOk;
+  },
+  timed: function(p,ms){
+    const self=this;let done=false;
+    const gated=Promise.resolve(p).then(function(v){done=true;return v;},function(e){done=true;throw e;});
+    gated.catch(function(){});
+    return Promise.race([gated,new Promise(function(res,rej){setTimeout(function(){if(!done){const te=new Error("timeout");te.code="timeout";rej(te);}},ms||self.syncTimeoutMs||20000);})]);
+  },
+  /* Round 64: connection test. Writes ONE throwaway doc and reads it
+     back. Collection "settings" (NOT a new "syncTest" collection): the
+     Firestore rules enumerate the subcollections a school may write,
+     and "syncTest" is not among them — a write there would fail
+     permission-denied even on a healthy connection and the test would
+     lie. "settings" is covered by the existing rules; the doc is
+     deleted right after the read-back and carries test:true so no
+     listener ever treats it as real data. */
+  syncTestConnection: function(){
+    const self=this;
+    if(!self.ready||!self.fs||!self.schoolId){const code=!self.ready?"not-ready":(!self.fs?"no-firestore":"no-school");const r={ok:false,code:code,message:"",at:tsNow()};self.lastSyncTest=r;self.recordSyncError("syncTest",code);return Promise.resolve(r);}
+    const t0=Date.now();
+    const p=self.coll("settings").doc("sync-ping").set({at:tsNow(),by:self.user?self.user.uid:"",test:true}).then(function(){
+      return self.coll("settings").doc("sync-ping").get();
+    }).then(function(d){
+      if(!d.exists)throw Object.assign(new Error("no read-back"),{code:"no-readback"});
+      return {ok:true,ms:Date.now()-t0,code:"",message:"",at:tsNow()};
+    });
+    return self.timed(p).then(function(r){
+      self.markSyncOk();self.lastSyncTest=r;
+      try{self.coll("settings").doc("sync-ping").delete().catch(function(){});}catch(e){}
+      return r;
+    },function(e){
+      const r={ok:false,code:self.syncErrCode(e),message:(e&&e.message)?String(e.message):"",at:tsNow()};
+      self.lastSyncTest=r;self.recordSyncError("syncTest",e);return r;
+    });
+  },
   statusText: function(){return !this.enabled?"local-only":(!this.user?"signed-out":(this.ready?"live":"connecting"));},
   init: function(){
     if(!this.enabled||typeof document==="undefined")return;
@@ -11259,7 +11319,7 @@ const Cloud = {
         try{self.auth.setPersistence(self.fb.auth.Auth.Persistence.LOCAL);}catch(e){}
         self.auth.onAuthStateChanged(function(u){self.onAuth(u);});
       }catch(e){self.authResolved=true;render();}
-    }).catch(function(){self.authResolved=true;render();});
+    }).catch(function(e){self.recordSyncError("init",e);self.authResolved=true;render();});
   },
   /* SaaS: every school is a tenant. All school data lives under schools/{schoolId}/...
      The teacher's root mapping doc (teachers/{uid}) names their school; the school doc
@@ -11294,7 +11354,7 @@ const Cloud = {
           });
         });
       });
-    }).catch(function(){self.authResolved=true;render();});
+    }).catch(function(e){self.recordSyncError("auth",e);self.authResolved=true;render();});
   },
   signIn: function(email,pass){
     const self=this;
@@ -11314,10 +11374,11 @@ const Cloud = {
     colls.forEach(function(c){
       const un=self.coll(c).onSnapshot(function(snap){
         self.applyChanges(c,snap.docChanges());
+        self.markSyncOk();
         if(!self.firstSeen[c]){self.firstSeen[c]=true;
           if(Object.keys(self.firstSeen).length>=colls.length&&!self.seedChecked){self.seedChecked=true;self.firstDone=true;self.seedCheck();}
         }
-      },function(){});
+      },function(e){self.recordSyncError("listen:"+c,e);});
       self.unsubs.push(un);
     });
     setTimeout(function(){if(!self.seedChecked){self.seedChecked=true;self.firstDone=true;self.seedCheck();}},8000);
@@ -11337,7 +11398,7 @@ const Cloud = {
       });
       Store.trySave();
       self.lastSyncedJSON=JSON.stringify(db());
-    }catch(e){}
+    }catch(e){self.recordSyncError("apply:"+coll,e);}
     self.applyingRemote=false;
     if(typeof document!=="undefined")render();
   },
@@ -11426,18 +11487,36 @@ const Cloud = {
     return f;
   },
   pushDoc: function(coll,id,data){
-    if(!this.ready||!this.fs||!this.schoolId)return Promise.resolve(false);
-    try{return this.coll(coll).doc(id).set(JSON.parse(JSON.stringify(data)));}catch(e){return Promise.resolve(false);}
+    const self=this;
+    if(!self.ready||!self.fs||!self.schoolId){self.recordSyncError("push:"+coll,!self.ready?"not-ready":(!self.fs?"no-firestore":"no-school"));return Promise.resolve(false);}
+    try{
+      const p=self.coll(coll).doc(id).set(JSON.parse(JSON.stringify(data)));
+      const tapped=Promise.resolve(p).then(function(){self.markSyncOk();return true;},function(e){self.recordSyncError("push:"+coll,e);return false;});
+      tapped.catch(function(){});
+      return tapped;
+    }catch(e){self.recordSyncError("push:"+coll,e);return Promise.resolve(false);}
   },
   deleteDoc: function(coll,id){
-    if(!this.ready||!this.fs||!this.schoolId)return Promise.resolve(false);
-    try{return this.coll(coll).doc(id).delete();}catch(e){return Promise.resolve(false);}
+    const self=this;
+    if(!self.ready||!self.fs||!self.schoolId){self.recordSyncError("delete:"+coll,!self.ready?"not-ready":(!self.fs?"no-firestore":"no-school"));return Promise.resolve(false);}
+    try{
+      const p=self.coll(coll).doc(id).delete();
+      const tapped=Promise.resolve(p).then(function(){self.markSyncOk();return true;},function(e){self.recordSyncError("delete:"+coll,e);return false;});
+      tapped.catch(function(){});
+      return tapped;
+    }catch(e){self.recordSyncError("delete:"+coll,e);return Promise.resolve(false);}
   },
   /* Portal write without sign-in: the school id comes from the URL, not
      from the signed-in teacher. Used by admission applications. */
   pushPublicDoc: function(schoolId,coll,id,data){
-    if(!this.fs||!schoolId||!coll||!id)return Promise.resolve(false);
-    try{return this.fs.collection("schools").doc(schoolId).collection(coll).doc(id).set(JSON.parse(JSON.stringify(data)));}catch(e){return Promise.resolve(false);}
+    const self=this;
+    if(!self.fs||!schoolId||!coll||!id){self.recordSyncError("portal:"+coll,!self.fs?"no-firestore":"no-school");return Promise.resolve(false);}
+    try{
+      const p=self.fs.collection("schools").doc(schoolId).collection(coll).doc(id).set(JSON.parse(JSON.stringify(data)));
+      const tapped=Promise.resolve(p).then(function(){self.markSyncOk();return true;},function(e){self.recordSyncError("portal:"+coll,e);return false;});
+      tapped.catch(function(){});
+      return tapped;
+    }catch(e){self.recordSyncError("portal:"+coll,e);return Promise.resolve(false);}
   },
   /* parent portal: fetch ONE public result by its hash. No sign-in, no list —
      the Firestore rules allow public reads only on publicResults. */
@@ -11446,8 +11525,7 @@ const Cloud = {
   getPublicResult: function(schoolId,hash){
     const self=this;
     if(!self.fs||!schoolId||!hash)return Promise.resolve(null);
-    return self.fs.collection("schools").doc(schoolId).collection("publicResults").doc(hash).get()
-      .then(function(d){return d.exists?d.data():null;});
+    return self.timed(self.fs.collection("schools").doc(schoolId).collection("publicResults").doc(hash).get()).then(function(d){return d.exists?d.data():null;},function(e){self.recordSyncError("portal-result",e);throw e;});
   },
   getPublicInfo: function(schoolId){
     const self=this;
@@ -11479,13 +11557,14 @@ const Cloud = {
     const self=this;
     if(!self.fs||!self.isSuperAdmin)return Promise.resolve([]);
     try{
-      return self.fs.collection("signupRequests").get().then(function(snap){
+      return self.timed(self.fs.collection("signupRequests").get()).then(function(snap){
         const out=[];
         snap.forEach(function(d){out.push(Object.assign({id:d.id},d.data()||{}));});
         out.sort(function(a,b){return String(b.at||"").localeCompare(String(a.at||""));});
+        self.markSyncOk();
         return out;
-      }).catch(function(){return [];});
-    }catch(e){return Promise.resolve([]);}
+      }).catch(function(e){self.recordSyncError("signups-list",e);return [];});
+    }catch(e){self.recordSyncError("signups-list",e);return Promise.resolve([]);}
   },
   approveSignup: function(reqId){
     const self=this;
@@ -11527,12 +11606,13 @@ const Cloud = {
     const self=this;
     if(!self.fs||!self.isSuperAdmin)return Promise.resolve([]);
     try{
-      return self.fs.collection("schools").get().then(function(snap){
+      return self.timed(self.fs.collection("schools").get()).then(function(snap){
         const out=[];
         snap.forEach(function(d){out.push(Object.assign({id:d.id},d.data()||{}));});
+        self.markSyncOk();
         return out;
-      }).catch(function(){return [];});
-    }catch(e){return Promise.resolve([]);}
+      }).catch(function(e){self.recordSyncError("schools-list",e);return [];});
+    }catch(e){self.recordSyncError("schools-list",e);return Promise.resolve([]);}
   },
   getSubPayments: function(schoolId){
     const self=this;
@@ -11580,12 +11660,12 @@ const Cloud = {
      settings), read by any signed-in teacher at sign-in. */
   setPlatformKey: function(key){
     const self=this;
-    if(!self.fs||!self.isSuperAdmin)return Promise.resolve({ok:false,error:t("req")});
+    if(!self.fs||!self.isSuperAdmin){if(self.enabled&&!self.fs)self.recordSyncError("key-save","no-firestore");return Promise.resolve({ok:false,error:t("req")});}
     try{
       return self.fs.collection("platform").doc("ai").set({geminiKey:String(key||""),updatedAt:tsNow(),updatedBy:self.user?self.user.uid:""},{merge:true}).then(function(){
-        self.platformKey=String(key||"");return {ok:true};
-      }).catch(function(){return {ok:false,error:t("login_fail")};});
-    }catch(e){return Promise.resolve({ok:false,error:t("login_fail")});}
+        self.platformKey=String(key||"");self.markSyncOk();return {ok:true};
+      }).catch(function(e){self.recordSyncError("key-save",e);return {ok:false,error:t("login_fail")};});
+    }catch(e){self.recordSyncError("key-save",e);return Promise.resolve({ok:false,error:t("login_fail")});}
   },
   /* Platform admin only. Teachers of one school, for the allow/block list. */
   listTeachers: function(schoolId){
@@ -11703,10 +11783,10 @@ const Cloud = {
           if(!b[coll][id]){batch.delete(self.coll(coll).doc(id));n++;}
         });
       });
-      if(n>0)batch.commit().catch(function(){});
+      if(n>0)batch.commit().then(function(){self.markSyncOk();},function(e){self.recordSyncError("sync-out",e);});
       this.lastSyncedJSON=JSON.stringify(cur);
       if(Date.now()-(this.lastSummaryAt||0)>3600000)this.pushPublicInfo();
-    }catch(e){}
+    }catch(e){this.recordSyncError("sync-out",e);}
   },
   seedCheck: function(){
     /* first sign-in: upload every record that exists only on this phone; records that
@@ -11722,9 +11802,9 @@ const Cloud = {
           if(!cf[coll]||!cf[coll][id]){batch.set(self.coll(coll).doc(id),JSON.parse(JSON.stringify(lf[coll][id])));n++;}
         });
       });
-      if(n>0)batch.commit().catch(function(){});
+      if(n>0)batch.commit().then(function(){self.markSyncOk();},function(e){self.recordSyncError("sync-seed",e);});
       this.lastSyncedJSON=JSON.stringify(db());
-    }catch(e){}
+    }catch(e){this.recordSyncError("sync-seed",e);}
   }
 };
 const SyncAdapter={
@@ -16156,6 +16236,8 @@ function publishResults(examId){
     if(n>0){
       db().settings.published[examId]={count:n,at:tsNow()};
       audit("publish-results",ex.name+" ("+ex.year+") — "+n+" "+t("dash_marks_done"));
+    }else if(bad.length){
+      audit("sync-error","publish-results "+ex.name+" ("+ex.year+"): "+bad.length+" failed — "+(typeof Cloud!=="undefined"&&Cloud.lastSyncError?Cloud.lastSyncError.code:"unknown"));
     }
     Store.save();
     if(bad.length)return {ok:false,count:n,failed:bad.length,error:t("publish_failed")};
@@ -16695,7 +16777,7 @@ function geminiPing(key){
   if(!key)return Promise.resolve({ok:false,reason:"no_key"});
   return geminiCall(key,{contents:[{parts:[{text:"Reply with the single word OK."}]}],generationConfig:{temperature:0}})
     .then(function(r){
-      if(r.status!==200)return {ok:false,reason:geminiReason(r.status,r.body)};
+      if(r.status!==200)return {ok:false,reason:geminiReason(r.status,r.body),status:r.status};
       const c=(((r.body||{}).candidates)||[])[0],parts=(c&&c.content&&c.content.parts)||[];
       return parts.some(function(p){return (p.text||"").trim().length>0;})?{ok:true}:{ok:false,reason:"empty"};
     }).catch(function(){return {ok:false,reason:"net"};});
@@ -17742,6 +17824,27 @@ new_pass:{en:"New password",ur:"نیا پاس ورڈ",bn:"নতুন পাস
 pass_changed:{en:"Password changed.",ur:"پاس ورڈ تبدیل ہو گیا۔",bn:"পাসওয়ার্ড পরিবর্তিত হয়েছে।",hi:"पासवर्ड बदल गया।",ne:"पासवर्ड परिवर्तन भयो।",sw:"Nenosiri limebadilishwa.",ar:"تم تغيير كلمة المرور.",zh:"密码已更改。",es:"Contraseña cambiada.",fr:"Mot de passe modifié.",pt:"Palavra-passe alterada.",ru:"Пароль изменен.",id:"Kata sandi diubah.",de:"Passwort geändert.",ja:"パスワードを変更しました。",pa:"پاس ورڈ بدل گیا۔",mr:"पासवर्ड बदलला.",te:"పాస్‌వర్డ్ మార్చబడింది.",fa:"رمز عبور تغییر کرد.",tr:"Şifre değiştirildi.",ta:"கடவுச்சொல் மாற்றப்பட்டது.",vi:"Đã đổi mật khẩu.",ko:"비밀번호가 변경되었습니다.",tl:"Nabago na ang password.",ha:"An canza kalmar sirri.",it:"La password è cambiata.",ps:"پټنوم بدل شو.",ms:"Kata laluan ditukar.",yo:"A ti yí ọ̀rọ̀ìpamọ́ padà.",ig:"Agbanweela okwuntughe."},
 sync_on:{en:"Live sync: ON — every entry reaches all teachers instantly",ur:"لائیو مطابقت: آن — ہر اندراج فوراً تمام اساتذہ تک پہنچتا ہے",bn:"লাইভ সিঙ্ক: চালু — প্রতিটি এন্ট্রি সঙ্গে সঙ্গে সব শিক্ষকের কাছে পৌঁছে যায়",hi:"लाइव सिंक: चालू — हर प्रविष्टि सभी शिक्षकों तक तुरंत पहुंचती है",ne:"लाइभ सिङ्क: चालु — हरेक प्रविष्टि सबै शिक्षकसम्म तुरुन्तै पुग्छ",sw:"Usawazishaji wa moja kwa moja: IMEWASHWA — kila ingizo huwafikia walimu wote mara moja",ar:"المزامنة المباشرة: مفعّلة — كل إدخال يصل جميع المعلمين فورًا",zh:"实时同步：已开启——每条记录会即时同步给所有教师",es:"Sincronización en vivo: ACTIVADA: cada entrada llega a todos los docentes al instante",fr:"Synchronisation en direct : ACTIVÉE — chaque saisie parvient instantanément à tous les enseignants",pt:"Sincronização em direto: LIGADA — cada registo chega a todos os professores de imediato",ru:"Синхронизация в реальном времени: ВКЛ. — каждая запись мгновенно доходит до всех учителей.",id:"Sinkronisasi langsung: AKTIF — setiap entri langsung sampai ke semua guru",de:"Live-Synchronisierung: EIN – jeder Eintrag erreicht sofort alle Lehrer",ja:"ライブ同期：オン — すべての入力がすべての教師に即座に届きます",pa:"لائیو سنک: چالو — ہر اندراج فوراً سارے استاداں تک پہنچدا اے",mr:"लाइव्ह सिंक: चालू — प्रत्येक नोंद सर्व शिक्षकांपर्यंत लगेच पोहोचते",te:"ప్రత్యక్ష సమకాలీకరణ: ఆన్ - ప్రతి ఎంట్రీ తక్షణమే ఉపాధ్యాయులందరికీ చేరుతుంది",fa:"همگام‌سازی زنده: روشن — هر ورودی فوراً به همهٔ معلمان می‌رسد",tr:"Canlı senkronizasyon: AÇIK — her giriş tüm öğretmenlere anında ulaşır",ta:"நேரடி ஒத்திசைவு: ஆன் — ஒவ்வொரு பதிவும் உடனடியாக அனைத்து ஆசிரியர்களையும் சென்றடையும்",vi:"Đồng bộ trực tiếp: BẬT — mọi mục nhập đến tất cả giáo viên ngay lập tức",ko:"실시간 동기화: 켜짐 — 모든 입력이 모든 교사에게 즉시 전달됩니다",tl:"Live sync: NAKA-ON — bawat entry ay agad na nakakarating sa lahat ng guro",ha:"Daidaito kai tsaye: KUNNE — kowace shigarwa tana isa ga dukkan malamai nan take",it:"Sincronizzazione live: ATTIVA: ogni voce raggiunge immediatamente tutti gli insegnanti",ps:"ژوندۍ همغږې: فعاله — هره لیکنه سمدلاسه ټولو ښوونکو ته رسېږي",ms:"Segerakan langsung: HIDUP — setiap entri sampai kepada semua guru serta-merta",yo:"Ìṣọ̀kan láàyè: TÁN — ìtẹ̀wọlé kọ̀ọ̀kan ń dé ọ̀dọ̀ gbogbo àwọn olùkọ́ lẹ́sẹ̀kẹsẹ̀",ig:"Mmekọrịta ndụ: GBANYERE — ntinye ọ bụla na-eru ndị nkuzi niile ozugbo"},
 sync_off:{en:"Saved on this phone only (not connected)",ur:"صرف اس فون پر محفوظ ہے (جڑا ہوا نہیں)",bn:"শুধু এই ফোনে সংরক্ষিত (সংযুক্ত নয়)",hi:"केवल इस फ़ोन पर सहेजा गया (कनेक्ट नहीं)",ne:"यो फोनमा मात्र सुरक्षित (जडान छैन)",sw:"Imehifadhiwa kwenye simu hii tu (haijaunganishwa)",ar:"محفوظ على هذا الهاتف فقط (غير متصل)",zh:"仅保存在本手机上（未连接）",es:"Guardado solo en este teléfono (sin conexión)",fr:"Enregistré sur ce téléphone uniquement (non connecté)",pt:"Guardado apenas neste telefone (não ligado)",ru:"Сохранено только на этом телефоне (не подключено)",id:"Disimpan hanya di ponsel ini (tidak terhubung)",de:"Nur auf diesem Telefon gespeichert (nicht verbunden)",ja:"この端末だけに保存（未接続）",pa:"صرف ایس فون تے محفوظ ہویا (جڑیا نئیں)",mr:"फक्त या फोनवर जतन केले (जोडलेले नाही)",te:"ఈ ఫోన్‌లో మాత్రమే సేవ్ చేయబడింది (కనెక్ట్ చేయబడలేదు)",fa:"فقط روی این گوشی ذخیره شد (متصل نیست)",tr:"Yalnızca bu telefona kaydedildi (bağlı değil)",ta:"இந்த மொபைலில் மட்டும் சேமிக்கப்பட்டது (இணைக்கப்படவில்லை)",vi:"Chỉ lưu trên điện thoại này (không kết nối)",ko:"이 휴대전화에만 저장됨(연결 안 됨)",tl:"Nai-save lamang sa teleponong ito (hindi nakakonekta)",ha:"An adana a wannan wayar kaɗai (ba a haɗa ba)",it:"Salvato solo su questo telefono (non connesso)",ps:"یوازې په دې تلیفون کې خوندي شو (نه دی نښلول شوی)",ms:"Disimpan pada telefon ini sahaja (tidak disambung)",yo:"A fi pamọ́ lórí fóònù yìí nìkan (kò so pọ̀)",ig:"Echekwara naanị na ekwentị a (ejikọtaghị)"},
+sync_title:{en:"Cloud sync status",ur:"کلاؤڈ مطابقت کی صورتحال",bn:"ক্লাউড সিঙ্কের অবস্থা",hi:"क्लाउड सिंक स्थिति",ne:"क्लाउड सिङ्क स्थिति",sw:"Hali ya usawazishaji wa wingu",ar:"حالة مزامنة السحابة",zh:"云同步状态",es:"Estado de la sincronización en la nube",fr:"État de la synchronisation cloud",pt:"Estado da sincronização na nuvem",ru:"Состояние облачной синхронизации",id:"Status sinkronisasi cloud",de:"Cloud-Sync-Status",ja:"クラウド同期の状態",pa:"کلاؤڈ سنک دی حالت",mr:"क्लाउड सिंक स्थिती",te:"క్లౌడ్ సింక్ స్థితి",fa:"وضعیت همگام‌سازی ابری",tr:"Bulut senkronizasyon durumu",ta:"கிளவுட் ஒத்திசைவு நிலை",vi:"Trạng thái đồng bộ đám mây",ko:"클라우드 동기화 상태",tl:"Katayuan ng pag-sync sa cloud",ha:"Matsayin daidaito na girgije",it:"Stato della sincronizzazione cloud",ps:"د ورېځې همغږۍ حالت",ms:"Status segerakan awan",yo:"Ipò ìṣọ̀kan òjì",ig:"Ọnọdụ mmekọrịta igwe ojii"},
+sync_test:{en:"Test connection",ur:"کنکشن جانچیں",bn:"সংযোগ পরীক্ষা করুন",hi:"कनेक्शन जाँचें",ne:"जडान परीक्षण गर्नुहोस्",sw:"Jaribu muunganisho",ar:"اختبار الاتصال",zh:"测试连接",es:"Probar la conexión",fr:"Tester la connexion",pt:"Testar a ligação",ru:"Проверить соединение",id:"Uji koneksi",de:"Verbindung testen",ja:"接続をテスト",pa:"کنکشن ٹیسٹ کرو",mr:"कनेक्शन तपासा",te:"కనెక్షన్‌ను పరీక్షించండి",fa:"اتصال را آزمایش کنید",tr:"Bağlantıyı test et",ta:"இணைப்பைச் சோதிக்கவும்",vi:"Kiểm tra kết nối",ko:"연결 테스트",tl:"Subukan ang koneksyon",ha:"Gwada haɗi",it:"Testa la connessione",ps:"اړیکه وازمایئ",ms:"Uji sambungan",yo:"Ṣe ìdánwò ìsopọ̀",ig:"Nwalee njikọ"},
+sync_testing:{en:"Testing…",ur:"جانچ جاری ہے…",bn:"পরীক্ষা চলছে…",hi:"जाँच जारी है…",ne:"परीक्षण हुँदैछ…",sw:"Inajaribu…",ar:"جارٍ الاختبار…",zh:"测试中…",es:"Probando…",fr:"Test en cours…",pt:"A testar…",ru:"Проверка…",id:"Menguji…",de:"Wird getestet…",ja:"テスト中…",pa:"جانچ جاری اے…",mr:"तपासणी सुरू आहे…",te:"పరీక్షిస్తోంది…",fa:"در حال آزمایش…",tr:"Test ediliyor…",ta:"சோதிக்கப்படுகிறது…",vi:"Đang kiểm tra…",ko:"테스트 중…",tl:"Sinusubukan…",ha:"Ana gwaji…",it:"Verifica in corso…",ps:"ازموینه روانه ده…",ms:"Sedang menguji…",yo:"Ní ìdánwò…",ig:"Na-anwale…"},
+sync_test_ok:{en:"Connection works — a test record reached the cloud and came back ({ms} ms).",ur:"کنکشن کام کر رہا ہے — ٹیسٹ ریکارڈ کلاؤڈ تک پہنچا اور واپس آیا ({ms} ملی سیکنڈ)۔",bn:"সংযোগ কাজ করছে — পরীক্ষার রেকর্ড ক্লাউডে পৌঁছে ফিরে এসেছে ({ms} মি.সে.)।",hi:"कनेक्शन काम कर रहा है — टेस्ट रिकॉर्ड क्लाउड तक पहुँचा और वापस आया ({ms} मि.से.)।",ne:"जडान काम गरिरहेको छ — परीक्षण रेकर्ड क्लाउडमा पुग्यो र फर्कियो ({ms} मि.से.)।",sw:"Muunganisho unafanya kazi — rekodi ya majaribio ilifika kwenye wingu na kurudi ({ms} ms).",ar:"الاتصال يعمل — وصل سجل الاختبار إلى السحابة وعاد ({ms} مللي ثانية).",zh:"连接正常——测试记录已到达云端并返回（{ms} 毫秒）。",es:"La conexión funciona: el registro de prueba llegó a la nube y volvió ({ms} ms).",fr:"La connexion fonctionne — l'enregistrement de test a atteint le cloud et est revenu ({ms} ms).",pt:"A ligação funciona — o registo de teste chegou à nuvem e voltou ({ms} ms).",ru:"Соединение работает — тестовая запись дошла до облака и вернулась ({ms} мс).",id:"Koneksi berfungsi — catatan uji sampai ke cloud dan kembali ({ms} md).",de:"Verbindung funktioniert – der Testdatensatz erreichte die Cloud und kam zurück ({ms} ms).",ja:"接続は正常です——テスト記録がクラウドに到達して戻ってきました（{ms}ミリ秒）。",pa:"کنکشن کم کردا اے — ٹیسٹ ریکارڈ کلاؤڈ تک پہنچیا تے واپس آیا ({ms} ملی سیکنڈ)۔",mr:"कनेक्शन काम करत आहे — चाचणी नोंद क्लाउडपर्यंत पोहोचली आणि परत आली ({ms} मि.से.).",te:"కనెక్షన్ పని చేస్తోంది — పరీక్ష రికార్డు క్లౌడ్‌కు చేరి తిరిగి వచ్చింది ({ms} మి.సె.).",fa:"اتصال کار می‌کند — رکورد آزمایشی به ابر رسید و برگشت ({ms} میلی‌ثانیه).",tr:"Bağlantı çalışıyor — test kaydı buluta ulaştı ve geri döndü ({ms} ms).",ta:"இணைப்பு வேலை செய்கிறது — சோதனைப் பதிவு கிளவுடை அடைந்து திரும்பியது ({ms} மி.வி.).",vi:"Kết nối hoạt động — bản ghi kiểm tra đã đến đám mây và trở về ({ms} ms).",ko:"연결이 작동합니다 — 테스트 기록이 클라우드에 도달했다가 돌아왔습니다({ms}ms).",tl:"Gumagana ang koneksyon — nakarating sa cloud ang test record at bumalik ({ms} ms).",ha:"Haɗi yana aiki — rikodin gwaji ya isa girgije ya dawo ({ms} ms).",it:"La connessione funziona: il record di prova ha raggiunto il cloud ed è tornato ({ms} ms).",ps:"اړیکه کار کوي — د ازموینې ریکارډ ورېځې ته ورسېد او بېرته راغی ({ms} ملي ثانۍ).",ms:"Sambungan berfungsi — rekod ujian sampai ke awan dan kembali ({ms} ms).",yo:"Ìsopọ̀ ń ṣiṣẹ́ — ìgbèsẹ̀ ìdánwò dé òjì ó sì padà ({ms} ms).",ig:"Njikọ na-arụ ọrụ — ndekọ nnwale ruru igwe ojii wee laghachi ({ms} ms)."},
+sync_test_bad:{en:"Connection failed — {code}: {message}",ur:"کنکشن ناکام — {code}: {message}",bn:"সংযোগ ব্যর্থ — {code}: {message}",hi:"कनेक्शन विफल — {code}: {message}",ne:"जडान असफल — {code}: {message}",sw:"Muunganisho umeshindwa — {code}: {message}",ar:"فشل الاتصال — {code}: {message}",zh:"连接失败——{code}：{message}",es:"La conexión falló — {code}: {message}",fr:"Échec de la connexion — {code} : {message}",pt:"A ligação falhou — {code}: {message}",ru:"Соединение не удалось — {code}: {message}",id:"Koneksi gagal — {code}: {message}",de:"Verbindung fehlgeschlagen — {code}: {message}",ja:"接続に失敗しました——{code}: {message}",pa:"کنکشن ناکام — {code}: {message}",mr:"कनेक्शन अयशस्वी — {code}: {message}",te:"కనెక్షన్ విఫలమైంది — {code}: {message}",fa:"اتصال ناموفق بود — {code}: {message}",tr:"Bağlantı başarısız — {code}: {message}",ta:"இணைப்பு தோல்வியடைந்தது — {code}: {message}",vi:"Kết nối thất bại — {code}: {message}",ko:"연결 실패 — {code}: {message}",tl:"Nabigo ang koneksyon — {code}: {message}",ha:"Haɗi ya kasa — {code}: {message}",it:"Connessione non riuscita — {code}: {message}",ps:"اړیکه ناکامه شوه — {code}: {message}",ms:"Sambungan gagal — {code}: {message}",yo:"Ìsopọ̀ kùnà — {code}: {message}",ig:"Njikọ dara — {code}: {message}"},
+sync_error_line:{en:"Sync: not connected — {code}",ur:"مطابقت: جڑا ہوا نہیں — {code}",bn:"সিঙ্ক: সংযুক্ত নয় — {code}",hi:"सिंक: कनेक्ट नहीं — {code}",ne:"सिङ्क: जडान छैन — {code}",sw:"Usawazishaji: haujaunganishwa — {code}",ar:"المزامنة: غير متصلة — {code}",zh:"同步：未连接——{code}",es:"Sincronización: sin conexión — {code}",fr:"Synchronisation : non connectée — {code}",pt:"Sincronização: sem ligação — {code}",ru:"Синхронизация: нет соединения — {code}",id:"Sinkronisasi: tidak terhubung — {code}",de:"Synchronisierung: nicht verbunden — {code}",ja:"同期：未接続——{code}",pa:"سنک: جڑیا نئیں — {code}",mr:"सिंक: जोडलेले नाही — {code}",te:"సింక్: కనెక్ట్ కాలేదు — {code}",fa:"همگام‌سازی: متصل نیست — {code}",tr:"Senkronizasyon: bağlı değil — {code}",ta:"ஒத்திசைவு: இணைக்கப்படவில்லை — {code}",vi:"Đồng bộ: không kết nối — {code}",ko:"동기화: 연결 안 됨 — {code}",tl:"Pag-sync: hindi nakakonekta — {code}",ha:"Daidaito: ba a haɗa ba — {code}",it:"Sincronizzazione: non connessa — {code}",ps:"همغږې: نه ده نښلول شوې — {code}",ms:"Segerakan: tidak disambung — {code}",yo:"Ìṣọ̀kan: kò so pọ̀ — {code}",ig:"Mmekọrịta: ejikọtaghị — {code}"},
+sync_unknown:{en:"unknown error",ur:"نامعلوم خرابی",bn:"অজানা ত্রুটি",hi:"अज्ञात त्रुटि",ne:"अज्ञात त्रुटि",sw:"kosa lisilojulikana",ar:"خطأ غير معروف",zh:"未知错误",es:"error desconocido",fr:"erreur inconnue",pt:"erro desconhecido",ru:"неизвестная ошибка",id:"kesalahan tidak dikenal",de:"unbekannter Fehler",ja:"不明なエラー",pa:"نامعلوم خرابی",mr:"अज्ञात त्रुटी",te:"తెలియని లోపం",fa:"خطای ناشناخته",tr:"bilinmeyen hata",ta:"தெரியாத பிழை",vi:"lỗi không xác định",ko:"알 수 없는 오류",tl:"hindi kilalang error",ha:"kuskure da ba a sani ba",it:"errore sconosciuto",ps:"نامعلومه تېروتنه",ms:"ralat tidak diketahui",yo:"àṣìṣe tí a kò mọ̀",ig:"njehie amaghị"},
+sync_never:{en:"never",ur:"کبھی نہیں",bn:"কখনও নয়",hi:"कभी नहीं",ne:"कहिल्यै होइन",sw:"kamwe",ar:"أبدًا",zh:"从未",es:"nunca",fr:"jamais",pt:"nunca",ru:"никогда",id:"tidak pernah",de:"nie",ja:"なし",pa:"کدی نئیں",mr:"कधीही नाही",te:"ఎప్పుడూ లేదు",fa:"هرگز",tr:"hiç",ta:"ஒருபோதும் இல்லை",vi:"chưa bao giờ",ko:"없음",tl:"hindi kailanman",ha:"ba a taɓa ba",it:"mai",ps:"هېڅکله",ms:"tidak pernah",yo:"rárá",ig:"mgbe ọ bụla"},
+sync_none:{en:"none",ur:"کوئی نہیں",bn:"কোনোটিই নয়",hi:"कोई नहीं",ne:"कुनै छैन",sw:"hakuna",ar:"لا شيء",zh:"无",es:"ninguno",fr:"aucune",pt:"nenhum",ru:"нет",id:"tidak ada",de:"keine",ja:"なし",pa:"کوئی نئیں",mr:"काहीही नाही",te:"ఏదీ లేదు",fa:"هیچ",tr:"yok",ta:"ஏதுமில்லை",vi:"không có",ko:"없음",tl:"wala",ha:"babu",it:"nessuno",ps:"هېڅ",ms:"tiada",yo:"kò sí",ig:"ọ dịghị"},
+sync_not_signed_in:{en:"not signed in",ur:"سائن ان نہیں",bn:"সাইন ইন করা হয়নি",hi:"साइन इन नहीं",ne:"साइन इन गरिएको छैन",sw:"hujaingia",ar:"لم يتم تسجيل الدخول",zh:"未登录",es:"sin iniciar sesión",fr:"non connecté",pt:"sem sessão iniciada",ru:"не выполнен вход",id:"belum masuk",de:"nicht angemeldet",ja:"未ログイン",pa:"سائن ان نئیں",mr:"साइन इन केलेले नाही",te:"సైన్ ఇన్ చేయలేదు",fa:"وارد نشده‌اید",tr:"giriş yapılmadı",ta:"உள்நுழையவில்லை",vi:"chưa đăng nhập",ko:"로그인 안 됨",tl:"hindi naka-sign in",ha:"ba a shiga ba",it:"non connesso",ps:"ننوتلی نه یاست",ms:"belum log masuk",yo:"kò wọlé",ig:"abanyeghị"},
+sync_row_sdk:{en:"Cloud SDK",ur:"کلاؤڈ ایس ڈی کے",bn:"ক্লাউড SDK",hi:"क्लाउड SDK",ne:"क्लाउड SDK",sw:"SDK ya wingu",ar:"حزمة تطوير السحابة",zh:"云 SDK",es:"SDK de la nube",fr:"SDK cloud",pt:"SDK da nuvem",ru:"Cloud SDK",id:"SDK cloud",de:"Cloud-SDK",ja:"クラウドSDK",pa:"کلاؤڈ SDK",mr:"क्लाउड SDK",te:"క్లౌడ్ SDK",fa:"SDK ابری",tr:"Bulut SDK'si",ta:"கிளவுட் SDK",vi:"SDK đám mây",ko:"클라우드 SDK",tl:"Cloud SDK",ha:"SDK na girgije",it:"SDK cloud",ps:"د ورېځې SDK",ms:"SDK awan",yo:"SDK òjì",ig:"SDK igwe ojii"},
+sync_row_auth:{en:"Signed in as",ur:"سائن ان بطور",bn:"সাইন ইন করা হয়েছে",hi:"साइन इन है",ne:"साइन इन गरिएको",sw:"Umeingia kama",ar:"تم تسجيل الدخول باسم",zh:"登录身份",es:"Sesión iniciada como",fr:"Connecté en tant que",pt:"Sessão iniciada como",ru:"Вошёл как",id:"Masuk sebagai",de:"Angemeldet als",ja:"サインイン中",pa:"سائن ان اے بطور",mr:"साइन इन केले",te:"గా సైన్ ఇన్ చేసారు",fa:"واردشده به‌عنوان",tr:"Giriş yapan",ta:"என உள்நுழைந்துள்ளார்",vi:"Đã đăng nhập với tên",ko:"로그인됨",tl:"Naka-sign in bilang",ha:"An shiga a matsayin",it:"Accesso effettuato come",ps:"ننوتلی په توګه",ms:"Log masuk sebagai",yo:"A wọlé gẹ́gẹ́ bí",ig:"Abanyere dịka"},
+sync_row_teacher:{en:"Teacher record",ur:"استاد کا ریکارڈ",bn:"শিক্ষকের রেকর্ড",hi:"शिक्षक का रिकॉर्ड",ne:"शिक्षकको रेकर्ड",sw:"Rekodi ya mwalimu",ar:"سجل المعلم",zh:"教师记录",es:"Registro del docente",fr:"Fiche enseignant",pt:"Registo do professor",ru:"Запись учителя",id:"Catatan guru",de:"Lehrer-Datensatz",ja:"教師レコード",pa:"استاد دا ریکارڈ",mr:"शिक्षक नोंद",te:"ఉపాధ్యాయ రికార్డు",fa:"پروندهٔ معلم",tr:"Öğretmen kaydı",ta:"ஆசிரியர் பதிவு",vi:"Hồ sơ giáo viên",ko:"교사 기록",tl:"Record ng guro",ha:"Rikodin malami",it:"Scheda docente",ps:"د ښوونکي ریکارډ",ms:"Rekod guru",yo:"Ìgbèsẹ̀ olùkọ́",ig:"Ndekọ onye nkuzi"},
+sync_row_school:{en:"School record",ur:"اسکول کا ریکارڈ",bn:"স্কুলের রেকর্ড",hi:"स्कूल का रिकॉर्ड",ne:"विद्यालयको रेकर्ड",sw:"Rekodi ya shule",ar:"سجل المدرسة",zh:"学校记录",es:"Registro de la escuela",fr:"Fiche école",pt:"Registo da escola",ru:"Запись школы",id:"Catatan sekolah",de:"Schul-Datensatz",ja:"学校レコード",pa:"اسکول دا ریکارڈ",mr:"शाळा नोंद",te:"పాఠశాల రికార్డు",fa:"پروندهٔ مدرسه",tr:"Okul kaydı",ta:"பள்ளிப் பதிவு",vi:"Hồ sơ trường",ko:"학교 기록",tl:"Record ng paaralan",ha:"Rikodin makaranta",it:"Scheda scuola",ps:"د ښوونځي ریکارډ",ms:"Rekod sekolah",yo:"Ìgbèsẹ̀ ilé-ẹ̀kọ́",ig:"Ndekọ ụlọ akwụkwọ"},
+sync_row_ready:{en:"Ready to sync",ur:"مطابقت کے لیے تیار",bn:"সিঙ্কের জন্য প্রস্তুত",hi:"सिंक के लिए तैयार",ne:"सिङ्क गर्न तयार",sw:"Tayari kusawazisha",ar:"جاهز للمزامنة",zh:"已就绪可同步",es:"Listo para sincronizar",fr:"Prêt à synchroniser",pt:"Pronto a sincronizar",ru:"Готов к синхронизации",id:"Siap disinkronkan",de:"Bereit zum Synchronisieren",ja:"同期の準備完了",pa:"سنک لئی تیار",mr:"सिंकसाठी तयार",te:"సింక్ చేయడానికి సిద్ధం",fa:"آمادهٔ همگام‌سازی",tr:"Senkronize etmeye hazır",ta:"ஒத்திசைக்கத் தயார்",vi:"Sẵn sàng đồng bộ",ko:"동기화 준비 완료",tl:"Handa nang mag-sync",ha:"A shirye don daidaitawa",it:"Pronto per la sincronizzazione",ps:"د همغږۍ لپاره چمتو",ms:"Sedia untuk disegerakkan",yo:"Ṣetán láti ṣọ̀kan",ig:"Dị njikere ịmekọrịta"},
+sync_row_lastok:{en:"Last successful sync",ur:"آخری کامیاب مطابقت",bn:"শেষ সফল সিঙ্ক",hi:"अंतिम सफल सिंक",ne:"अन्तिम सफल सिङ्क",sw:"Usawazishaji wa mwisho uliofanikiwa",ar:"آخر مزامنة ناجحة",zh:"上次成功同步",es:"Última sincronización correcta",fr:"Dernière synchronisation réussie",pt:"Última sincronização com êxito",ru:"Последняя успешная синхронизация",id:"Sinkronisasi terakhir yang berhasil",de:"Letzte erfolgreiche Synchronisierung",ja:"最後に成功した同期",pa:"آخری کامیاب سنک",mr:"शेवटची यशस्वी सिंक",te:"చివరి విజయవంతమైన సింక్",fa:"آخرین همگام‌سازی موفق",tr:"Son başarılı senkronizasyon",ta:"கடைசி வெற்றிகரமான ஒத்திசைவு",vi:"Lần đồng bộ thành công cuối",ko:"마지막 성공 동기화",tl:"Huling matagumpay na pag-sync",ha:"Daidaito na ƙarshe da ya yi nasara",it:"Ultima sincronizzazione riuscita",ps:"وروستۍ بریالۍ همغږې",ms:"Segerakan terakhir yang berjaya",yo:"Ìṣọ̀kan àṣeyọrí tó kẹ́yìn",ig:"Mmekọrịta ikpeazụ gara nke ọma"},
+sync_row_lasterr:{en:"Last error",ur:"آخری خرابی",bn:"শেষ ত্রুটি",hi:"अंतिम त्रुटि",ne:"अन्तिम त्रुटि",sw:"Kosa la mwisho",ar:"آخر خطأ",zh:"上次错误",es:"Último error",fr:"Dernière erreur",pt:"Último erro",ru:"Последняя ошибка",id:"Kesalahan terakhir",de:"Letzter Fehler",ja:"最後のエラー",pa:"آخری خرابی",mr:"शेवटची त्रुटी",te:"చివరి లోపం",fa:"آخرین خطا",tr:"Son hata",ta:"கடைசி பிழை",vi:"Lỗi gần nhất",ko:"마지막 오류",tl:"Huling error",ha:"Kuskure na ƙarshe",it:"Ultimo errore",ps:"وروستۍ تېروتنه",ms:"Ralat terakhir",yo:"Àṣìṣe tó kẹ́yìn",ig:"Njehie ikpeazụ"},
+sync_yes:{en:"Yes",ur:"جی ہاں",bn:"হ্যাঁ",hi:"हाँ",ne:"हो",sw:"Ndiyo",ar:"نعم",zh:"是",es:"Sí",fr:"Oui",pt:"Sim",ru:"Да",id:"Ya",de:"Ja",ja:"はい",pa:"ہاں",mr:"होय",te:"అవును",fa:"بله",tr:"Evet",ta:"ஆம்",vi:"Có",ko:"예",tl:"Oo",ha:"I",it:"Sì",ps:"هو",ms:"Ya",yo:"Bẹ́ẹ̀ni",ig:"Ee"},
+sync_no:{en:"No",ur:"نہیں",bn:"না",hi:"नहीं",ne:"होइन",sw:"Hapana",ar:"لا",zh:"否",es:"No",fr:"Non",pt:"Não",ru:"Нет",id:"Tidak",de:"Nein",ja:"いいえ",pa:"نئیں",mr:"नाही",te:"కాదు",fa:"خیر",tr:"Hayır",ta:"இல்லை",vi:"Không",ko:"아니요",tl:"Hindi",ha:"A'a",it:"No",ps:"نه",ms:"Tidak",yo:"Rárá",ig:"Mba"},
+gemini_status:{en:"Google answered {status} — try again.",ur:"گوگل نے جواب دیا {status} — دوبارہ کوشش کریں۔",bn:"Google উত্তর দিয়েছে {status} — আবার চেষ্টা করুন।",hi:"Google ने जवाब दिया {status} — फिर से प्रयास करें।",ne:"Google ले {status} जवाफ दियो — फेरि प्रयास गर्नुहोस्।",sw:"Google ilijibu {status} — jaribu tena.",ar:"أجابت Google بالرمز {status} — حاول مجددًا.",zh:"Google 返回了 {status}——请重试。",es:"Google respondió {status}: inténtalo de nuevo.",fr:"Google a répondu {status} — réessayez.",pt:"A Google respondeu {status} — tente novamente.",ru:"Google ответил {status} — попробуйте ещё раз.",id:"Google menjawab {status} — coba lagi.",de:"Google antwortete {status} – bitte erneut versuchen.",ja:"Google は {status} を返しました——もう一度お試しください。",pa:"گوگل نے جواب دتا {status} — دوبارہ کوشش کرو۔",mr:"Google ने {status} उत्तर दिले — पुन्हा प्रयत्न करा.",te:"Google {status} అని సమాధానం ఇచ్చింది — మళ్ళీ ప్రయత్నించండి.",fa:"گوگل {status} پاسخ داد — دوباره تلاش کنید.",tr:"Google {status} yanıtı verdi — tekrar deneyin.",ta:"Google {status} என்று பதிலளித்தது — மீண்டும் முயற்சிக்கவும்.",vi:"Google trả lời {status} — hãy thử lại.",ko:"Google이 {status}로 응답했습니다 — 다시 시도하세요.",tl:"Sumagot ang Google ng {status} — subukang muli.",ha:"Google ta amsa {status} — sake gwadawa.",it:"Google ha risposto {status} — riprova.",ps:"ګوګل {status} ځواب ورکړ — بیا هڅه وکړئ.",ms:"Google menjawab {status} — cuba lagi.",yo:"Google dá {status} — tún gbìyànjú.",ig:"Google zara {status} — nwaa ọzọ."},
+ai_save_failed:{en:"Could not save the key — the school's online records could not be saved. Check the connection and try again.",ur:"کلید محفوظ نہیں ہو سکی — اسکول کا آن لائن ریکارڈ محفوظ نہیں ہو سکا۔ کنکشن چیک کریں اور دوبارہ کوشش کریں۔",bn:"কীটি সংরক্ষণ করা যায়নি — স্কুলের অনলাইন রেকর্ড সংরক্ষণ করা যায়নি। সংযোগটি পরীক্ষা করে আবার চেষ্টা করুন।",hi:"कुंजी सहेजी नहीं जा सकी — स्कूल का ऑनलाइन रिकॉर्ड सहेजा नहीं जा सका। कनेक्शन जाँचें और फिर से प्रयास करें।",ne:"कुञ्जी बचत गर्न सकिएन — विद्यालयको अनलाइन रेकर्ड बचत गर्न सकिएन। जडान जाँचेर फेरि प्रयास गर्नुहोस्।",sw:"Haikuwezekana kuhifadhi ufunguo — rekodi za shule mtandaoni hazikuweza kuhifadhiwa. Angalia muunganisho na ujaribu tena.",ar:"تعذّر حفظ المفتاح — تعذّر حفظ سجلات المدرسة على الإنترنت. تحقق من الاتصال وحاول مجددًا.",zh:"无法保存密钥——学校的在线记录无法保存。请检查连接后重试。",es:"No se pudo guardar la clave: no se pudieron guardar los registros en línea de la escuela. Revisa la conexión e inténtalo de nuevo.",fr:"Impossible d'enregistrer la clé — les dossiers en ligne de l'école n'ont pas pu être enregistrés. Vérifiez la connexion et réessayez.",pt:"Não foi possível guardar a chave — os registos online da escola não puderam ser guardados. Verifique a ligação e tente novamente.",ru:"Не удалось сохранить ключ — школьные онлайн-записи не сохранились. Проверьте соединение и попробуйте ещё раз.",id:"Kunci tidak dapat disimpan — catatan online sekolah tidak dapat disimpan. Periksa koneksi dan coba lagi.",de:"Der Schlüssel konnte nicht gespeichert werden – die Online-Datensätze der Schule konnten nicht gespeichert werden. Bitte Verbindung prüfen und erneut versuchen.",ja:"キーを保存できませんでした——学校のオンラインレコードを保存できませんでした。接続を確認して、もう一度お試しください。",pa:"کلید محفوظ نئیں ہو سکی — اسکول دا آن لائن ریکارڈ محفوظ نئیں ہو سکیا۔ کنکشن چیک کرو تے دوبارہ کوشش کرو۔",mr:"की जतन करता आली नाही — शाळेची ऑनलाइन नोंद जतन करता आली नाही. कनेक्शन तपासा आणि पुन्हा प्रयत्न करा.",te:"కీని సేవ్ చేయలేకపోయాం — పాఠశాల ఆన్‌లైన్ రికార్డులను సేవ్ చేయలేకపోయాం. కనెక్షన్‌ను తనిఖీ చేసి మళ్ళీ ప్రయత్నించండి.",fa:"کلید ذخیره نشد — سوابق آنلاین مدرسه ذخیره نشد. اتصال را بررسی کنید و دوباره تلاش کنید.",tr:"Anahtar kaydedilemedi — okulun çevrimiçi kayıtları kaydedilemedi. Bağlantıyı kontrol edip tekrar deneyin.",ta:"விசையைச் சேமிக்க முடியவில்லை — பள்ளியின் ஆன்லைன் பதிவுகளைச் சேமிக்க முடியவில்லை. இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",vi:"Không thể lưu khóa — không thể lưu hồ sơ trực tuyến của trường. Kiểm tra kết nối và thử lại.",ko:"키를 저장할 수 없습니다 — 학교 온라인 기록을 저장할 수 없습니다. 연결을 확인하고 다시 시도하세요.",tl:"Hindi mai-save ang key — hindi mai-save ang mga online record ng paaralan. Suriin ang koneksyon at subukang muli.",ha:"Ba a iya adana maɓalli ba — ba a iya adana bayanan makaranta na kan layi ba. Duba haɗi ka sake gwadawa.",it:"Impossibile salvare la chiave: i registri online della scuola non sono stati salvati. Controlla la connessione e riprova.",ps:"کیلي خوندي نه شوه — د ښوونځي آنلاین ریکارډونه خوندي نه شول. اړیکه وګورئ او بیا هڅه وکړئ.",ms:"Kunci tidak dapat disimpan — rekod dalam talian sekolah tidak dapat disimpan. Semak sambungan dan cuba lagi.",yo:"A kò lè fi bọ́tìnì pamọ́ — a kò lè fi àwọn ìgbèsẹ̀ ilé-ẹ̀kọ́ lórí ìkànnì pamọ́. Ṣàyẹ̀wò ìsopọ̀ kí o sì tún gbìyànjú.",ig:"Enweghị ike ịchekwa igodo ahụ — enweghị ike ịchekwa ndekọ ntanetị nke ụlọ akwụkwọ ahụ. Lelee njikọ ma nwaa ọzọ."},
 account:{en:"Teacher account",ur:"استاد اکاؤنٹ",bn:"শিক্ষকের অ্যাকাউন্ট",hi:"शिक्षक खाता",ne:"शिक्षक खाता",sw:"Akaunti ya mwalimu",ar:"حساب المعلم",zh:"教师账号",es:"Cuenta de docente",fr:"Compte enseignant",pt:"Conta de professor",ru:"Аккаунт учителя",id:"Akun guru",de:"Lehrerkonto",ja:"教師アカウント",pa:"استاد دا کھاتہ",mr:"शिक्षक खाते",te:"ఉపాధ్యాయ ఖాతా",fa:"حساب معلم",tr:"Öğretmen hesabı",ta:"ஆசிரியர் கணக்கு",vi:"Tài khoản giáo viên",ko:"교사 계정",tl:"Account ng guro",ha:"Asusun malami",it:"Conto insegnante",ps:"د ښوونکي حساب",ms:"Akaun guru",yo:"Ákántì olùkọ́",ig:"Akaụntụ onye nkuzi"},
 school_sub:{en:"School & subscription",ur:"اسکول اور سبسکرپشن",bn:"স্কুল ও সদস্যতা",hi:"स्कूल और सब्सक्रिप्शन",ne:"विद्यालय र सदस्यता",sw:"Shule na usajili",ar:"المدرسة والاشتراك",zh:"学校与订阅",es:"Escuela y suscripción",fr:"École et abonnement",pt:"Escola e subscrição",ru:"Школа и подписка",id:"Sekolah & langganan",de:"Schule & Abonnement",ja:"学校と契約",pa:"سکول تے رکنیت",mr:"शाळा आणि सदस्यता",te:"పాఠశాల & సభ్యత్వం",fa:"مدرسه و اشتراک",tr:"Okul ve abonelik",ta:"பள்ளி & சந்தா",vi:"Trường & gói đăng ký",ko:"학교 및 구독",tl:"Paaralan at subscription",ha:"Makaranta da biyan kuɗi",it:"Scuola e abbonamento",ps:"ښوونځی او ګډون",ms:"Sekolah & langganan",yo:"Ilé-ìwé àti ìsanwó",ig:"Ụlọ akwụkwọ na ndenye aha"},
 plan_trial:{en:"Trial",ur:"آزمائشی",bn:"ট্রায়াল",hi:"ट्रायल",ne:"परीक्षण",sw:"Jaribio",ar:"تجريبي",zh:"试用",es:"Prueba",fr:"Essai",pt:"Ensaio",ru:"Пробный период",id:"Uji coba",de:"Testversion",ja:"試用",pa:"آزمائش",mr:"चाचणी",te:"విచారణ",fa:"آزمایشی",tr:"Deneme",ta:"விசாரணை",vi:"Dùng thử",ko:"체험",tl:"Pagsubok",ha:"Gwaji",it:"Prova",ps:"ازمېښت",ms:"Percubaan",yo:"Ìdánwò",ig:"Nnwale"},
@@ -18924,7 +19027,7 @@ function viewAdmin(){
     '<input id="adm-gemini" type="password" value="" placeholder="AIza..." autocomplete="off"></div>'+
     '<div class="toolbar"><button type="button" class="btn btn-primary" id="adm-gemini-save">'+esc(t("save"))+'</button> <button type="button" class="btn" id="adm-gemini-test">'+esc(t("ai_test"))+'</button></div>'+
     '<div id="adm-gemini-msg">'+(Cloud.platformKey?'<div class="msg ok">'+esc(t("platform_key_set"))+'</div>':'<div class="muted">'+esc(t("platform_key_none"))+'</div>')+'</div></div>'+
-    '<div id="adm-summary"></div><div id="adm-signups"></div><div id="adm-list"><p class="muted">⏳ '+esc(t("connecting"))+'</p></div></div>';
+    '<div id="adm-sync"></div><div id="adm-summary"></div><div id="adm-signups"></div><div id="adm-list"><p class="muted">⏳ '+esc(t("connecting"))+'</p></div></div>';
 }
 function adminSchoolHTML(row){
   const s=row.school, due=subDue(s);
@@ -19016,7 +19119,7 @@ function afterAdmin(){
     mg.innerHTML='<div class="msg">'+esc(t("gemini_thinking"))+'</div>';
     Cloud.setPlatformKey(k).then(function(r){
       if(r&&r.ok){mg.innerHTML='<div class="msg ok">'+esc(t("platform_key_saved"))+'</div>';$("adm-gemini").value="";}
-      else{mg.innerHTML='<div class="msg err">'+esc(t("ai_test_bad"))+'</div>';}
+      else{mg.innerHTML='<div class="msg err">'+esc(t("ai_save_failed"))+'</div>';}
     });
   };
   const gt2=$("adm-gemini-test");
@@ -19026,6 +19129,7 @@ function afterAdmin(){
     mg.innerHTML='<div class="msg">'+esc(t("gemini_thinking"))+'</div>';
     geminiPing(Cloud.platformKey).then(function(r){
       if(r.ok){mg.innerHTML='<div class="msg ok">'+esc(t("ai_test_ok"))+'</div>';return;}
+      if(r.reason==="other"&&r.status){mg.innerHTML='<div class="msg err">'+esc(t("gemini_status").replace("{status}",String(r.status)))+'</div>';return;}
       const msgs={no_key:"ai_no_key",invalid_key:"gemini_key_bad",not_allowed:"gemini_key_bad",model:"gemini_model",busy:"gemini_busy",net:"gemini_offline",empty:"gemini_empty",other:"ai_test_bad"};
       mg.innerHTML='<div class="msg err">'+esc(t(msgs[r.reason]||"ai_test_bad"))+'</div>';
     });
@@ -19083,6 +19187,8 @@ function afterAdmin(){
       return;
     }
   };
+  const admSync=$("adm-sync");
+  if(admSync){admSync.innerHTML=syncStatusHTML();bindSyncTest();}
   loadAdminList();
 }
 function accountCardHTML(){
@@ -19091,7 +19197,7 @@ function accountCardHTML(){
   if(Cloud.user&&Cloud.teacher){
     h+='<p>'+esc(t("signed_in_as"))+": <b>"+esc(Cloud.teacher.name||Cloud.user.email)+"</b> • "+esc(Cloud.user.email)+
       (Cloud.teacher.role==="admin"?" • 👑 "+esc(t("nav_admin")):"")+"</p>"+
-      '<p class="muted">🟢 '+esc(t("sync_on"))+'</p>'+
+      syncLineHTML()+syncStatusHTML()+
       '<div class="toolbar"><input id="s-newpass" type="password" placeholder="'+esc(t("new_pass"))+'" style="min-height:44px;border:1px solid var(--line);border-radius:10px;padding:.5rem">'+
       '<button type="button" class="btn btn-sm" id="s-chpass">'+esc(t("change_pass"))+'</button>'+
       '<button type="button" class="btn btn-sm" id="s-signout">'+esc(t("sign_out"))+'</button></div><div id="s-accmsg"></div>';
@@ -19099,6 +19205,51 @@ function accountCardHTML(){
     h+='<p class="muted">🔴 '+esc(t("sync_off"))+'</p>';
   }
   return h+"</div>";
+}
+/* Round 64: honest sync line + sync-status card. syncLineHTML says ON
+   only when the app is ready AND a sync has succeeded AND no error is
+   recorded; anything else names the last error code. syncStatusHTML
+   lists the live facts (SDK, auth, teacher, school, ready, last OK,
+   last error) and the Test-connection button, which writes one
+   throwaway heartbeat doc under the school (settings/sync-ping) and
+   reads it back. */
+function syncLineHTML(){
+  if(typeof Cloud==="undefined"||!Cloud.enabled||!Cloud.user||!Cloud.teacher)return '<p class="muted">🔴 '+esc(t("sync_off"))+'</p>';
+  if(Cloud.ready&&Cloud.lastSyncOk&&!Cloud.lastSyncError)return '<p class="muted">🟢 '+esc(t("sync_on"))+'</p>';
+  const code=Cloud.lastSyncError?Cloud.lastSyncError.code:(Cloud.ready?t("sync_never"):"not-ready");
+  return '<p class="muted">🔴 '+esc(t("sync_error_line").replace("{code}",String(code)))+'</p>';
+}
+function syncStatusHTML(){
+  if(typeof Cloud==="undefined"||!Cloud.enabled)return "";
+  const e=Cloud.lastSyncError;
+  function row(k,v){return '<p>'+esc(t(k))+": <b>"+esc(v)+"</b></p>";}
+  let h='<div class="card" id="sync-status-card"><h3>🔄 '+esc(t("sync_title"))+'</h3>';
+  h+=row("sync_row_sdk",Cloud.fs?t("sync_yes"):t("sync_no"));
+  h+=row("sync_row_auth",Cloud.user?String(Cloud.user.email||Cloud.user.uid):t("sync_not_signed_in"));
+  h+=row("sync_row_teacher",Cloud.teacher?String(Cloud.teacher.name||"")+" • "+String(Cloud.teacher.role||""):t("sync_none"));
+  h+=row("sync_row_school",Cloud.school?String(Cloud.school.name||Cloud.schoolId||""):t("sync_none"));
+  h+=row("sync_row_ready",Cloud.ready?t("sync_yes"):t("sync_no"));
+  h+=row("sync_row_lastok",Cloud.lastSyncOk||t("sync_never"));
+  h+=row("sync_row_lasterr",e?((e.code==="unknown"?t("sync_unknown"):String(e.code))+" — "+String(e.message||"")+" ("+String(e.where||"")+", "+String(e.at||"")+")"):t("sync_none"));
+  h+='<div class="toolbar"><button type="button" class="btn btn-sm" id="sync-test">'+esc(t("sync_test"))+'</button></div><div id="sync-test-msg"></div>';
+  return h+"</div>";
+}
+function bindSyncTest(){
+  const b=$("sync-test");
+  if(!b||b._r64)return;
+  b._r64=true;
+  b.onclick=function(){
+    const m=$("sync-test-msg");
+    if(m)m.innerHTML='<div class="muted">'+esc(t("sync_testing"))+'</div>';
+    Cloud.syncTestConnection().then(function(r){
+      /* Re-render the card (fresh rows) then put the result back, so the
+         message survives the refresh. outerHTML swaps just this card. */
+      const card=$("sync-status-card");
+      if(card){card.outerHTML=syncStatusHTML();bindSyncTest();}
+      const m2=$("sync-test-msg");
+      if(m2)m2.innerHTML=r.ok?'<div class="msg ok">'+esc(t("sync_test_ok").replace("{ms}",String(r.ms)))+'</div>':'<div class="msg err">'+esc(t("sync_test_bad").replace("{code}",String(r.code)).replace("{message}",String(r.message||"")))+'</div>';
+    });
+  };
 }
 function snapshotsCardHTML(){
   if(typeof localStorage==="undefined")return "";
@@ -19261,6 +19412,7 @@ function afterSettings(){
     mg.innerHTML='<div class="msg">'+esc(t("gemini_thinking"))+'</div>';
     geminiPing(k).then(function(r){
       if(r.ok){mg.innerHTML='<div class="msg ok">'+esc(t("ai_test_ok"))+'</div>';return;}
+      if(r.reason==="other"&&r.status){mg.innerHTML='<div class="msg err">'+esc(t("gemini_status").replace("{status}",String(r.status)))+'</div>';return;}
       const msgs={no_key:"ai_no_key",invalid_key:"gemini_key_bad",not_allowed:"gemini_key_bad",model:"gemini_model",busy:"gemini_busy",net:"gemini_offline",empty:"gemini_empty",other:"ai_test_bad"};
       mg.innerHTML='<div class="msg err">'+esc(t(msgs[r.reason]||"ai_test_bad"))+'</div>';
     });
@@ -19359,6 +19511,7 @@ function afterSettings(){
     if(!r.ok){if(m)m.innerHTML='<div class="msg err">'+esc(r.error||t("req"))+'</div>';return;}
     render();
   };
+  bindSyncTest();
 }
 
 /* ================= demo seed ================= */
