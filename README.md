@@ -27,3 +27,6 @@ https://JumaKhan-kakar.github.io/school-record-system/
 ## Round 68 — Teacher Tools
 
 - **Tools tab** — teacher tools in one place: scientific calculator, maths solvers, class utilities, subject explainer, theorem solver, science practicals, and art.
+## Round 74 — Assistant reliability
+
+- **Assistant reliability** — auto-retry with backoff, one-at-a-time queue, pacing, Test/Ask button guards, and honest final error messages.
