@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="ur" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>School Record System</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231a6fd4'/%3E%3Cpath d='M18 34l10 10 18-22' stroke='%23fff' stroke-width='7' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <style>
 /* ============ base ============ */
 :root{
@@ -25,6 +26,10 @@ button{font:inherit}
 .hdr .sub{font-size:.8rem;opacity:.9}
 .langbtn{background:#fff;color:var(--brand);border:0;border-radius:999px;
   padding:.45rem .95rem;font-weight:700;min-height:44px;cursor:pointer}
+.langwrap{position:relative}
+.langmenu{position:absolute;top:calc(100% + .3rem);right:0;background:#fff;border:1px solid var(--line);border-radius:10px;padding:.5rem;z-index:60;box-shadow:0 4px 16px rgba(20,40,60,.18);min-width:230px}
+.langmenu input{width:100%;padding:.5rem .6rem;min-height:44px;border:1px solid var(--line);border-radius:8px;font:inherit;margin-bottom:.3rem}
+#lang-menu-list,#s-lang-list{max-height:320px;overflow-y:auto;-webkit-overflow-scrolling:touch}
 /* ============ tabs ============ */
 .tabs{display:flex;gap:.4rem;overflow-x:auto;background:var(--card);
   border-bottom:1px solid var(--line);padding:.45rem .6rem;position:sticky;top:57px;z-index:40}
@@ -154,9 +159,15 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:1rem 0}
   <header class="hdr no-print">
     <div class="row">
       <div>
-        <div class="school" id="hdr-school">—</div>
+        <div class="school" id="hdr-school">School Record System</div>
       </div>
-      <button class="langbtn" id="lang-toggle" type="button">EN</button>
+      <div class="langwrap">
+        <button class="langbtn" id="lang-toggle" type="button">English ▾</button>
+        <div id="lang-menu" class="langmenu" hidden>
+          <input id="lang-menu-search" autocomplete="off">
+          <div id="lang-menu-list"></div>
+        </div>
+      </div>
     </div>
   </header>
   <nav class="tabs no-print" id="tabs" role="tablist"></nav>
@@ -11064,7 +11075,7 @@ age_bands:{en:"Board-age bands per class (years–months)",ur:"ہر جماعت �
 band_min:{en:"Min",ur:"کم از کم",bn:"সর্বনিম্ন",hi:"न्यूनतम",ne:"न्यूनतम",sw:"Kiwango cha chini",ar:"الأدنى"},
 band_max:{en:"Max",ur:"زیادہ سے زیادہ",bn:"সর্বোচ্চ",hi:"अधिकतम",ne:"अधिकतम",sw:"Kiwango cha juu",ar:"الأقصى"},
 seed_demo:{en:"Load demo data",ur:"نمونہ ڈیٹا لوڈ کریں",bn:"নমুনা ডেটা লোড করুন",hi:"डेमो डेटा लोड करें",ne:"नमुना डाटा लोड गर्नुहोस्",sw:"Pakia data ya majaribio",ar:"تحميل بيانات تجريبية"},
-seed_warn:{en:"This replaces ALL current data with 12 demo students, 2 exams and lab items.",ur:"اس سے تمام موجودہ ڈیٹا ختم ہو کر 12 نمونہ طلبہ، 2 امتحانات اور لیب سامان آ جائے گا۔",bn:"এটি বর্তমান সব ডেটা ১২ জন নমুনা শিক্ষার্থী, ২টি পরীক্ষা ও ল্যাব আইটেম দিয়ে প্রতিস্থাপন করবে।",hi:"यह मौजूदा सभी डेटा को 12 डेमो छात्रों, 2 परीक्षाओं और प्रयोगशाला सामान से बदल देगा।",ne:"यसले हालको सबै डाटालाई १२ जना नमुना विद्यार्थी, २ परीक्षा र प्रयोगशालाका सामानले प्रतिस्थापन गर्छ।",sw:"Hii itabadilisha data yote ya sasa na wanafunzi 12 wa majaribio, mitihani 2 na vifaa vya maabara.",ar:"سيستبدل هذا جميع البيانات الحالية بـ 12 طالبًا تجريبيًا وامتحانين وأدوات مختبر."},
+seed_warn:{en:"This replaces ALL current data with 14 demo students (class 6), 4 exams and 8 lab items.",ur:"اس سے تمام موجودہ ڈیٹا ختم ہو کر 14 نمونہ طلبہ (جماعت 6)، 4 امتحانات اور 8 لیب سامان آ جائے گا۔",bn:"এটি বর্তমান সব ডেটা ১৪ জন নমুনা শিক্ষার্থী (শ্রেণি ৬), ৪টি পরীক্ষা ও ৮টি ল্যাব আইটেম দিয়ে প্রতিস্থাপন করবে।",hi:"यह मौजूदा सभी डेटा को 14 डेमो छात्रों (कक्षा 6), 4 परीक्षाओं और 8 प्रयोगशाला सामान से बदल देगा।",ne:"यसले हालको सबै डाटालाई १४ जना नमुना विद्यार्थी (कक्षा ६), ४ परीक्षा र ८ प्रयोगशालाका सामानले प्रतिस्थापन गर्छ।",sw:"Hii itabadilisha data yote ya sasa na wanafunzi 14 wa majaribio (darasa la 6), mitihani 4 na vifaa 8 vya maabara.",ar:"سيستبدل هذا جميع البيانات الحالية بـ 14 طالبًا تجريبيًا (الصف 6) و4 امتحانات و8 أدوات مختبر."},
 seed_done:{en:"Demo data loaded.",ur:"نمونہ ڈیٹا لوڈ ہو گیا۔",bn:"নমুনা ডেটা লোড হয়েছে।",hi:"डेमो डेटा लोड हो गया।",ne:"नमुना डाटा लोड भयो।",sw:"Data ya majaribio imepakiwa.",ar:"تم تحميل البيانات التجريبية."},
 wipe:{en:"Erase all data",ur:"تمام ڈیٹا مٹائیں",bn:"সব ডেটা মুছুন",hi:"सभी डेटा मिटाएं",ne:"सबै डाटा मेट्नुहोस्",sw:"Futa data yote",ar:"مسح جميع البيانات"},
 wipe_confirm:{en:"Type ERASE to confirm.",ur:"تصدیق کے لیے ERASE لکھیں۔",bn:"নিশ্চিত করতে ERASE লিখুন।",hi:"पुष्टि के लिए ERASE लिखें।",ne:"पुष्टि गर्न ERASE लेख्नुहोस्।",sw:"Andika ERASE ili kuthibitisha.",ar:"اكتب ERASE للتأكيد."},
@@ -11146,16 +11157,16 @@ const Store={
   _ls:function(){try{return (typeof localStorage!=="undefined")?localStorage:null;}catch(e){return null;}},
   load:function(){
     const ls=this._ls();
-    if(ls){try{const raw=ls.getItem(LS_KEY);if(raw){const d=JSON.parse(raw);if(d&&d.v===1&&d.settings)return d;}}catch(e){}}
+    if(ls){try{const raw=ls.getItem(demoMode?DEMO_LS_KEY:LS_KEY);if(raw){const d=JSON.parse(raw);if(d&&d.v===1&&d.settings)return d;}}catch(e){}}
     return defaultDB();
   },
   trySave:function(){
     const ls=this._ls();
     if(!ls)return true;
-    try{ls.setItem(LS_KEY,JSON.stringify(DB));return true;}
+    try{ls.setItem(demoMode?DEMO_LS_KEY:LS_KEY,JSON.stringify(DB));return true;}
     catch(e){return false;}
   },
-  save:function(){this.trySave();if(typeof Cloud!=="undefined")Cloud.onLocalSave();}
+  save:function(){this.trySave();if(!demoMode&&typeof Cloud!=="undefined")Cloud.onLocalSave();}
 };
 let DB=null;
 function db(){if(!DB)DB=Store.load();return DB;}
@@ -11626,6 +11637,7 @@ const Cloud = {
     try{this.coll("publicInfo").doc("main").set(JSON.parse(JSON.stringify({name:db().settings.schoolName||"",phone:db().settings.schoolPhone||"",fees:feesOn(),summary:schoolSummary(),at:tsNow()})));this.lastSummaryAt=Date.now();}catch(e){}
   },
   onLocalSave: function(){
+    if(demoMode)return;
     if(!this.enabled||!this.ready||!this.user||!this.schoolId||this.applyingRemote||!this.firstDone||!this.fs)return;
     try{
       const cur=db(),prev=this.lastSyncedJSON?JSON.parse(this.lastSyncedJSON):null;
@@ -12304,7 +12316,7 @@ function attPrintHTML(cls,year,month){
 }
 function viewAtt(){
   const classes=attClasses();
-  if(!classes.length)return '<div class="card"><h2>'+esc(t("att_title"))+'</h2><p class="muted">'+esc(t("tt_no_class"))+"</p></div>";
+  if(!classes.length)return '<div class="card"><h2>'+esc(t("att_title"))+'</h2>'+emptyStateHTML(t("es_att_t"),t("es_att_h"),t("es_att_b"),"adm")+"</div>";
   if(!curAttCls||classes.indexOf(curAttCls)<0)curAttCls=classes[0];
   if(!curAttMonth)curAttMonth=todayISO().slice(0,7);
   const list=attStudents(curAttCls);
@@ -13004,7 +13016,7 @@ function viewComplaints(){
   const done=all.filter(function(c){return c.status==="resolved";});
   let h='<div class="card"><h3>📮 '+esc(t("cmp_title"))+'</h3><p class="muted">'+esc(t("cmp_hint"))+"</p></div>";
   h+='<div class="card"><h3>'+esc(t("cmp_open"))+" ("+open.length+")</h3>"+
-    (open.length?open.map(cmpCardHTML).join(""):'<p class="muted">'+esc(t("cmp_no_complaints"))+"</p>")+"</div>";
+    (open.length?open.map(cmpCardHTML).join(""):emptyStateHTML(t("es_cmp_t"),t("es_cmp_h"),t("es_cmp_b"),"home"))+"</div>";
   if(done.length)h+='<div class="card"><h3>'+esc(t("cmp_resolved"))+" ("+done.length+")</h3>"+done.map(cmpCardHTML).join("")+"</div>";
   return h;
 }
@@ -13124,7 +13136,7 @@ function viewLibrary(){
     '<div class="field"><label>'+esc(t("lib_copies"))+'</label><input id="lib-copies" inputmode="numeric" value="1"></div>'+
     '<div id="lib-msg"></div>'+
     '<button type="button" class="btn btn-primary" id="lib-add">'+esc(t("lib_add_book"))+"</button></div>";
-  if(!books.length)h+='<div class="card"><p class="muted">'+esc(t("lib_no_books"))+"</p></div>";
+  if(!books.length)h+=emptyStateHTML(t("es_lib_t"),t("es_lib_h"),t("es_lib_b"),"lib");
   books.forEach(function(b){
     h+='<div class="card"><b>'+esc(b.title)+"</b>"+(b.author?" — "+esc(b.author):"")+
       '<br><span class="muted">'+esc(t("lib_copies"))+": "+b.copies+" • "+esc(t("lib_available"))+": "+libAvailable(b.id)+"</span> "+
@@ -13199,7 +13211,7 @@ function viewTransport(){
     '<div class="field"><label>'+esc(t("tr_stops"))+'</label><textarea id="tr-stops" rows="3"></textarea></div>'+
     '<div id="tr-msg"></div>'+
     '<button type="button" class="btn btn-primary" id="tr-add">'+esc(t("tr_add_route"))+"</button></div>";
-  if(!routes.length)h+='<div class="card"><p class="muted">'+esc(t("tr_no_routes"))+"</p></div>";
+  if(!routes.length)h+=emptyStateHTML(t("es_tr_t"),t("es_tr_h"),t("es_tr_b"),"tr");
   routes.forEach(function(r){
     const n=routeStudents(r.id).length;
     h+='<div class="card"><b>'+esc(r.name)+"</b> • "+esc(r.vehicle||"—")+" • "+esc(t("tr_driver"))+": "+esc(r.driver||"—")+" • "+esc(r.phone||"—")+
@@ -13275,7 +13287,7 @@ function viewHomework(){
     '<div class="field"><label>'+esc(t("hw_due"))+'</label><input id="hw-due" type="date"></div>'+
     '<div id="hw-msg"></div>'+
     '<button type="button" class="btn btn-primary" id="hw-add">'+esc(t("hw_add"))+"</button></div>"+
-    '<div id="hw-list">'+(list.length?list.map(hwItemHTML).join(""):'<div class="card"><p class="muted">'+esc(t("hw_no_homework"))+"</p></div>")+"</div>";
+    '<div id="hw-list">'+(list.length?list.map(hwItemHTML).join(""):emptyStateHTML(t("es_hw_t"),t("es_hw_h"),t("es_hw_b"),"hw"))+"</div>";
   return h;
 }
 function afterHomework(){
@@ -14218,7 +14230,7 @@ function viewFee(){
     (db().feeHeads||[]).map(function(hd){
       return '<div class="toolbar"><span>'+esc(hd.name)+" — <b>"+hd.amount+"</b>"+(hd.cls?" ("+esc(hd.cls)+")":"")+"</span>"+
         '<button type="button" class="btn btn-sm btn-danger fee-del-head" data-id="'+hd.id+'">✕</button></div>';
-    }).join("")+
+    }).join("")+((db().feeHeads||[]).length?"":emptyStateHTML(t("es_fee_t"),t("es_fee_h"),t("es_fee_b"),"fee"))+
     '<div class="toolbar"><input id="fh-name" placeholder="'+esc(t("fee_head_name"))+'" style="min-width:140px">'+
     '<input id="fh-amount" inputmode="numeric" placeholder="'+esc(t("fee_amount"))+'" style="width:100px">'+
     '<select id="fh-cls"><option value="">'+esc(t("fee_all_classes"))+"</option>"+
@@ -14761,6 +14773,7 @@ function snapshotsList(){try{const a=JSON.parse(localStorage.getItem(SNAP_KEY)||
 function snapshotsSave(l){try{localStorage.setItem(SNAP_KEY,JSON.stringify(l));return true;}catch(e){return false;}}
 function snapshotCounts(d){let mk=0;try{Object.keys(d.marks||{}).forEach(function(k){Object.keys(d.marks[k]||{}).forEach(function(s){mk+=Object.keys(d.marks[k][s]||{}).length;});});}catch(e){}return {students:(d.students||[]).length,exams:(d.exams||[]).length,marks:mk,certs:(d.certificates||[]).length};}
 function takeSnapshot(reason){
+  if(demoMode)return false;
   if(typeof localStorage==="undefined")return false;
   let data;try{data=JSON.stringify(db());}catch(e){return false;}
   const list=snapshotsList();
@@ -15143,14 +15156,88 @@ function bindMic(){
 /* ================= UI shell ================= */
 let curTab="home", curExamId=null, curResExamId=null, admEditId=null, labEditId=null, dobAsOf=todayISO(), maintItemFilter="",
     admFlash=null, admKeepOpen=false, admPhotoPending="", admDraft=null;
+
+/* ================= Round 44: demo sandbox + empty states + language pill ================= */
+/* Demo school: a safe local-only sandbox. The seeded demo database lives in its own
+   localStorage namespace (srs_v1_demo) and NEVER touches the real database (srs_v1)
+   or any cloud sync — Store.save writes the demo key while demoMode is on,
+   Cloud.onLocalSave returns immediately, takeSnapshot refuses, and enterDemo
+   refuses while a teacher is signed in. Leaving wipes the demo namespace and
+   restores the exact in-memory real database. */
+const DEMO_LS_KEY="srs_v1_demo";
+let demoMode=false,demoRealDB=null;
+function isDemoMode(){return demoMode;}
+function headerSchoolName(){
+  if(demoMode)return t("demo_school");
+  const n=String((db().settings||{}).schoolName||"").trim();
+  return n||t("app_name");
+}
+function logoSVG(size){
+  const s=size||64;
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="'+s+'" height="'+s+'" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#1a6fd4"/><path d="M18 34l10 10 18-22" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+}
+function enterDemo(){
+  if(typeof Cloud!=="undefined"&&Cloud.enabled&&Cloud.user)return {ok:false,error:t("demo_signedin")};
+  if(!demoMode)demoRealDB=DB;
+  demoMode=true;
+  seedDemo();
+  db().settings.schoolName="Demo School";
+  Store.save();
+  return {ok:true};
+}
+function leaveDemo(){
+  demoMode=false;
+  try{const ls=Store._ls();if(ls)ls.removeItem(DEMO_LS_KEY);}catch(e){}
+  DB=demoRealDB||Store.load();
+  demoRealDB=null;
+  return {ok:true};
+}
+/* One shared empty state: a friendly line about what belongs here plus the
+   primary next step. tab is the destination tab (data-goto, wired once in
+   initApp via a delegated click listener, so re-renders stay wired). */
+function emptyStateHTML(title,hint,buttonLabel,tab){
+  return '<div class="card" style="text-align:center;padding:1.2rem .8rem"><h3 style="margin-top:0">'+esc(title)+'</h3><p class="muted">'+esc(hint)+'</p><button type="button" class="btn btn-primary" data-goto="'+esc(tab)+'">'+esc(buttonLabel)+"</button></div>";
+}
+/* Shared language-picker rows (Settings + the header pill menu). */
+function langListRows(q){
+  q=String(q||"").trim().toLowerCase();
+  const rows=Object.keys(LANGS).filter(function(c){return !q||LANGS[c].native.toLowerCase().indexOf(q)>=0||LANGS[c].name.toLowerCase().indexOf(q)>=0||c===q;});
+  return rows.map(function(c){return '<button type="button" class="btn btn-sm" style="display:block;width:100%;text-align:left;margin:.15rem 0" data-lang="'+c+'">'+esc(LANGS[c].native)+" \u2014 "+esc(LANGS[c].name)+"</button>";}).join("");
+}
+function wireLangList(listEl,onPick){
+  if(!listEl)return;
+  listEl.querySelectorAll("[data-lang]").forEach(function(b){b.onclick=function(){onPick(b.getAttribute("data-lang"));};});
+}
+function drawHeaderLangList(q){
+  const lsl=$("lang-menu-list");if(!lsl)return;
+  lsl.innerHTML=langListRows(q);
+  wireLangList(lsl,function(c){
+    db().settings.lang=c;Store.save();
+    const m=$("lang-menu");if(m)m.hidden=true;
+    render();
+  });
+}
+function wireLangPill(){
+  const lt=$("lang-toggle");if(!lt||lt._wired)return;lt._wired=true;
+  lt.onclick=function(){
+    const m=$("lang-menu");if(!m)return;
+    if(m.hidden){m.hidden=false;drawHeaderLangList("");const s=$("lang-menu-search");if(s){s.value="";s.focus();}}
+    else m.hidden=true;
+  };
+  const lms=$("lang-menu-search");
+  if(lms&&!lms._wired){lms._wired=true;
+    lms.oninput=function(){drawHeaderLangList(lms.value);};
+    lms.onblur=function(){setTimeout(function(){const m=$("lang-menu");if(m)m.hidden=true;},200);};
+  }
+}
 function applyLang(){
   if(typeof document==="undefined")return;
   const L=lang();
   document.documentElement.lang=L;
   document.documentElement.dir=langDir();
-  $("hdr-school").textContent=db().settings.schoolName||"—";
-  const o=langOrder(),nx=LANGS[o[(o.indexOf(L)+1)%o.length]];
-  $("lang-toggle").textContent=nx?nx.native:"EN";
+  $("hdr-school").textContent=headerSchoolName();
+  $("lang-toggle").textContent=(LANGS[L]||LANGS.en).native+" ▾";
+  const lms=$("lang-menu-search");if(lms)lms.placeholder=t("lang_search");
 }
 const TABS=[["home","nav_home"],["adm","nav_adm"],["dob","nav_dob"],["exam","nav_exam"],["result","nav_result"],["att","nav_att"],["fee","nav_fee"],["staff","nav_staff"],["bc","nav_bc"],["hw","nav_hw"],["tr","nav_transport"],["lib","nav_library"],["cmp","nav_complaints"],["tt","nav_tt"],["he","nav_highered"],["lab","nav_lab"],["cert","nav_cert"],["admin","nav_admin"],["settings","nav_settings"]];
 /* Which tab each module toggle controls (Round 22). Shared by renderTabs and quickLinksHTML. */
@@ -15388,7 +15475,14 @@ function renderLogin(){
     :err==="account_blocked"?'<div class="msg err">'+esc(t("login_blocked"))+'</div>'
     :err==="school_blocked"?'<div class="msg err">'+esc(t("login_school_blocked"))+'</div>':"";
   if(err)Cloud.authError="";
-  $("view").innerHTML='<div class="card" style="max-width:420px;margin:2rem auto"><h2>🔐 '+esc(t("login_title"))+'</h2>'+
+  $("view").innerHTML='<div class="card" style="max-width:420px;margin:2rem auto;text-align:center">'+
+    '<div style="margin:.4rem 0 .2rem">'+logoSVG(72)+'</div>'+
+    '<h1 style="margin:.2rem 0;font-size:1.4rem">'+esc(t("app_name"))+'</h1>'+
+    '<p class="muted" style="margin:.2rem 0 .8rem">'+esc(t("login_promise"))+'</p>'+
+    '<button type="button" class="btn btn-primary" id="lg-demo" style="width:100%">🎓 '+esc(t("demo_try"))+'</button>'+
+    '<button type="button" class="btn" id="lg-signup" style="width:100%;margin-top:.5rem">🏫 '+esc(t("signup_title"))+'</button>'+
+    '<div style="margin:1rem 0 .5rem;border-top:1px solid var(--line);padding-top:1rem;text-align:start">'+
+    '<h2 style="margin-top:0">🔐 '+esc(t("login_title"))+'</h2>'+
     '<p class="muted">'+esc(t("login_hint"))+'</p>'+
     '<div class="field"><label>'+esc(t("login_email"))+'</label><input id="lg-email" type="email" autocomplete="username"></div>'+
     '<div class="field"><label>'+esc(t("login_pass"))+'</label><input id="lg-pass" type="password" autocomplete="current-password"></div>'+
@@ -15397,7 +15491,9 @@ function renderLogin(){
     '<div style="margin-top:1rem;text-align:center"><button type="button" class="btn btn-sm" id="lg-parent">👨‍👩‍👧 '+esc(t("parent_title"))+"</button> "+
     '<button type="button" class="btn btn-sm" id="lg-verify">✅ '+esc(t("verify_title"))+"</button> "+
     '<button type="button" class="btn btn-sm" id="lg-pricing">💰 '+esc(t("pricing_title"))+"</button></div>"+
-    '<div style="margin-top:.5rem;text-align:center"><button type="button" class="btn btn-sm" id="lg-signup">🏫 '+esc(t("signup_title"))+"</button></div></div>";
+    "</div>";
+  const ld=$("lg-demo");
+  if(ld)ld.onclick=function(){const r=enterDemo();if(r.ok)render();else $("lg-msg").innerHTML='<div class="msg err">'+esc(r.error)+"</div>";};
   $("lg-go").onclick=function(){
     const em=$("lg-email").value.trim(),pw=$("lg-pass").value;
     if(!em||!pw){$("lg-msg").innerHTML='<div class="msg err">'+esc(t("req"))+'</div>';return;}
@@ -15454,18 +15550,20 @@ function render(){
   if(verifyMode){renderVerify();return;}
   if(signupMode){renderSignup();return;}
   if(parentMode){renderParent();return;}
-  if(typeof Cloud!=="undefined"&&Cloud.enabled){
+  if(typeof Cloud!=="undefined"&&Cloud.enabled&&!demoMode){
     if(!Cloud.authResolved){$("tabs").innerHTML="";$("view").innerHTML='<div class="card"><p class="muted">⏳ '+esc(t("connecting"))+'</p></div>';return;}
     if(!Cloud.user){renderLogin();return;}
   }
   if((curTab==="fee"&&!feesOn())||(curTab==="att"&&!attOn())||(curTab==="staff"&&!staffOn())||(curTab==="bc"&&!bcOn())||(curTab==="hw"&&!hwOn())||(curTab==="tr"&&!transportOn())||(curTab==="lib"&&!libOn())||(curTab==="cmp"&&!cmpOn())||(curTab==="he"&&!heOn())||(curTab==="tt"&&!ttOn())||(curTab==="lab"&&!labOn())||(curTab==="cert"&&!certOn())||(curTab==="admin"&&!(typeof Cloud!=="undefined"&&Cloud.isSuperAdmin)))curTab="home";
   renderTabs();const v=$("view");
   const roBanner=(typeof Cloud!=="undefined"&&Cloud.enabled&&Cloud.readOnly)?'<div class="msg err" style="margin:.5rem 0">🔒 '+esc(t("sub_expired"))+'</div>':"";
-  v.innerHTML = roBanner+(curTab==="home"?viewHome():curTab==="adm"?viewAdm():curTab==="dob"?viewDob():
+  const demoBanner=demoMode?'<div class="msg warnm" style="margin:.5rem 0">🎓 <b>'+esc(t("demo_school"))+'</b> — '+esc(t("demo_banner"))+' <button type="button" class="btn btn-sm" id="demo-leave" style="margin-left:.4rem">'+esc(t("demo_leave"))+"</button></div>":"";
+  v.innerHTML = demoBanner+roBanner+(curTab==="home"?viewHome():curTab==="adm"?viewAdm():curTab==="dob"?viewDob():
     curTab==="exam"?viewExam():curTab==="result"?viewResult():curTab==="att"?viewAtt():curTab==="fee"?viewFee():curTab==="staff"?viewStaff():curTab==="bc"?viewBroadcast():curTab==="hw"?viewHomework():curTab==="tr"?viewTransport():curTab==="lib"?viewLibrary():curTab==="cmp"?viewComplaints():curTab==="tt"?viewTimetable():curTab==="he"?viewHigherEd():curTab==="lab"?viewLab():
     curTab==="cert"?viewCert():curTab==="admin"?viewAdmin():viewSettings());
   const fns={home:afterHome,adm:afterAdm,dob:afterDob,exam:afterExam,result:afterResult,att:afterAtt,fee:afterFee,staff:afterStaff,bc:afterBroadcast,hw:afterHomework,tr:afterTransport,lib:afterLibrary,cmp:afterComplaints,tt:afterTimetable,he:afterHigherEd,lab:afterLab,cert:afterCert,admin:afterAdmin,settings:afterSettings};
   if(fns[curTab])fns[curTab]();
+  const dl=$("demo-leave");if(dl)dl.onclick=function(){leaveDemo();render();};
   v.scrollTop=0;if(typeof window!=="undefined")window.scrollTo(0,0);
 }
 function downloadFile(name,text,mime){
@@ -16320,11 +16418,12 @@ function drawDir(){
     /* identity rule: search matches name + father's name together */
     return !needle||norm(s.name).indexOf(needle)>=0||norm(s.fatherName).indexOf(needle)>=0||norm(s.admNo).indexOf(needle)>=0;
   });
-  box.innerHTML=list.slice(0,dirLimit).map(function(s){
+  const rows=list.slice(0,dirLimit).map(function(s){
     return '<button type="button" class="btn" style="display:block;width:100%;text-align:start;margin:.3rem 0" data-open="'+s.id+'">'+
       '<span class="idrow">'+studentPhotoHTML(s,44)+"<span><b>"+esc(displayName(s))+"</b><br><span class=\"muted\">"+esc(s.admNo)+" • "+esc(clsLabel(s.cls,s.section))+
       " • "+t("dob")+": "+fmtDate(s.dob)+"</span></span></span></button>";
-  }).join("")+(list.length>dirLimit?'<button type="button" class="btn" id="dir-more" style="width:100%;margin:.4rem 0">'+esc(t("show_more"))+" ("+list.length+")</button>":"")||'<p class="muted">'+esc(t("no_records"))+"</p>";
+  }).join("")+(list.length>dirLimit?'<button type="button" class="btn" id="dir-more" style="width:100%;margin:.4rem 0">'+esc(t("show_more"))+" ("+list.length+")</button>":"");
+  box.innerHTML=rows||(studentsOfAll().length?'<p class="muted">'+esc(t("no_records"))+"</p>":emptyStateHTML(t("es_dir_t"),t("es_dir_h"),t("es_dir_b"),"adm"));
   const dm=$("dir-more");if(dm)dm.onclick=function(){dirLimit+=50;drawDir();};
   Array.prototype.forEach.call(box.querySelectorAll("[data-open]"),function(b){
     b.onclick=function(){dossierId=b.getAttribute("data-open");render();};
@@ -16978,7 +17077,7 @@ function afterExam(){
 function drawGrid(){
   const box=$("e-grid");if(!box)return;
   const ex=db().exams.find(function(e){return e.id===curExamId;});
-  if(!ex){box.innerHTML='<p class="muted">'+esc(t("no_records"))+"</p>";return;}
+  if(!ex){box.innerHTML=emptyStateHTML(t("es_exam_t"),t("es_exam_h"),t("es_exam_b"),"exam");return;}
   const studs=studentsOf(ex.cls,ex.section);
   if(!studs.length){box.innerHTML='<p class="muted">'+esc(t("no_records"))+"</p>";return;}
   const saved=db().marks[ex.id]||{};
@@ -17753,6 +17852,40 @@ setup_step_tt:{en:"Timetable filled for a class",ur:"کسی جماعت کا ٹا
 setup_step_results:{en:"First marks entered",ur:"پہلے نمبر درج کیے گئے",bn:"প্রথম নম্বর দেওয়া হয়েছে",hi:"पहले अंक दर्ज किए गए",ne:"पहिलो अङ्कहरू राखिएका छन्",sw:"Alama za kwanza zimeingizwa",ar:"تم إدخال أول الدرجات"},
 setup_done:{en:"Your school is set up — everything is ready.",ur:"آپ کا اسکول تیار ہے — سب کچھ مکمل ہے۔",bn:"আপনার স্কুল তৈরি — সবকিছু প্রস্তুত।",hi:"आपका स्कूल तैयार है — सब कुछ पूरा है।",ne:"तपाईंको विद्यालय तयार छ — सबै कुरा पूरा भयो।",sw:"Shule yako iko tayari — kila kitu kiko sawa.",ar:"مدرستك جاهزة — كل شيء مكتمل."},
 setup_go:{en:"Open",ur:"کھولیں",bn:"খুলুন",hi:"खोलें",ne:"खोल्नुहोस्",sw:"Fungua",ar:"افتح"},
+login_promise:{en:"Your whole school — admissions, fees, exams, results — on one phone, in your language, even offline.",ur:"آپ کا پورا اسکول — داخلے، فیس، امتحانات، نتائج — ایک فون پر، آپ کی زبان میں، آف لائن بھی۔",bn:"আপনার পুরো স্কুল — ভর্তি, ফি, পরীক্ষা, ফলাফল — এক ফোনে, আপনার ভাষায়, অফলাইনেও।",hi:"आपका पूरा स्कूल — दाखिले, शुल्क, परीक्षाएँ, परिणाम — एक फ़ोन पर, आपकी भाषा में, ऑफ़लाइन भी।",ne:"तपाईंको पूरा विद्यालय — भर्ना, शुल्क, परीक्षा, नतिजा — एउटा फोनमा, तपाईंको भाषामा, अफलाइन पनि।",sw:"Shule yako yote — udahili, ada, mitihani, matokeo — kwenye simu moja, kwa lugha yako, hata bila mtandao.",ar:"مدرستك كلها — القبول، الرسوم، الامتحانات، النتائج — على هاتف واحد، بلغتك، حتى دون إنترنت."},
+demo_try:{en:"Try the demo school",ur:"نمونہ اسکول آزمائیں",bn:"ডেমো স্কুল চেষ্টা করুন",hi:"डेमो स्कूल आज़माएँ",ne:"डेमो विद्यालय प्रयास गर्नुहोस्",sw:"Jaribu shule ya majaribio",ar:"جرّب المدرسة التجريبية"},
+demo_school:{en:"Demo School",ur:"نمونہ اسکول",bn:"ডেমো স্কুল",hi:"डेमो स्कूल",ne:"डेमो विद्यालय",sw:"Shule ya Majaribio",ar:"المدرسة التجريبية"},
+demo_banner:{en:"You are viewing the demo school. Nothing here touches real data.",ur:"آپ نمونہ اسکول دیکھ رہے ہیں۔ یہاں کچھ بھی اصل ڈیٹا کو نہیں چھوتا۔",bn:"আপনি ডেমো স্কুল দেখছেন। এখানে কিছুই আসল ডেটা স্পর্শ করে না।",hi:"आप डेमो स्कूल देख रहे हैं। यहाँ कुछ भी असली डेटा को नहीं छूता।",ne:"तपाईं डेमो विद्यालय हेर्दै हुनुहुन्छ। यहाँ केहीले पनि वास्तविक डाटा छुँदैन।",sw:"Unaangalia shule ya majaribio. Hakuna chochote hapa kinachogusa data halisi.",ar:"أنت تشاهد المدرسة التجريبية. لا شيء هنا يمسّ البيانات الحقيقية."},
+demo_leave:{en:"Leave demo",ur:"ڈیمو چھوڑیں",bn:"ডেমো ছাড়ুন",hi:"डेमो छोड़ें",ne:"डेमो छोड्नुहोस्",sw:"Ondoka kwenye majaribio",ar:"مغادرة العرض"},
+demo_signedin:{en:"Sign out first to try the demo school.",ur:"نمونہ اسکول آزمانے کے لیے پہلے سائن آؤٹ کریں۔",bn:"ডেমো স্কুল চেষ্টা করতে প্রথমে সাইন আউট করুন।",hi:"डेमो स्कूल आज़माने के लिए पहले साइन आउट करें।",ne:"डेमो विद्यालय प्रयास गर्न पहिले साइन आउट गर्नुहोस्।",sw:"Toka kwanza ili ujaribu shule ya majaribio.",ar:"سجّل خروجك أولًا لتجربة المدرسة التجريبية."},
+es_dir_t:{en:"No students yet",ur:"ابھی کوئی طالب علم نہیں",bn:"এখনো কোনো শিক্ষার্থী নেই",hi:"अभी कोई छात्र नहीं है",ne:"अहिलेसम्म कुनै विद्यार्थी छैन",sw:"Hakuna mwanafunzi bado",ar:"لا يوجد طلاب بعد"},
+es_dir_h:{en:"Your student directory lives here. Add your first student and their full record — admission, fees, exams, results — opens in one click.",ur:"آپ کے طلبہ کی فہرست یہاں ہوگی۔ اپنا پہلا طالب علم شامل کریں — داخلہ، فیس، امتحانات اور نتائج ایک کلک میں کھل جائیں گے۔",bn:"আপনার শিক্ষার্থী তালিকা এখানে থাকবে। আপনার প্রথম শিক্ষার্থী যোগ করুন — ভর্তি, ফি, পরীক্ষা ও ফলাফল এক ক্লিকে খুলবে।",hi:"आपकी छात्र निर्देशिका यहाँ रहेगी। अपना पहला छात्र जोड़ें — दाखिला, शुल्क, परीक्षा और परिणाम एक क्लिक में खुलेंगे।",ne:"तपाईंको विद्यार्थी निर्देशिका यहाँ रहन्छ। आफ्नो पहिलो विद्यार्थी थप्नुहोस् — भर्ना, शुल्क, परीक्षा र नतिजा एक क्लिकमा खुल्छ।",sw:"Orodha ya wanafunzi wako itakuwa hapa. Ongeza mwanafunzi wako wa kwanza — udahili, ada, mitihani na matokeo hufunguka kwa mbofyo mmoja.",ar:"سيكون دليل طلابك هنا. أضف أول طالب — القبول والرسوم والامتحانات والنتائج تفتح بنقرة واحدة."},
+es_dir_b:{en:"Add your first student",ur:"اپنا پہلا طالب علم شامل کریں",bn:"আপনার প্রথম শিক্ষার্থী যোগ করুন",hi:"अपना पहला छात्र जोड़ें",ne:"आफ्नो पहिलो विद्यार्थी थप्नुहोस्",sw:"Ongeza mwanafunzi wako wa kwanza",ar:"أضف أول طالب"},
+es_fee_t:{en:"No fee heads yet",ur:"ابھی فیس کی کوئی مد نہیں",bn:"এখনো কোনো ফি হেড নেই",hi:"अभी कोई शुल्क शीर्ष नहीं है",ne:"अहिलेसम्म कुनै शुल्क शीर्षक छैन",sw:"Hakuna kichwa cha ada bado",ar:"لا توجد بنود رسوم بعد"},
+es_fee_h:{en:"Fee heads are the charges on every monthly bill — tuition, lab, transport. Set them once and every bill adds up itself.",ur:"فیس کی مدیں ہر ماہ کے بل کے اخراجات ہیں — ٹیوشن، لیب، ٹرانسپورٹ۔ ایک بار مقرر کریں تو ہر بل خود بن جائے گا۔",bn:"ফি হেড হল প্রতি মাসের বিলের খরচ — টিউশন, ল্যাব, পরিবহন। একবার সেট করলে প্রতিটি বিল নিজে নিজেই তৈরি হবে।",hi:"शुल्क शीर्ष हर मासिक बिल के शुल्क हैं — ट्यूशन, लैब, परिवहन। एक बार तय करें और हर बिल अपने आप बन जाएगा।",ne:"शुल्क शीर्षकहरू हरेक मासिक बिलका शुल्कहरू हुन् — ट्युसन, प्रयोगशाला, यातायात। एक पटक सेट गर्नुहोस् र हरेक बिल आफै बन्छ।",sw:"Vichwa vya ada ni malipo kwenye kila bili ya mwezi — masomo, maabara, usafiri. Viweke mara moja na kila bili itajijumlisha yenyewe.",ar:"بنود الرسوم هي التكاليف في كل فاتورة شهرية — الرسوم الدراسية والمختبر والنقل. حدّدها مرة واحدة وستُحسب كل فاتورة تلقائيًا."},
+es_fee_b:{en:"Set up fee heads",ur:"فیس کی مدیں مقرر کریں",bn:"ফি হেড সেট করুন",hi:"शुल्क शीर्ष निर्धारित करें",ne:"शुल्क शीर्षकहरू सेट गर्नुहोस्",sw:"Weka vichwa vya ada",ar:"حدّد بنود الرسوم"},
+es_exam_t:{en:"No exams yet",ur:"ابھی کوئی امتحان نہیں",bn:"এখনো কোনো পরীক্ষা নেই",hi:"अभी कोई परीक्षा नहीं है",ne:"अहिलेसम्म कुनै परीक्षा छैन",sw:"Hakuna mtihani bado",ar:"لا توجد امتحانات بعد"},
+es_exam_h:{en:"Exams hold the marks grid, the date sheet and the result cards. Create your first exam and enter marks for the class.",ur:"امتحانات میں نمبروں کی جدول، ڈیٹ شیٹ اور رزلٹ کارڈ ہوتے ہیں۔ اپنا پہلا امتحان بنائیں اور جماعت کے نمبر درج کریں۔",bn:"পরীক্ষায় নম্বরের তালিকা, ডেট শিট ও রেজাল্ট কার্ড থাকে। আপনার প্রথম পরীক্ষা তৈরি করুন এবং ক্লাসের নম্বর দিন।",hi:"परीक्षाओं में अंक तालिका, तिथि-पत्र और परिणाम कार्ड होते हैं। अपनी पहली परीक्षा बनाएँ और कक्षा के अंक दर्ज करें।",ne:"परीक्षाहरूमा अङ्क तालिका, मिति तालिका र नतिजा कार्ड हुन्छन्। आफ्नो पहिलो परीक्षा सिर्जना गर्नुहोस् र कक्षाको अङ्क राख्नुहोस्।",sw:"Mitihani ina jedwali la alama, ratiba ya tarehe na kadi za matokeo. Unda mtihani wako wa kwanza na uweke alama za darasa.",ar:"تحتوي الامتحانات على جدول الدرجات وجدول التواريخ وبطاقات النتائج. أنشئ أول امتحان وأدخل درجات الصف."},
+es_exam_b:{en:"Create your first exam",ur:"اپنا پہلا امتحان بنائیں",bn:"আপনার প্রথম পরীক্ষা তৈরি করুন",hi:"अपनी पहली परीक्षा बनाएँ",ne:"आफ्नो पहिलो परीक्षा सिर्जना गर्नुहोस्",sw:"Unda mtihani wako wa kwanza",ar:"أنشئ أول امتحان"},
+es_att_t:{en:"No students to mark",ur:"حاضری کے لیے کوئی طالب علم نہیں",bn:"উপস্থিতি নেওয়ার মতো কোনো শিক্ষার্থী নেই",hi:"उपस्थिति लेने के लिए कोई छात्र नहीं है",ne:"हाजिरी लिन कुनै विद्यार्थी छैन",sw:"Hakuna mwanafunzi wa kuweka mahudhurio",ar:"لا يوجد طلاب لتسجيل الحضور"},
+es_att_h:{en:"Attendance is marked here every morning — present, absent, late or on leave. First add students, then the register fills itself.",ur:"حاضری یہاں ہر صبح لگائی جاتی ہے — حاضر، غیر حاضر، دیر سے یا چھٹی پر۔ پہلے طلبہ شامل کریں، پھر رجسٹر خود بھر جائے گا۔",bn:"উপস্থিতি এখানে প্রতি সকালে নেওয়া হয় — উপস্থিত, অনুপস্থিত, দেরি বা ছুটি। প্রথমে শিক্ষার্থী যোগ করুন, তারপর রেজিস্টার নিজে ভরে যাবে।",hi:"उपस्थिति यहाँ हर सुबह ली जाती है — उपस्थित, अनुपस्थित, देर से या छुट्टी पर। पहले छात्र जोड़ें, फिर रजिस्टर अपने आप भर जाएगा।",ne:"हाजिरी यहाँ हरेक बिहान लिइन्छ — उपस्थित, अनुपस्थित, ढिलो वा बिदामा। पहिले विद्यार्थीहरू थप्नुहोस्, त्यसपछि रजिस्टर आफै भरिन्छ।",sw:"Mahudhurio huchukuliwa hapa kila asubuhi — alikuwepo, hayupo, amechelewa au likizo. Kwanza ongeza wanafunzi, kisha rejista itajijaza yenyewe.",ar:"يُسجَّل الحضور هنا كل صباح — حاضر أو غائب أو متأخر أو في إجازة. أضف الطلاب أولًا، ثم يمتلئ السجل تلقائيًا."},
+es_att_b:{en:"Add your first student",ur:"اپنا پہلا طالب علم شامل کریں",bn:"আপনার প্রথম শিক্ষার্থী যোগ করুন",hi:"अपना पहला छात्र जोड़ें",ne:"आफ्नो पहिलो विद्यार्थी थप्नुहोस्",sw:"Ongeza mwanafunzi wako wa kwanza",ar:"أضف أول طالب"},
+es_lib_t:{en:"No books yet",ur:"ابھی کوئی کتاب نہیں",bn:"এখনো কোনো বই নেই",hi:"अभी कोई किताब नहीं है",ne:"अहिलेसम्म कुनै पुस्तक छैन",sw:"Hakuna kitabu bado",ar:"لا توجد كتب بعد"},
+es_lib_h:{en:"The library lists every book, lends it to a student for 14 days, and flags overdue returns. Add your first book to start.",ur:"لائبریری میں ہر کتاب کی فہرست ہوتی ہے، وہ طالب علم کو 14 دن کے لیے دی جاتی ہے اور دیر سے واپسی کی نشاندہی ہوتی ہے۔ شروع کرنے کے لیے پہلی کتاب شامل کریں۔",bn:"লাইব্রেরিতে প্রতিটি বইয়ের তালিকা থাকে, শিক্ষার্থীকে ১৪ দিনের জন্য দেওয়া হয় এবং দেরিতে ফেরত চিহ্নিত হয়। শুরু করতে প্রথম বই যোগ করুন।",hi:"पुस्तकालय में हर किताब की सूची होती है, छात्र को 14 दिन के लिए दी जाती है और देर से वापसी चिह्नित होती है। शुरू करने के लिए पहली किताब जोड़ें।",ne:"पुस्तकालयमा हरेक पुस्तकको सूची हुन्छ, विद्यार्थीलाई १४ दिनका लागि दिइन्छ र ढिलो फिर्ता चिन्ह लगाइन्छ। सुरु गर्न पहिलो पुस्तक थप्नुहोस्।",sw:"Maktaba inaorodhesha kila kitabu, humkopesha mwanafunzi kwa siku 14, na huashiria marejesho yaliyochelewa. Ongeza kitabu chako cha kwanza ili kuanza.",ar:"تسرد المكتبة كل كتاب، وتُعيره للطالب 14 يومًا، وتُعلّم الإرجاعات المتأخرة. أضف أول كتاب للبدء."},
+es_lib_b:{en:"Add your first book",ur:"اپنی پہلی کتاب شامل کریں",bn:"আপনার প্রথম বই যোগ করুন",hi:"अपनी पहली किताब जोड़ें",ne:"आफ्नो पहिलो पुस्तक थप्नुहोस्",sw:"Ongeza kitabu chako cha kwanza",ar:"أضف أول كتاب"},
+es_tr_t:{en:"No routes yet",ur:"ابھی کوئی روٹ نہیں",bn:"এখনো কোনো রুট নেই",hi:"अभी कोई मार्ग नहीं है",ne:"अहिलेसम्म कुनै रुट छैन",sw:"Hakuna njia bado",ar:"لا توجد طرق بعد"},
+es_tr_h:{en:"Transport routes carry the bus fee onto each rider's monthly bill. Add a route with its stops, then assign students to it.",ur:"ٹرانسپورٹ روٹ کی فیس ہر سوار طالب علم کے ماہانہ بل میں شامل ہوتی ہے۔ اسٹاپس کے ساتھ روٹ شامل کریں، پھر طلبہ کو اس پر مقرر کریں۔",bn:"পরিবহন রুটের ভাড়া প্রত্যেক যাত্রী শিক্ষার্থীর মাসিক বিলে যোগ হয়। স্টপসহ একটি রুট যোগ করুন, তারপর শিক্ষার্থীদের তাতে বসান।",hi:"परिवहन मार्ग का किराया प्रत्येक सवार छात्र के मासिक बिल में जुड़ता है। स्टॉप के साथ एक मार्ग जोड़ें, फिर छात्रों को उस पर नियुक्त करें।",ne:"यातायात रुटको शुल्क हरेक यात्री विद्यार्थीको मासिक बिलमा थपिन्छ। स्टपहरूसहित एउटा रुट थप्नुहोस्, त्यसपछि विद्यार्थीहरूलाई तोक्नुहोस्।",sw:"Njia za usafiri huongeza ada ya basi kwenye bili ya kila mwanafunzi anayepanda. Ongeza njia pamoja na vituo vyake, kisha wawekee wanafunzi.",ar:"تُضاف أجرة النقل إلى الفاتورة الشهرية لكل طالب راكب. أضف طريقًا مع محطاته، ثم عيّن الطلاب عليه."},
+es_tr_b:{en:"Add your first route",ur:"اپنا پہلا روٹ شامل کریں",bn:"আপনার প্রথম রুট যোগ করুন",hi:"अपना पहला मार्ग जोड़ें",ne:"आफ्नो पहिलो रुट थप्नुहोस्",sw:"Ongeza njia yako ya kwanza",ar:"أضف أول طريق"},
+es_hw_t:{en:"No homework yet",ur:"ابھی کوئی ہوم ورک نہیں",bn:"এখনো কোনো হোমওয়ার্ক নেই",hi:"अभी कोई होमवर्क नहीं है",ne:"अहिलेसम्म कुनै गृहकार्य छैन",sw:"Hakuna kazi ya nyumbani bado",ar:"لا توجد واجبات منزلية بعد"},
+es_hw_h:{en:"Homework set here shows up for parents under their child's result. Pick a class, write the task and set the due date.",ur:"یہاں دیا گیا ہوم ورک والدین کو ان کے بچے کے نتیجے کے نیچے دکھائی دیتا ہے۔ جماعت چنیں، کام لکھیں اور مقررہ تاریخ بتائیں۔",bn:"এখানে দেওয়া হোমওয়ার্ক অভিভাবকদের কাছে তাদের সন্তানের ফলাফলের নিচে দেখা যায়। ক্লাস বাছুন, কাজ লিখুন এবং শেষ তারিখ দিন।",hi:"यहाँ दिया गया होमवर्क अभिभावकों को उनके बच्चे के परिणाम के नीचे दिखता है। कक्षा चुनें, कार्य लिखें और नियत तिथि तय करें।",ne:"यहाँ दिइएको गृहकार्य अभिभावकहरूलाई उनीहरूका बच्चाको नतिजामुनि देखिन्छ। कक्षा छान्नुहोस्, कार्य लेख्नुहोस् र अन्तिम मिति तोक्नुहोस्।",sw:"Kazi ya nyumbani iliyowekwa hapa huonekana kwa wazazi chini ya matokeo ya mtoto wao. Chagua darasa, andika kazi na uweke tarehe ya mwisho.",ar:"تظهر الواجبات المنزلية المحددة هنا للأهل أسفل نتيجة طفلهم. اختر الصف، واكتب المهمة، وحدّد تاريخ التسليم."},
+es_hw_b:{en:"Set homework",ur:"ہوم ورک دیں",bn:"হোমওয়ার্ক দিন",hi:"होमवर्क दें",ne:"गृहकार्य दिनुहोस्",sw:"Weka kazi ya nyumbani",ar:"حدّد واجبًا منزليًا"},
+es_cmp_t:{en:"No complaints — good news",ur:"کوئی شکایت نہیں — اچھی خبر",bn:"কোনো অভিযোগ নেই — ভালো খবর",hi:"कोई शिकायत नहीं — अच्छी खबर",ne:"कुनै गुनासो छैन — राम्रो खबर",sw:"Hakuna malalamiko — habari njema",ar:"لا توجد شكاوى — خبر سارة"},
+es_cmp_h:{en:"When a parent sends a complaint from the parent portal, it lands here. You reply to it here and mark it resolved.",ur:"جب کوئی والدین پیرنٹ پورٹل سے شکایت بھیجتے ہیں تو وہ یہاں آتی ہے۔ آپ یہیں جواب دیتے ہیں اور اسے حل شدہ قرار دیتے ہیں۔",bn:"অভিভাবক প্যারেন্ট পোর্টাল থেকে অভিযোগ পাঠালে তা এখানে আসে। আপনি এখানেই উত্তর দেন এবং সমাধান হয়েছে বলে চিহ্নিত করেন।",hi:"जब कोई अभिभावक पैरेंट पोर्टल से शिकायत भेजता है, तो वह यहाँ आती है। आप यहीं उत्तर देते हैं और उसे हल हुआ चिह्नित करते हैं।",ne:"जब अभिभावकले अभिभावक पोर्टलबाट गुनासो पठाउँछन्, त्यो यहाँ आउँछ। तपाईं यही जवाफ दिनुहुन्छ र समाधान भयो भनेर चिन्ह लगाउनुहुन्छ।",sw:"Mzazi anapotuma lalamiko kutoka kwenye lango la wazazi, linafika hapa. Unalijibu hapa na kuashiria kuwa limetatuliwa.",ar:"عندما يرسل أحد الأهل شكوى من بوابة الأهل، تصل إلى هنا. تردّ عليها هنا وتعلّمها كمحلولة."},
+es_cmp_b:{en:"Back to Home",ur:"ہوم پر واپس",bn:"হোমে ফিরুন",hi:"होम पर वापस जाएँ",ne:"गृहपृष्ठमा फर्कनुहोस्",sw:"Rudi Nyumbani",ar:"عودة إلى الرئيسية"},
+es_cert_t:{en:"No certificates yet",ur:"ابھی کوئی سرٹیفکیٹ نہیں",bn:"এখনো কোনো সার্টিফিকেট নেই",hi:"अभी कोई प्रमाणपत्र नहीं है",ne:"अहिलेसम्म कुनै प्रमाणपत्र छैन",sw:"Hakuna cheti bado",ar:"لا توجد شهادات بعد"},
+es_cert_h:{en:"Certificates — leaving, provisional, bonafide, character and transfer — are issued here with their own serial numbers and QR verification.",ur:"سرٹیفکیٹ — اسکول چھوڑنے، عارضی، بونافائیڈ، کردار اور ٹرانسفر — یہیں جاری ہوتے ہیں، اپنے سیریل نمبر اور کیو آر تصدیق کے ساتھ۔",bn:"সার্টিফিকেট — লিভিং, প্রভিশনাল, বোনাফাইড, ক্যারেক্টার ও ট্রান্সফার — এখানেই নিজস্ব সিরিয়াল নম্বর ও QR যাচাইসহ দেওয়া হয়।",hi:"प्रमाणपत्र — छोड़ने का, अस्थायी, बोनाफाइड, चरित्र और स्थानांतरण — यहीं अपने क्रमांक और QR सत्यापन के साथ जारी होते हैं।",ne:"प्रमाणपत्रहरू — छोड्ने, अस्थायी, बोनाफाइड, चरित्र र स्थानान्तरण — यहाँ आफ्नै क्रम सङ्ख्या र QR प्रमाणीकरणसहित जारी गरिन्छन्।",sw:"Vyeti — vya kuondoka, vya muda, vya uthibitisho, vya tabia na vya uhamisho — hutolewa hapa kwa nambari zake za mfululizo na uthibitisho wa QR.",ar:"تُصدر الشهادات — المغادرة والمؤقتة والإثبات وحسن السيرة والتحويل — هنا بأرقامها التسلسلية والتحقق عبر QR."},
+es_cert_b:{en:"Issue your first certificate",ur:"اپنا پہلا سرٹیفکیٹ جاری کریں",bn:"আপনার প্রথম সার্টিফিকেট দিন",hi:"अपना पहला प्रमाणपत्र जारी करें",ne:"आफ्नो पहिलो प्रमाणपत्र जारी गर्नुहोस्",sw:"Toa cheti chako cha kwanza",ar:"أصدر أول شهادة"},
+
 publish_results:{en:"Publish results",ur:"نتائج شائع کریں",bn:"ফলাফল প্রকাশ করুন",hi:"परिणाम प्रकाशित करें",ne:"नतिजा प्रकाशित गर्नुहोस्",sw:"Chapisha matokeo",ar:"نشر النتائج"},
 unpublish_results:{en:"Remove published results",ur:"شائع شدہ نتائج ہٹائیں",bn:"প্রকাশিত ফলাফল সরান",hi:"प्रकाशित परिणाम हटाएं",ne:"प्रकाशित नतिजा हटाउनुहोस्",sw:"Ondoa matokeo yaliyochapishwa",ar:"إزالة النتائج المنشورة"},
 publish_locked_only:{en:"Results can only be published after the exam is locked (approved).",ur:"نتائج صرف امتحان بند (منظور) ہونے کے بعد شائع ہو سکتے ہیں۔",bn:"পরীক্ষা লক (অনুমোদিত) হওয়ার পরেই ফলাফল প্রকাশ করা যাবে।",hi:"परिणाम तभी प्रकाशित किए जा सकते हैं जब परीक्षा लॉक (स्वीकृत) हो।",ne:"नतिजा परीक्षा लक (स्वीकृत) भएपछि मात्र प्रकाशित गर्न सकिन्छ।",sw:"Matokeo yanaweza kuchapishwa tu baada ya mtihani kufungwa (kuidhinishwa).",ar:"لا يمكن نشر النتائج إلا بعد قفل الامتحان (الموافقة عليه)."},
@@ -18212,7 +18345,7 @@ function afterCert(){
         (c.status==="void"?"":'<button type="button" class="btn btn-sm btn-danger" data-cvoid="'+c.id+'">'+esc(t("cert_void"))+"</button>")+
         ' <button type="button" class="btn btn-sm" data-chist="'+c.id+'">'+esc(t("history"))+"</button></td></tr>"+
         '<tr id="chist-'+c.id+'" style="display:none"><td colspan="6"><div class="hist">'+histHTML(c)+"</div></td></tr>";
-    }).join("")||'<tr><td colspan="6" class="muted">'+esc(t("no_records"))+"</td></tr>";
+    }).join("")||'<tr><td colspan="6">'+emptyStateHTML(t("es_cert_t"),t("es_cert_h"),t("es_cert_b"),"cert")+"</td></tr>";
     Array.prototype.forEach.call(document.querySelectorAll("[data-cprint]"),function(b){
       b.onclick=function(){doPrint(certPrintHTML(b.getAttribute("data-cprint")));};});
     Array.prototype.forEach.call(document.querySelectorAll("[data-cvoid]"),function(b){
@@ -18613,10 +18746,8 @@ function afterSettings(){
   const lsi=$("s-lang-search"),lsl=$("s-lang-list"),lsh=$("s-lang");
   const drawLangList=function(q){
     if(!lsi||!lsl||!lsh)return;
-    q=String(q||"").trim().toLowerCase();
-    const rows=Object.keys(LANGS).filter(function(c){return !q||LANGS[c].native.toLowerCase().indexOf(q)>=0||LANGS[c].name.toLowerCase().indexOf(q)>=0||c===q;});
-    lsl.innerHTML=rows.map(function(c){return '<button type="button" class="btn btn-sm" style="display:block;width:100%;text-align:left;margin:.15rem 0" data-lang="'+c+'">'+esc(LANGS[c].native)+" \u2014 "+esc(LANGS[c].name)+"</button>";}).join("");
-    lsl.querySelectorAll("[data-lang]").forEach(function(b){b.onclick=function(){lsh.value=b.getAttribute("data-lang");lsi.value=LANGS[lsh.value].native;lsl.innerHTML="";};});
+    lsl.innerHTML=langListRows(q);
+    wireLangList(lsl,function(c){lsh.value=c;lsi.value=LANGS[c].native;lsl.innerHTML="";});
   };
   if(lsi){lsi.oninput=function(){drawLangList(lsi.value);};lsi.onfocus=function(){drawLangList("");};lsi.onblur=function(){setTimeout(function(){if(lsl)lsl.innerHTML="";},200);};}
   const gt=$("s-gemini-test");
@@ -18801,7 +18932,7 @@ const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,LAN
   setTTCell:setTTCell,ttConflicts:ttConflicts,ttClasses:ttClasses,ttCell:ttCell,
   attGet:attGet,setAtt:setAtt,attMarkAll:attMarkAll,attSummary:attSummary,attAbsentees:attAbsentees,
   addStaff:addStaff,setStaffActive:setStaffActive,staffActive:staffActive,staffName:staffName,staffGet:staffGet,setStaffAtt:setStaffAtt,staffMarkAll:staffMarkAll,staffAttSummary:staffAttSummary,staffAbsentees:staffAbsentees,workingDaysInMonth:workingDaysInMonth,staffMonthStats:staffMonthStats,salaryRecord:salaryRecord,salaryPaid:salaryPaid,salaryStatus:salaryStatus,generateSalary:generateSalary,generateAllSalaries:generateAllSalaries,salarySetAdjust:salarySetAdjust,recordSalaryPayment:recordSalaryPayment,salarySummary:salarySummary,salarySlipHTML:salarySlipHTML,askFindStaff:askFindStaff,
-  dateSheetFor:dateSheetFor,dateSheetEntries:dateSheetEntries,setDateSheet:setDateSheet,admitCodeFor:admitCodeFor,admitCardHTML:admitCardHTML,admitCardsBatchHTML:admitCardsBatchHTML,dateSheetHTML:dateSheetHTML,issueAdmitCards:issueAdmitCards,withdrawAdmitCards:withdrawAdmitCards,bcOn:bcOn,bcClasses:bcClasses,bcResolve:bcResolve,bcRecipients:bcRecipients,bcNoContact:bcNoContact,createBroadcast:createBroadcast,bcGet:bcGet,bcNext:bcNext,bcWaLink:bcWaLink,broadcastMark:broadcastMark,bcSummary:bcSummary,schoolSummary:schoolSummary,hoAggregate:hoAggregate,hoSummaryHTML:hoSummaryHTML,adminSchoolHTML:adminSchoolHTML,hwOn:hwOn,hwList:hwList,hwDueCount:hwDueCount,addHomework:addHomework,hwSetDone:hwSetDone,deleteHomework:deleteHomework,hwItemHTML:hwItemHTML,hwParentHTML:hwParentHTML,transportOn:transportOn,routeById:routeById,transportFeeFor:transportFeeFor,addRoute:addRoute,setRouteFee:setRouteFee,deleteRoute:deleteRoute,routeStudents:routeStudents,setStudentTransport:setStudentTransport,transportChipHTML:transportChipHTML,libOn:libOn,addDaysISO:addDaysISO,libBookById:libBookById,libOutstanding:libOutstanding,libAvailable:libAvailable,addBook:addBook,deleteBook:deleteBook,issueBook:issueBook,returnBook:returnBook,libOverdue:libOverdue,libStudentLoans:libStudentLoans,libDossierHTML:libDossierHTML,admAppOn:admAppOn,pendingApplications:pendingApplications,submitApplication:submitApplication,reviewApplication:reviewApplication,appCardHTML:appCardHTML,cmpOn:cmpOn,cmpCatName:cmpCatName,openComplaints:openComplaints,submitComplaint:submitComplaint,replyComplaint:replyComplaint,resolveComplaint:resolveComplaint,cmpCardHTML:cmpCardHTML,ttPublish:ttPublish,ttParentHTML:ttParentHTML,publishAllTimetables:publishAllTimetables,slugifySchool:slugifySchool,pendingSignups:pendingSignups,submitSignup:submitSignup,signupReqCardHTML:signupReqCardHTML,validEmail:validEmail,inviteTempPassword:inviteTempPassword,isSchoolAdmin:isSchoolAdmin,heOn:heOn,heGradeFor:heGradeFor,hePctFor:hePctFor,heAttGate:heAttGate,heProgramById:heProgramById,heCourseById:heCourseById,heProgramCourses:heProgramCourses,heEnrollmentOf:heEnrollmentOf,addHeProgram:addHeProgram,deleteHeProgram:deleteHeProgram,addHeCourse:addHeCourse,deleteHeCourse:deleteHeCourse,enrollHe:enrollHe,recordHeResult:recordHeResult,heBestResults:heBestResults,heGPA:heGPA,heCGPA:heCGPA,heStanding:heStanding,
+  dateSheetFor:dateSheetFor,dateSheetEntries:dateSheetEntries,setDateSheet:setDateSheet,admitCodeFor:admitCodeFor,admitCardHTML:admitCardHTML,admitCardsBatchHTML:admitCardsBatchHTML,dateSheetHTML:dateSheetHTML,issueAdmitCards:issueAdmitCards,withdrawAdmitCards:withdrawAdmitCards,bcOn:bcOn,bcClasses:bcClasses,bcResolve:bcResolve,bcRecipients:bcRecipients,bcNoContact:bcNoContact,createBroadcast:createBroadcast,bcGet:bcGet,bcNext:bcNext,bcWaLink:bcWaLink,broadcastMark:broadcastMark,bcSummary:bcSummary,schoolSummary:schoolSummary,hoAggregate:hoAggregate,hoSummaryHTML:hoSummaryHTML,adminSchoolHTML:adminSchoolHTML,hwOn:hwOn,hwList:hwList,hwDueCount:hwDueCount,addHomework:addHomework,hwSetDone:hwSetDone,deleteHomework:deleteHomework,hwItemHTML:hwItemHTML,hwParentHTML:hwParentHTML,transportOn:transportOn,routeById:routeById,transportFeeFor:transportFeeFor,addRoute:addRoute,setRouteFee:setRouteFee,deleteRoute:deleteRoute,routeStudents:routeStudents,setStudentTransport:setStudentTransport,transportChipHTML:transportChipHTML,libOn:libOn,todayISO:todayISO,addDaysISO:addDaysISO,libBookById:libBookById,libOutstanding:libOutstanding,libAvailable:libAvailable,addBook:addBook,deleteBook:deleteBook,issueBook:issueBook,returnBook:returnBook,libOverdue:libOverdue,libStudentLoans:libStudentLoans,libDossierHTML:libDossierHTML,admAppOn:admAppOn,pendingApplications:pendingApplications,submitApplication:submitApplication,reviewApplication:reviewApplication,appCardHTML:appCardHTML,cmpOn:cmpOn,cmpCatName:cmpCatName,openComplaints:openComplaints,submitComplaint:submitComplaint,replyComplaint:replyComplaint,resolveComplaint:resolveComplaint,cmpCardHTML:cmpCardHTML,ttPublish:ttPublish,ttParentHTML:ttParentHTML,publishAllTimetables:publishAllTimetables,slugifySchool:slugifySchool,pendingSignups:pendingSignups,submitSignup:submitSignup,signupReqCardHTML:signupReqCardHTML,validEmail:validEmail,inviteTempPassword:inviteTempPassword,isSchoolAdmin:isSchoolAdmin,heOn:heOn,heGradeFor:heGradeFor,hePctFor:hePctFor,heAttGate:heAttGate,heProgramById:heProgramById,heCourseById:heCourseById,heProgramCourses:heProgramCourses,heEnrollmentOf:heEnrollmentOf,addHeProgram:addHeProgram,deleteHeProgram:deleteHeProgram,addHeCourse:addHeCourse,deleteHeCourse:deleteHeCourse,enrollHe:enrollHe,recordHeResult:recordHeResult,heBestResults:heBestResults,heGPA:heGPA,heCGPA:heCGPA,heStanding:heStanding,
   addFeeHead:addFeeHead,deleteFeeHead:deleteFeeHead,feeBill:feeBill,feeGenerate:feeGenerate,feeHeadsFor:feeHeadsFor,
   recordFeePayment:recordFeePayment,feeSetAdjust:feeSetAdjust,feeDefaulters:feeDefaulters,feeSummary:feeSummary,feePaid:feePaid,
   feeClearance:feeClearance,challanHTML:challanHTML,receiptHTML:receiptHTML,nextFeeReceipt:nextFeeReceipt,
@@ -18810,6 +18941,7 @@ const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,LAN
   addLabItem:addLabItem,updateLabItem:updateLabItem,deleteLabItem:deleteLabItem,
   addMaint:addMaint,labAlerts:labAlerts,maintTotal:maintTotal,
   exportCSV:exportCSV,exportJSON:exportJSON,importJSON:importJSON,mergeJSON:mergeJSON,seedDemo:seedDemo,
+  emptyStateHTML:emptyStateHTML,headerSchoolName:headerSchoolName,enterDemo:enterDemo,leaveDemo:leaveDemo,isDemoMode:isDemoMode,logoSVG:logoSVG,langListRows:langListRows,wireLangList:wireLangList,drawHeaderLangList:drawHeaderLangList,DEMO_LS_KEY:DEMO_LS_KEY,
   takeSnapshot:takeSnapshot,snapshotsList:snapshotsList,restoreSnapshot:restoreSnapshot,
   csvTemplateText:csvTemplateText,importStudentsCSV:importStudentsCSV,parseCSV:parseCSV,regPhotoHTML:regPhotoHTML,
   normUrduDigits:normUrduDigits,parseRegisterLine:parseRegisterLine,parseRegisterLines:parseRegisterLines,
@@ -18832,7 +18964,7 @@ function initApp(){db();takeSnapshot("auto");applyLang();
   if(parentHashFromURL()){parentMode=true;parentSchoolId=parentSchoolFromURL();}
   if(verifyHashFromURL()||verifyCodeFromURL()){verifyMode=true;}
   try{if((typeof location!=="undefined")&&(location.hash||"")==="#pricing")pricingMode=true;}catch(e){}
-  if(typeof Cloud!=="undefined")Cloud.init();render();var lt=$("lang-toggle");if(lt&&!lt._wired){lt._wired=true;lt.onclick=function(){const o=langOrder();db().settings.lang=o[(o.indexOf(lang())+1)%o.length];Store.save();render();};}}
+  if(typeof Cloud!=="undefined")Cloud.init();render();wireLangPill();document.addEventListener("click",function(e){const b=e.target&&e.target.closest?e.target.closest("[data-goto]"):null;if(b){curTab=b.getAttribute("data-goto");render();}});}
 if(typeof document!=="undefined"&&typeof window!=="undefined"){
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",initApp);
   else initApp();
