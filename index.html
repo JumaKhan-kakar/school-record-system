@@ -10960,6 +10960,7 @@ no_records:{en:"No records yet.",ur:"ابھی کوئی ریکارڈ نہیں۔",
 /* dashboard */
 dash_title:{en:"Overview",ur:"جائزہ",bn:"সারসংক্ষেপ",hi:"अवलोकन",ne:"सिंहावलोकन",sw:"Muhtasari",ar:"نظرة عامة",zh:"总览",es:"Resumen",fr:"Aperçu",pt:"Visão geral",ru:"Обзор",id:"Ringkasan",de:"Übersicht",ja:"概要",pa:"جائزہ",mr:"आढावा",te:"అవలోకనం",fa:"نمای کلی",tr:"Genel bakış",ta:"கண்ணோட்டம்",vi:"Tổng quan",ko:"개요",tl:"Pangkalahatang-ideya",ha:"Bayani gaba ɗaya",it:"Panoramica",ps:"کتنه",ms:"Gambaran keseluruhan",yo:"Àkójọpọ̀",ig:"Nlele izugbe"},
 kpi_students:{en:"Students",ur:"طلبہ",bn:"শিক্ষার্থী",hi:"छात्र",ne:"विद्यार्थीहरू",sw:"Wanafunzi",ar:"الطلاب",zh:"学生",es:"Estudiantes",fr:"Élèves",pt:"Alunos",ru:"Ученики",id:"Siswa",de:"Schüler",ja:"生徒",pa:"طالب علم",mr:"विद्यार्थी",te:"విద్యార్థులు",fa:"دانش‌آموزان",tr:"Öğrenciler",ta:"மாணவர்கள்",vi:"Học sinh",ko:"학생",tl:"Mga mag-aaral",ha:"Ɗalibai",it:"Studenti",ps:"زده کوونکي",ms:"Murid",yo:"Àwọn akẹ́kọ̀ọ́",ig:"Ụmụ akwụkwọ"},
+tr_students:{en:"Students",ur:"طلبہ",bn:"শিক্ষার্থী",hi:"छात्र",ne:"विद्यार्थीहरू",sw:"Wanafunzi",ar:"الطلاب",zh:"学生",es:"Estudiantes",fr:"Élèves",pt:"Alunos",ru:"Ученики",id:"Siswa",de:"Schüler",ja:"生徒",pa:"طالب علم",mr:"विद्यार्थी",te:"విద్యార్థులు",fa:"دانش‌آموزان",tr:"Öğrenciler",ta:"மாணவர்கள்",vi:"Học sinh",ko:"학생",tl:"Mga mag-aaral",ha:"Ɗalibai",it:"Studenti",ps:"زده کوونکي",ms:"Murid",yo:"Àwọn akẹ́kọ̀ọ́",ig:"Ụmụ akwụkwọ"},
 kpi_exams:{en:"Exams",ur:"امتحانات",bn:"পরীক্ষা",hi:"परीक्षाएं",ne:"परीक्षाहरू",sw:"Mitihani",ar:"الامتحانات",zh:"考试",es:"Exámenes",fr:"Examens",pt:"Exames",ru:"Экзамены",id:"Ujian",de:"Prüfungen",ja:"試験",pa:"امتحان",mr:"परीक्षा",te:"పరీక్షలు",fa:"امتحان‌ها",tr:"Sınavlar",ta:"தேர்வுகள்",vi:"Kỳ thi",ko:"시험",tl:"Mga pagsusulit",ha:"Jarrabawa",it:"Esami",ps:"ازموینې",ms:"Peperiksaan",yo:"Àwọn ìdánwò",ig:"Ule"},
 kpi_lab:{en:"Lab items",ur:"لیب سامان",bn:"ল্যাবের জিনিস",hi:"प्रयोगशाला सामान",ne:"प्रयोगशालाका सामान",sw:"Vifaa vya maabara",ar:"أدوات المختبر",zh:"实验物品",es:"Artículos de laboratorio",fr:"Articles de laboratoire",pt:"Artigos de laboratório",ru:"Лабораторные предметы",id:"Item lab",de:"Laborartikel",ja:"実験室物品",pa:"لیب دیاں چیزاں",mr:"प्रयोगशाळा वस्तू",te:"ల్యాబ్ అంశాలు",fa:"اقلام آزمایشگاه",tr:"Laboratuvar öğeleri",ta:"ஆய்வக பொருட்கள்",vi:"Vật dụng phòng thí nghiệm",ko:"실험실 물품",tl:"Mga item sa laboratoryo",ha:"Abubuwan lab",it:"Articoli di laboratorio",ps:"د لابراتوار توکي",ms:"Item makmal",yo:"Àwọn nǹkan láábù",ig:"Ihe lab"},
 kpi_alerts:{en:"Lab alerts",ur:"لیب الرٹس",bn:"ল্যাবের সতর্কতা",hi:"प्रयोगशाला अलर्ट",ne:"प्रयोगशाला चेतावनी",sw:"Tahadhari za maabara",ar:"تنبيهات المختبر",zh:"实验室提醒",es:"Alertas de laboratorio",fr:"Alertes de laboratoire",pt:"Alertas de laboratório",ru:"Лабораторные оповещения",id:"Peringatan lab",de:"Laborwarnungen",ja:"実験室アラート",pa:"لیب دیاں تنبیہاں",mr:"प्रयोगशाळा सूचना",te:"ల్యాబ్ హెచ్చరికలు",fa:"هشدارهای آزمایشگاه",tr:"Laboratuvar uyarıları",ta:"ஆய்வக எச்சரிக்கைகள்",vi:"Cảnh báo phòng thí nghiệm",ko:"실험실 알림",tl:"Mga alerto sa laboratoryo",ha:"Faɗakarwar lab",it:"Avvisi di laboratorio",ps:"د لابراتوار خبرتیاوې",ms:"Amaran makmal",yo:"Àwọn ìkìlọ̀ láábù",ig:"Ịdọ aka lab"},
@@ -11793,7 +11794,7 @@ const Cloud = {
        exist in both places already took the cloud copy (applied by the listeners). */
     try{
       const local=this.localBeforeSync?JSON.parse(this.localBeforeSync):null;
-      if(!local){this.lastSyncedJSON=JSON.stringify(db());return;}
+      if(!local){this.lastSyncedJSON=JSON.stringify(db());try{takeSnapshot("auto");}catch(e){}return;}
       const lf=this.flatten(local),cf=this.cloudFirst;
       const batch=this.fs.batch();let n=0;
       const self=this;
@@ -11804,6 +11805,7 @@ const Cloud = {
       });
       if(n>0)batch.commit().then(function(){self.markSyncOk();},function(e){self.recordSyncError("sync-seed",e);});
       this.lastSyncedJSON=JSON.stringify(db());
+      try{takeSnapshot("auto");}catch(e){}
     }catch(e){this.recordSyncError("sync-seed",e);}
   }
 };
@@ -12164,7 +12166,7 @@ function ttCell(cls,day,per){
   const g=(db().timetable||{})[cls];
   return (g&&g[day]&&g[day][per])||{subject:"",teacher:""};
 }
-function setTTCell(cls,day,per,k,v){
+function setTTCell(cls,day,per,k,v,pub){
   db().timetable=db().timetable||{};
   const g=db().timetable[cls]=db().timetable[cls]||{};
   const d=g[day]=g[day]||{};
@@ -12172,7 +12174,7 @@ function setTTCell(cls,day,per,k,v){
   c[k]=String(v==null?"":v).trim();
   if(!c.subject&&!c.teacher)delete d[per];
   Store.save();
-  ttPublish(cls);
+  if(pub!==false)ttPublish(cls);
   return {ok:true};
 }
 function ttConflicts(){
@@ -12233,6 +12235,10 @@ function afterTimetable(){
   const sel=$("tt-cls");
   if(sel)sel.onchange=function(){curTTCls=sel.value;render();};
   Array.prototype.forEach.call(document.querySelectorAll("input.tt-cell"),function(inp){
+    inp.oninput=function(){
+      setTTCell(curTTCls,+inp.getAttribute("data-day"),+inp.getAttribute("data-per"),inp.getAttribute("data-k"),inp.value,false);
+      drawTTWarn();
+    };
     inp.onchange=function(){
       setTTCell(curTTCls,+inp.getAttribute("data-day"),+inp.getAttribute("data-per"),inp.getAttribute("data-k"),inp.value);
       drawTTWarn();
@@ -12385,7 +12391,7 @@ function attSummary(date,cls){
     const v=attGet(date,st.id);
     if(v==="P")s.P++;else if(v==="A")s.A++;else if(v==="L")s.L++;else if(v==="V")s.V++;else s.unmarked++;
   });
-  s.pct=s.total?Math.round((s.P+s.L)/s.total*100):0;
+  s.pct=s.total?Math.round(s.P/s.total*100):0;
   return s;
 }
 function attAbsentees(date,cls){
@@ -12419,10 +12425,10 @@ function attWaNumber(st){
   if(digits.length===11&&digits[0]==="0")return "92"+digits.slice(1);
   return digits;
 }
-function attWaLink(st,date){
+function attWaLink(st,date,status){
   const num=attWaNumber(st);
   if(!num)return "";
-  const msg=t("att_wa_msg")
+  const msg=t(status==="L"?"att_wa_msg_late":"att_wa_msg")
     .replace("{school}",db().settings.schoolName||"—")
     .replace("{name}",displayName(st))
     .replace("{cls}",clsLabel(st.cls,st.section))
@@ -12448,6 +12454,20 @@ function attPrintHTML(cls,year,month){
   h+="<p>"+esc(t("att_summary"))+": "+esc(t("att_p"))+" "+sum.P+" • "+esc(t("att_a"))+" "+sum.A+" • "+esc(t("att_l"))+" "+sum.L+" • "+esc(t("att_v"))+" "+sum.V+"</p>";
   return h;
 }
+function attMonthGridHTML(cls,year,month){
+  const g=attMonthGrid(cls,year,month);
+  const ym=year+"-"+String(month).padStart(2,"0");
+  let h='<div class="twrap"><table class="grid"><tr><th>#</th><th>'+esc(t("f_name"))+" — "+esc(t("father_name"))+"</th>";
+  g.days.forEach(function(dt){h+='<th class="num">'+dt.slice(8)+"</th>";});
+  h+="<th>"+esc(t("att_p"))+"</th><th>"+esc(t("att_a"))+"</th><th>"+esc(t("att_l"))+"</th></tr>";
+  g.rows.forEach(function(r,i){
+    const ms=attMonthStats(r.st.id,ym);
+    h+="<tr><td>"+(i+1)+"</td><td>"+esc(displayName(r.st))+"</td>";
+    g.days.forEach(function(dt){h+='<td class="num">'+esc(r.cells[dt]||"")+"</td>";});
+    h+="<td class=\"num\">"+ms.P+"</td><td class=\"num\">"+ms.A+"</td><td class=\"num\">"+ms.L+"</td></tr>";
+  });
+  return h+"</table></div>";
+}
 function viewAtt(){
   const classes=attClasses();
   if(!classes.length)return '<div class="card"><h2>'+esc(t("att_title"))+'</h2>'+emptyStateHTML(t("es_att_t"),t("es_att_h"),t("es_att_b"),"adm")+"</div>";
@@ -12456,6 +12476,7 @@ function viewAtt(){
   const list=attStudents(curAttCls);
   const sum=attSummary(curAttDate,curAttCls);
   const abs=attAbsentees(curAttDate,curAttCls);
+  const lates=list.filter(function(st){return attGet(curAttDate,st.id)==="L";});
   let h='<div class="card"><h2>'+esc(t("att_title"))+'</h2><p class="muted">'+esc(t("att_hint"))+"</p>"+
     '<div class="toolbar"><div class="field" style="margin:0"><label>'+esc(t("att_date"))+'</label><input type="date" id="at-date" value="'+esc(curAttDate)+'"></div>'+
     '<div class="field" style="margin:0;min-width:160px"><label>'+esc(t("cls"))+'</label><select id="at-cls">'+
@@ -12476,17 +12497,19 @@ function viewAtt(){
       }).join(" ")+"</td></tr>";
   });
   h+="</table>";
-  if(abs.length){
+  const waList=abs.map(function(st){return {st:st,v:"A"};}).concat(lates.map(function(st){return {st:st,v:"L"};}));
+  if(waList.length){
     h+='<h3 style="margin:.8rem 0 .3rem">📱 '+esc(t("att_wa"))+"</h3><p class=\"muted\">"+esc(t("att_wa_hint"))+"</p>"+
-      abs.map(function(st){
-        const link=attWaLink(st,curAttDate);
-        return '<div class="toolbar"><span>'+esc(displayName(st))+"</span>"+
+      waList.map(function(x){
+        const link=attWaLink(x.st,curAttDate,x.v);
+        return '<div class="toolbar"><span>'+esc(displayName(x.st))+' <span class="chip">'+esc(t(x.v==="L"?"att_l":"att_a"))+"</span></span>"+
           (link?'<a class="btn btn-sm" href="'+link+'" target="_blank" rel="noopener">WhatsApp →</a>':'<span class="muted">'+esc(t("att_no_contact"))+"</span>")+"</div>";
       }).join("");
   }
   h+='<h3 style="margin:.8rem 0 .3rem">'+esc(t("att_register"))+"</h3>"+
     '<div class="toolbar"><div class="field" style="margin:0"><label>'+esc(t("att_month"))+'</label><input type="month" id="at-month" value="'+esc(curAttMonth)+'"></div>'+
     '<button type="button" class="btn" id="at-print">'+esc(t("print"))+"</button></div></div>";
+  h+=attMonthGridHTML(curAttCls,+curAttMonth.slice(0,4),+curAttMonth.slice(5,7));
   h+=attFlagsHTML(curAttMonth);
   h+=docImpCardHTML("att");
   return h;
@@ -12494,7 +12517,7 @@ function viewAtt(){
 function afterAtt(){
   const d=$("at-date");if(d)d.onchange=function(){curAttDate=d.value||todayISO();render();};
   const c=$("at-cls");if(c)c.onchange=function(){curAttCls=c.value;render();};
-  const m=$("at-month");if(m)m.onchange=function(){curAttMonth=m.value;};
+  const m=$("at-month");if(m)m.onchange=function(){curAttMonth=m.value;render();};
   const ap=$("at-allp");if(ap)ap.onclick=function(){attMarkAll(curAttDate,curAttCls,"P");render();};
   Array.prototype.forEach.call(document.querySelectorAll("button.att-btn"),function(b){
     b.onclick=function(){setAtt(curAttDate,b.getAttribute("data-st"),b.getAttribute("data-s"));render();};
@@ -13067,18 +13090,28 @@ function bcClasses(){
 function bcClassStudents(cls){
   return (db().students||[]).filter(function(s){return s.cls===String(cls);}).sort(function(a,b){return a.admNo<b.admNo?-1:1;});
 }
-function bcResolve(template,st){
+function bcResolve(template,st,tplKey){
   const s=db().settings||{};
-  return String(template||"")
+  let msg=String(template||"")
     .replace(/{name}/g,st?st.name||"":"")
     .replace(/{father}/g,st?st.fatherName||"":"")
     .replace(/{class}/g,st?clsLabel(st.cls,st.section):"")
     .replace(/{adm}/g,st?st.admNo||"":"")
     .replace(/{school}/g,s.schoolName||"—")
     .replace(/{date}/g,fmtDate(todayISO()));
+  if(st){
+    const b=feeBill(st.id,todayISO().slice(0,7));
+    const sym=((countryPack(schoolCountry())||{}).sym||"");
+    const amt=b?(sym?sym+" "+fmtNum(Math.max(0,b.balance)):fmtNum(Math.max(0,b.balance))):"";
+    msg=msg.replace(/{amount}/g,amt);
+    if(tplKey==="fee"&&String(template||"").indexOf("{amount}")<0)msg+="\n"+t("bc_amount_due").replace("{amount}",amt);
+  }
+  return msg;
 }
-function bcRecipients(cls){
-  return bcClassStudents(cls).filter(function(st){return !!attWaNumber(st);});
+function bcRecipients(cls,tplKey){
+  let list=bcClassStudents(cls).filter(function(st){return !!attWaNumber(st);});
+  if(tplKey==="fee"){const m=todayISO().slice(0,7);list=list.filter(function(st){const b=feeBill(st.id,m);return b&&b.balance>0;});}
+  return list;
 }
 function bcNoContact(cls){
   return bcClassStudents(cls).filter(function(st){return !attWaNumber(st);});
@@ -13089,10 +13122,10 @@ function createBroadcast(cls,tplKey,customText){
   let msg="";
   if(tplKey==="custom"){msg=String(customText||"").trim();if(!msg)return {ok:false,error:"req"};}
   else{const key=BC_TEMPLATES[tplKey]||BC_TEMPLATES.general;msg=t(key);}
-  const recs=bcRecipients(cls);
+  const recs=bcRecipients(cls,tplKey);
   if(!recs.length)return {ok:false,error:"ask_no_broadcast"};
   const noC=bcNoContact(cls).length;
-  const bc={id:uid("bc"),at:tsNow(),cls:cls,tpl:tplKey,message:msg,recipients:recs.map(function(st){return {studentId:st.id,name:displayName(st),phone:attWaNumber(st),status:"pending"};})};
+  const bc={id:uid("bc"),at:tsNow(),cls:cls,tpl:tplKey,message:msg,noContact:noC,recipients:recs.map(function(st){return {studentId:st.id,name:displayName(st),phone:attWaNumber(st),status:"pending"};})};
   if(!db().broadcasts)db().broadcasts=[];
   dbArr("broadcasts").push(bc);
   audit("broadcast_start","Broadcast "+cls+": "+recs.length+" recipients");
@@ -13106,7 +13139,7 @@ function bcNext(id){
 }
 function bcWaLink(bc,rec){
   const st=(db().students||[]).find(function(x){return x.id===rec.studentId;});
-  return "https://wa.me/"+rec.phone+"?text="+encodeURIComponent(bcResolve(bc.message,st||null));
+  return "https://wa.me/"+rec.phone+"?text="+encodeURIComponent(bcResolve(bc.message,st||null,bc.tpl));
 }
 function broadcastMark(id,studentId,status){
   const bc=bcGet(id);if(!bc)return {ok:false,error:"req"};
@@ -13136,7 +13169,7 @@ function bcDrawPreview(){
   const custom=$("bc-custom");
   if(curBcTpl==="custom")msg=custom?custom.value:curBcCustom;
   else msg=t(BC_TEMPLATES[curBcTpl]||BC_TEMPLATES.general);
-  box.textContent=first?bcResolve(msg,first):msg;
+  box.textContent=first?bcResolve(msg,first,curBcTpl):msg;
 }
 
 let curHwCls="",curHwSection="";
@@ -13149,7 +13182,7 @@ let curHeProg="",curHeStudent="";
 function viewComplaints(){
   const all=(db().complaints||[]).slice().sort(function(a,b){return String(b.at||"").localeCompare(String(a.at||""));});
   const open=all.filter(function(c){return c.status==="open";});
-  const done=all.filter(function(c){return c.status==="resolved";});
+  const done=all.filter(function(c){return c.status!=="open";});
   let h='<div class="card"><h3>📮 '+esc(t("cmp_title"))+'</h3><p class="muted">'+esc(t("cmp_hint"))+"</p></div>";
   h+='<div class="card"><h3>'+esc(t("cmp_open"))+" ("+open.length+")</h3>"+
     (open.length?open.map(cmpCardHTML).join(""):emptyStateHTML(t("es_cmp_t"),t("es_cmp_h"),t("es_cmp_b"),"home"))+"</div>";
@@ -13210,7 +13243,7 @@ function viewHigherEd(){
     h+='<div class="toolbar"><div class="field" style="min-width:160px"><label>'+esc(t("he_programs"))+'</label><select id="he-eprog">'+progs.map(function(p){return '<option value="'+p.id+'"'+(enr&&p.id===enr.programId?" selected":"")+'>'+esc(p.name)+"</option>";}).join("")+"</select></div>"+
       '<div class="field" style="min-width:80px"><label>'+esc(t("he_semester"))+'</label><input id="he-esem" type="number" min="1" value="'+(enr?enr.semester:1)+'" inputmode="numeric"></div>'+
       '<button type="button" class="btn btn-sm btn-primary" id="he-eadd" style="align-self:end">'+esc(t("he_enroll"))+"</button></div>";
-    if(cg)h+='<p><b>'+esc(t("he_cgpa"))+":</b> "+cg.cgpa+" • "+cg.credits+" "+esc(t("he_credits"))+" • "+esc(stnd.probation?t("he_probation"):t("he_good"))+(stnd.canGraduate?"":" • CGPA "+cg.cgpa+" < "+stnd.floor)+"</p>";
+    if(cg)h+='<p><b>'+esc(t("he_cgpa"))+":</b> "+Number(cg.cgpa).toFixed(2)+" • "+cg.credits+" "+esc(t("he_credits"))+" • "+esc(stnd.probation?t("he_probation"):t("he_good"))+(stnd.canGraduate?"":" • CGPA "+Number(cg.cgpa).toFixed(2)+" < "+Number(stnd.floor).toFixed(2))+"</p>";
     if(myCourses.length){
       h+='<div class="field"><label>'+esc(t("he_courses"))+'</label><select id="he-course">'+myCourses.map(function(c){return '<option value="'+c.id+'">'+esc(c.code+" — "+c.title)+" ("+c.credits+" cr)</option>";}).join("")+"</select></div>"+
         '<div class="field"><label>'+esc(t("he_marks"))+'</label><input id="he-marks" type="number" min="0" max="100" inputmode="numeric"></div>'+
@@ -13391,8 +13424,10 @@ function afterTransport(){
   document.querySelectorAll("[data-trdel]").forEach(function(b){
     b.onclick=function(){
       const r=deleteRoute(b.getAttribute("data-trdel"));
-      if(!r.ok){alert(r.error);return;}
+      if(!r.ok){const mg=$("tr-msg");if(mg)mg.innerHTML='<div class="msg err">'+esc(r.error||t("req"))+"</div>";return;}
       render();
+      const mg2=$("tr-msg");
+      if(mg2)mg2.innerHTML='<div class="msg">✅ '+esc(t("tr_route_deleted"))+"</div>";
     };
   });
   const rt=$("tr-route");
@@ -13427,6 +13462,7 @@ function viewHomework(){
   return h;
 }
 function afterHomework(){
+  if(!hwPubDone&&publishAllHomework())hwPubDone=true;
   const cls=$("hw-cls");
   if(cls)cls.onchange=function(){curHwCls=cls.value;render();};
   const sec=$("hw-section");
@@ -13468,9 +13504,9 @@ function viewBroadcast(){
   if(bc){
     const sum=bcSummary(bc.id);
     const next=bcNext(bc.id);
-    h+='<div class="card"><h3>'+esc(t("bc_title"))+" — "+esc(bc.cls)+'</h3><p>'+esc(t("bc_progress"))+": "+sum.sent+" "+esc(t("bc_sent"))+" • "+sum.skipped+" "+esc(t("bc_skipped"))+" • "+sum.pending+" "+esc(t("bc_pending"))+"</p>";
+    h+='<div class="card"><h3>'+esc(t("bc_title"))+" — "+esc(bc.cls)+'</h3><p>'+esc(t("bc_progress"))+": "+sum.sent+" "+esc(t("bc_sent"))+" • "+sum.skipped+" "+esc(t("bc_skipped"))+" • "+sum.pending+" "+esc(t("bc_pending"))+(bc.noContact?" • "+bc.noContact+" "+esc(t("bc_no_contact")):"")+"</p>";
     if(next){
-      h+='<div class="card"><b>'+esc(next.name)+"</b> • "+esc(next.phone)+'<div style="white-space:pre-wrap;margin:.5rem 0">'+esc(bcResolve(bc.message,(db().students||[]).find(function(x){return x.id===next.studentId;})||null))+"</div>"+
+      h+='<div class="card"><b>'+esc(next.name)+"</b> • "+esc(next.phone)+'<div style="white-space:pre-wrap;margin:.5rem 0">'+esc(bcResolve(bc.message,(db().students||[]).find(function(x){return x.id===next.studentId;})||null,bc.tpl))+"</div>"+
         '<div class="toolbar"><a class="btn btn-primary" href="'+esc(bcWaLink(bc,next))+'" target="_blank" rel="noopener">'+esc(t("bc_open_wa"))+"</a> "+
         '<button type="button" class="btn btn-sm" data-bcsent="'+esc(next.studentId)+'">'+esc(t("bc_mark_sent"))+"</button> "+
         '<button type="button" class="btn btn-sm btn-danger" data-bcskip="'+esc(next.studentId)+'">'+esc(t("bc_skip"))+"</button></div></div>";
@@ -13572,6 +13608,16 @@ function hwList(cls,section){
   return list;
 }
 function hwDueCount(dateISO){return (db().homework||[]).filter(function(h){return !h.done&&h.due===dateISO;}).length;}
+let hwPubDone=false;
+function publishAllHomework(){
+  /* Parents read homework only from the public copy; items added while the
+     sync was down were never published, so re-push every local item once
+     per session when the Homework tab opens (addHomework/hwSetDone already
+     push single items on change). */
+  if(typeof Cloud==="undefined"||!Cloud.enabled||!Cloud.ready||!Cloud.schoolId)return false;
+  (db().homework||[]).forEach(function(item){Cloud.pushDoc("publicHomework",item.id,item);});
+  return true;
+}
 function addHomework(cls,section,subject,title,details,due){
   cls=String(cls||"").trim();section=String(section||"").trim();subject=String(subject||"").trim();title=String(title||"").trim();details=String(details||"").trim();due=String(due||"").trim();
   if(!cls)return {ok:false,error:t("bc_no_class")};
@@ -14914,7 +14960,17 @@ function takeSnapshot(reason){
   let data;try{data=JSON.stringify(db());}catch(e){return false;}
   const list=snapshotsList();
   const today=todayISO();
-  if(reason==="auto"&&list.some(function(s){return s.date===today&&s.reason==="auto";}))return true;
+  if(reason==="auto"){
+    /* An empty auto snapshot (taken at a startup before any data was loaded
+       or synced in) must not lock the day in: drop it and take a fresh one
+       with the real counts; a non-empty one still dedupes. */
+    const oldAuto=list.findIndex(function(s){return s.date===today&&s.reason==="auto";});
+    if(oldAuto>=0){
+      const oc=list[oldAuto].counts||{};
+      if(Number(oc.students||0)>0||Number(oc.exams||0)>0)return true;
+      list.splice(oldAuto,1);
+    }
+  }
   list.push({ts:tsNow(),date:today,reason:reason,counts:snapshotCounts(db()),data:data});
   while(list.length>SNAP_MAX)list.shift();
   if(!snapshotsSave(list)){list.shift();if(!snapshotsSave(list))return false;}
@@ -15291,7 +15347,7 @@ function bindMic(){
 
 /* ================= UI shell ================= */
 let curTab="home", curExamId=null, curResExamId=null, admEditId=null, labEditId=null, dobAsOf=todayISO(), maintItemFilter="",
-    admFlash=null, admKeepOpen=false, admPhotoPending="", admDraft=null;
+    admFlash=null, admKeepOpen=false, admPhotoPending="", admDraft=null, admClsFilter="";
 
 /* ================= Round 44: demo sandbox + empty states + language pill ================= */
 /* Demo school: a safe local-only sandbox. The seeded demo database lives in its own
@@ -16537,7 +16593,10 @@ function askBuild(id,st,cls,q){
     if(st){
       const p=resultPayload(ex.id,st.id);
       if(!p)return '<div class="msg err">'+esc(t("ask_no_result"))+"</div>";
-      return "<b>"+esc(displayName(st))+" — "+esc(ex.name||ex.id)+"</b><br>"+esc(t("percentage"))+": "+p.pct+"% · "+esc(t("grade"))+": "+p.grade+" · "+esc(t("division"))+": "+p.division+" · "+esc(t("position"))+": "+p.position;
+      const pctTxt=p.pct==null?"—":Number(p.pct).toFixed(1);
+      const totTxt=p.total==null?"—":p.total+"/"+p.maxTotal;
+      return "<b>"+esc(displayName(st))+" — "+esc(ex.name||ex.id)+"</b><br>"+esc(t("total"))+": "+totTxt+" · "+esc(t("percentage"))+": "+pctTxt+"% · "+esc(t("grade"))+": "+p.grade+" · "+esc(t("division"))+": "+p.division+" · "+esc(t("position"))+": "+p.position+
+        (p.subjects&&p.subjects.length?"<br>"+p.subjects.map(function(sj){return esc(sj.name)+" "+(sj.obtained==null?"—":sj.obtained);}).join(" • "):"");
     }
     const rows=(db().students||[]).map(function(s){return resultPayload(ex.id,s.id);}).filter(Boolean);
     const passed=rows.filter(function(r){return r.pass;}).length;
@@ -16550,10 +16609,10 @@ function askBuild(id,st,cls,q){
   if(id==="att_pct"){if(!attOn())return null;
     if(st){
       const recs=Object.keys(db().attendance||{}).filter(function(d){return d.slice(0,7)===month;});
-      let p=0,a=0;
-      recs.forEach(function(d){const v=attGet(d,st.id);if(v==="P"||v==="L")p++;else if(v==="A")a++;});
-      const pct=(p+a)?Math.round(p/(p+a)*100):0;
-      return "<b>"+esc(displayName(st))+"</b><br>"+esc(t("att_pct"))+": "+pct+"% · "+esc(t("att_p"))+": "+p+" · "+esc(t("att_a"))+": "+a;
+      let p=0,l=0,a=0;
+      recs.forEach(function(d){const v=attGet(d,st.id);if(v==="P")p++;else if(v==="L")l++;else if(v==="A")a++;});
+      const tot=p+l+a, pct=tot?Math.round(p/tot*100):0;
+      return "<b>"+esc(displayName(st))+"</b><br>"+esc(t("att_pct"))+": "+pct+"% · "+esc(t("att_p"))+": "+p+" · "+esc(t("att_l"))+": "+l+" · "+esc(t("att_a"))+": "+a;
     }
     const s=attSummary(today,cls);
     return "<b>"+esc(t("dash_att"))+" — "+esc(today)+"</b><br>"+esc(t("att_p"))+": "+s.P+" · "+esc(t("att_a"))+": "+s.A+" · "+esc(t("att_l"))+": "+s.L+" · "+esc(t("att_pct"))+": "+s.pct+"%";
@@ -16614,6 +16673,7 @@ function askBuild(id,st,cls,q){
     return "<b>"+esc(ex.name)+"</b><br>"+papers.map(function(p){return "• "+esc(fmtDate(p.date))+" — "+esc(p.subject)+(p.start?" ("+esc(p.start)+(p.end?"–"+esc(p.end):"")+")":"");}).join("<br>");
   }
   if(id==="broadcast"){
+    if(/^(draft|write|compose|لکھیں|لکھو|লিখুন|লেখো)/i.test(String(q||"").trim()))return null;
     if(cls){const recs=bcRecipients(cls);if(!recs.length)return '<div class="msg err">'+esc(t("ask_no_broadcast"))+"</div>";return "<b>"+esc(t("bc_recipients"))+"</b><br>"+recs.length+" ("+esc(t("bc_class"))+" "+esc(cls)+")";}
     const all=(db().students||[]).filter(function(st){return !!attWaNumber(st);});
     if(!all.length)return '<div class="msg err">'+esc(t("ask_no_broadcast"))+"</div>";
@@ -16668,7 +16728,7 @@ function askBuild(id,st,cls,q){
     const cg=heCGPA(st.id);
     if(!cg)return '<div class="msg err">'+esc(t("ask_no_gpa"))+"</div>";
     const stnd=heStanding(st.id);
-    return "<b>"+esc(displayName(st))+"</b><br>"+esc(t("he_cgpa"))+": <b>"+cg.cgpa+"</b> • "+cg.credits+" "+esc(t("he_credits"))+"<br>"+esc(stnd.probation?t("he_probation"):t("he_good"));
+    return "<b>"+esc(displayName(st))+"</b><br>"+esc(t("he_cgpa"))+": <b>"+Number(cg.cgpa).toFixed(2)+"</b> • "+cg.credits+" "+esc(t("he_credits"))+"<br>"+esc(stnd.probation?t("he_probation"):t("he_good"));
   }
   if(id==="admit"){
     const exs=db().exams||[];
@@ -16871,7 +16931,7 @@ function briefingHTML(){
   const today=todayISO(),m=today.slice(0,7),items=[];
   if(attOn()){
     const at=attSummary(today);
-    items.push(t("brief_att")+": "+at.P+" "+t("att_p")+", "+at.A+" "+t("att_a")+(at.unmarked?", "+at.unmarked+" "+t("brief_unmarked"):"")+" / "+at.total);
+    items.push(t("brief_att")+": "+at.P+" "+t("att_p")+", "+at.A+" "+t("att_a")+(at.L?", "+at.L+" "+t("att_l"):"")+(at.unmarked?", "+at.unmarked+" "+t("brief_unmarked"):"")+" / "+at.total);
   }
   if(feesOn()){
     let defn=0,defAmt=0;
@@ -17044,6 +17104,27 @@ function afterHome(){
   };
 }
 /* ---- unified student dossier ---- */
+function feeDossierHTML(st){
+  if(!feesOn())return "";
+  const m=todayISO().slice(0,7);
+  const b=feeBill(st.id,m);
+  const recs=(db().feeRecords||[]).filter(function(r){return r.studentId===st.id;}).sort(function(a,b){return String(b.month||"").localeCompare(String(a.month||""));}).slice(0,6);
+  let h='<div class="card"><h3>'+esc(t("fee_title"))+"</h3>";
+  if(b)h+="<div>"+esc(t("fee_total"))+": <b>"+b.total+"</b> • "+esc(t("fee_paid"))+": "+b.paid+" • "+esc(t("fee_balance"))+": <b>"+b.balance+"</b> • "+esc(feePayStatusText(st.id,m))+"</div>";
+  if(recs.length){
+    h+='<div class="twrap"><table class="grid"><tr><th>'+esc(t("att_month"))+"</th><th class=\"num\">"+esc(t("fee_total"))+"</th><th class=\"num\">"+esc(t("fee_paid"))+"</th><th class=\"num\">"+esc(t("fee_balance"))+"</th></tr>"+
+      recs.map(function(r){const bal=r.total-r.discount+r.fine-feePaid(r);return "<tr><td>"+esc(r.month)+"</td><td class=\"num\">"+r.total+"</td><td class=\"num\">"+feePaid(r)+"</td><td class=\"num\">"+bal+"</td></tr>";}).join("")+"</table></div>";
+  }else h+='<p class="muted">'+esc(t("no_records"))+"</p>";
+  return h+"</div>";
+}
+function attDossierHTML(st){
+  if(!attOn())return "";
+  const m=todayISO().slice(0,7);
+  const s=attMonthStats(st.id,m);
+  const tot=s.P+s.A+s.L+s.V;
+  const pct=tot?Math.round(s.P/tot*100):null;
+  return '<div class="card"><h3>'+esc(t("nav_att"))+"</h3><div>"+esc(t("att_month"))+": "+esc(m)+" • "+esc(t("att_p"))+": <b>"+s.P+"</b> • "+esc(t("att_a"))+": "+s.A+" • "+esc(t("att_l"))+": "+s.L+" • "+esc(t("att_v"))+": "+s.V+(pct==null?"":" • "+esc(t("att_pct"))+": "+pct+"%")+"</div></div>";
+}
 function viewDossier(id){
   const d=getDossier(id);if(!d)return '<div class="card"><p class="muted">'+esc(t("no_records"))+"</p></div>";
   const st=d.student;
@@ -17066,6 +17147,8 @@ function viewDossier(id){
     " ("+esc(t("as_of"))+" "+fmtDate(d.asOf)+"): <b>"+fmtAge(d.age)+"</b> • "+esc(t("elig_band"))+": "+bandTxt+" • "+
     (d.eligible==null?"—":'<span class="flag'+(d.eligible?" okf":"")+'">'+(d.eligible?esc(t("eligible")):esc(t("not_eligible")))+"</span>")+
     (d.boardElig==null?"":' • '+esc(t("board_elig"))+": "+'<span class="flag'+(d.boardElig?" okf":"")+'">'+(d.boardElig?esc(t("eligible")):esc(t("not_eligible")))+"</span>")+"</div></div>";
+  h+=feeDossierHTML(st);
+  h+=attDossierHTML(st);
   h+='<div class="card"><h3>'+esc(t("timeline"))+"</h3>";
   if(!d.terms.length)h+='<p class="muted">'+esc(t("no_exams_yet"))+"</p>";
   d.terms.forEach(function(tm){
@@ -17121,8 +17204,12 @@ function afterDossier(){
     b.onclick=function(){doPrint(certPrintHTML(b.getAttribute("data-dcprint")));};});
   Array.prototype.forEach.call(document.querySelectorAll("[data-dcvoid]"),function(b){
     b.onclick=function(){
-      const c=getCertificate(b.getAttribute("data-dcvoid"));
-      if(c&&confirm(t("cert_void")+" "+c.serial+"?")){voidCertificate(c.id);render();}
+      const id=b.getAttribute("data-dcvoid");
+      const c=getCertificate(id);
+      if(!c)return;
+      if(certVoidArm!==id){certVoidArm=id;render();return;}
+      certVoidArm=null;
+      voidCertificate(id);render();
     };});
 }
 function dossierPrintHTML(studentId){
@@ -17341,6 +17428,7 @@ function studentPhotoCardHTML(st){
 }
 /* ================= MODULE 1: admissions ================= */
 function viewAdm(){
+  const admClsList=[];studentsOfAll().forEach(function(s){if(s.cls&&admClsList.indexOf(s.cls)<0)admClsList.push(s.cls);});admClsList.sort();
   const st=admEditId?db().students.find(function(s){return s.id===admEditId;}):null;
   const f=st||Object.assign({name:"",fatherName:"",dob:"",gender:"male",cls:"",section:"",admDate:todayISO(),contact:"",address:"",pin:""},admDraft||{});
   let h=scanCardHTML();
@@ -17371,6 +17459,7 @@ function viewAdm(){
     '<div id="a-imsg"></div></div>';
   h+=docImpCardHTML("adm");
   h+='<div class="card"><div class="toolbar"><input class="search" id="a-q" placeholder="'+esc(t("search"))+'">'+
+    '<select id="a-cls-filter" style="min-height:44px"><option value="">'+esc(t("filter_cls"))+": "+esc(t("all"))+"</option>"+admClsList.map(function(c){return '<option value="'+esc(c)+'"'+(c===admClsFilter?" selected":"")+'>'+esc(c)+"</option>";}).join("")+"</select>"+
     '<button type="button" class="btn btn-sm" id="a-csv">'+esc(t("export_csv"))+'</button>'+
     '<button type="button" class="btn btn-sm" id="a-print">'+esc(t("print"))+"</button></div>"+
     '<div class="twrap"><table class="grid"><tr><th>'+t("sno")+"</th><th>"+t("adm_no")+"</th><th>"+t("f_name")+
@@ -17390,7 +17479,8 @@ function afterAdm(){
   const draw=function(){
     const needle=norm(q.value);
     const list=studentsOfAll().filter(function(s){
-      return !needle||norm(s.name).indexOf(needle)>=0||norm(s.admNo).indexOf(needle)>=0||norm(s.fatherName).indexOf(needle)>=0;
+      if(admClsFilter&&s.cls!==admClsFilter)return false;
+      return !needle||norm(s.name).indexOf(needle)>=0||norm(s.admNo).indexOf(needle)>=0||norm(s.fatherName).indexOf(needle)>=0||norm(s.cls+"-"+s.section).indexOf(needle)>=0||norm(s.cls).indexOf(needle)>=0;
     });
     $("a-rows").innerHTML=list.map(function(s,i){
       return "<tr><td class=\"num\">"+(i+1)+"</td><td>"+esc(s.admNo)+"</td><td>"+esc(s.name)+"</td><td>"+esc(s.fatherName)+
@@ -17410,6 +17500,7 @@ function afterAdm(){
       const r=$("hist-"+b.getAttribute("data-hist"));r.style.display=r.style.display==="none"?"":"none";};});
   };
   q.oninput=draw;
+  const af=$("a-cls-filter");if(af)af.onchange=function(){admClsFilter=af.value;draw();};
   function readAdmForm(){return {name:$("a-name").value,fatherName:$("a-father").value,dob:$("a-dob").value,gender:$("a-gender").value,
       cls:$("a-cls").value,section:$("a-sec").value,admDate:$("a-admdate").value,contact:$("a-contact").value,address:$("a-address").value,pin:$("a-pin").value};}
   $("a-save").onclick=function(){
@@ -17900,6 +17991,7 @@ att_pct:{en:"Present %",ur:"حاضری ٪",bn:"উপস্থিত %",hi:"उ�
 att_wa:{en:"Tell absent parents",ur:"غیر حاضر والدین کو بتائیں",bn:"অনুপস্থিত শিক্ষার্থীর অভিভাবককে জানান",hi:"अनुपस्थित अभिभावकों को बताएं",ne:"अनुपस्थित अभिभावकलाई भन्नुहोस्",sw:"Waambie wazazi wa wasiokuwepo",ar:"إبلاغ أولياء أمور الغائبين",zh:"通知缺席学生的家长",es:"Avisar a los padres de los ausentes",fr:"Prévenir les parents des absents",pt:"Avisar os pais dos ausentes",ru:"Сообщить отсутствующим родителям",id:"Beri tahu orang tua yang tidak hadir",de:"Informieren Sie abwesende Eltern",ja:"欠席した生徒の保護者に知らせる",pa:"غیر حاضر والدین نوں دسو",mr:"गैरहजर पालकांना कळवा",te:"గైర్హాజరైన తల్లిదండ్రులకు చెప్పండి",fa:"به والدین غایبان اطلاع دهید",tr:"Yok olanların velilerine bildir",ta:"இல்லாத பெற்றோரிடம் சொல்லுங்கள்",vi:"Báo cho phụ huynh của học sinh vắng mặt",ko:"결석 학생 학부모에게 알리기",tl:"Sabihan ang mga magulang ng mga wala",ha:"Sanar da iyayen waɗanda ba su nan",it:"Avvisa i genitori degli assenti",ps:"غیرحاضرو مور او پلار ته خبر ورکړئ",ms:"Beritahu ibu bapa yang tidak hadir",yo:"Sọ fún àwọn òbí àwọn tí kò sí",ig:"Gwa ndị nne na nna nke ndị anọghị"},
 att_wa_hint:{en:"Opens WhatsApp with the message ready — no SMS cost. Needs the guardian's number saved in the student's contact.",ur:"واٹس ایپ پیغام تیار کھلتا ہے — کوئی SMS خرچ نہیں۔ طالب علم کے رابطہ نمبر کی ضرورت ہے۔",bn:"বার্তা তৈরি করে WhatsApp খুলবে — SMS খরচ নেই। শিক্ষার্থীর যোগাযোগে অভিভাবকের নম্বর থাকতে হবে।",hi:"संदेश तैयार करके WhatsApp खोलता है — कोई SMS खर्च नहीं। छात्र के संपर्क में अभिभावक का नंबर सहेजा होना चाहिए।",ne:"सन्देश तयार गरेर WhatsApp खोल्छ — कुनै SMS खर्च छैन। विद्यार्थीको सम्पर्कमा अभिभावकको नम्बर सुरक्षित हुनुपर्छ।",sw:"Hufungua WhatsApp ujumbe ukiwa tayari — hakuna gharama ya SMS. Inahitaji namba ya mlezi iliyohifadhiwa kwenye mawasiliano ya mwanafunzi.",ar:"يفتح واتساب والرسالة جاهزة — دون تكلفة رسائل. يحتاج إلى رقم ولي الأمر المحفوظ في جهة اتصال الطالب.",zh:"打开 WhatsApp 并准备好消息——无需短信费用。需要学生在联系方式中保存监护人号码。",es:"Abre WhatsApp con el mensaje listo, sin costo de SMS. Necesita el número del tutor guardado en el contacto del estudiante.",fr:"Ouvre WhatsApp avec le message prêt, sans coût de SMS. Nécessite le numéro du tuteur enregistré dans le contact de l'élève.",pt:"Abre o WhatsApp com a mensagem pronta, sem custo de SMS. Precisa do número do encarregado guardado no contacto do aluno.",ru:"Открывает WhatsApp с готовым сообщением — без оплаты SMS. Нужен номер опекуна, сохранённый в контактах ученика.",id:"Membuka WhatsApp dengan pesan siap — tanpa biaya SMS. Memerlukan nomor wali yang tersimpan di kontak siswa.",de:"Öffnet WhatsApp mit der fertigen Nachricht – keine SMS-Kosten. Die Nummer des Erziehungsberechtigten muss in den Kontaktdaten des Schülers gespeichert sein.",ja:"メッセージを用意してWhatsAppを開きます — SMS料金はかかりません。生徒の連絡先に保護者の番号が保存されている必要があります。",pa:"پیغام تیار نال WhatsApp کھلدا اے — کوئی SMS خرچ نئیں۔ طالب علم دے رابطے وچ سرپرست دا نمبر محفوظ ہونا چاہیدا اے۔",mr:"संदेश तयार असलेले WhatsApp उघडते — SMS खर्च नाही. विद्यार्थ्याच्या संपर्कात पालकाचा क्रमांक जतन केलेला असणे आवश्यक आहे.",te:"సిద్ధంగా ఉన్న సందేశంతో WhatsAppను తెరుస్తుంది - SMS ఖర్చు లేదు. విద్యార్థి కాంటాక్ట్‌లో సేవ్ చేసిన గార్డియన్ నంబర్ అవసరం.",fa:"WhatsApp را با پیام آماده باز می‌کند — بدون هزینهٔ SMS. نیازمند ذخیرهٔ شمارهٔ سرپرست در تماس دانش‌آموز است.",tr:"WhatsApp'ı mesaj hazır olarak açar — SMS ücreti yok. Velinin numarasının öğrencinin iletişiminde kayıtlı olması gerekir.",ta:"வாட்ஸ்அப்பைத் திறக்கும் செய்தி தயாராக உள்ளது - எஸ்எம்எஸ் கட்டணம் இல்லை. மாணவரின் தொடர்பில் சேமிக்கப்பட்ட பாதுகாவலரின் எண் தேவை.",vi:"Mở WhatsApp với tin nhắn đã sẵn — không tốn phí SMS. Cần số điện thoại người giám hộ đã lưu trong liên hệ của học sinh.",ko:"메시지를 준비한 상태로 WhatsApp을 엽니다 — SMS 비용이 없습니다. 학생 연락처에 보호자 번호가 저장되어 있어야 합니다.",tl:"Binubuksan ang WhatsApp na handa na ang mensahe — walang gastos sa SMS. Kailangan ang numero ng tagapag-alaga na nakasave sa contact ng mag-aaral.",ha:"Yana buɗe WhatsApp da saƙon a shirye — babu kuɗin SMS. Yana buƙatar lambar mai kula da aka adana a cikin tuntuɓar ɗalibi.",it:"Apre WhatsApp con il messaggio pronto: nessun costo per gli SMS. È necessario che il numero del tutore venga salvato nel contatto dello studente.",ps:"پیغام چمتو سره WhatsApp خلاصوي — د SMS هېڅ لګښت نشته. د زده کوونکي په اړیکه کې د سرپرست شمېره خوندي کېدو ته اړتیا لري.",ms:"Membuka WhatsApp dengan mesej sedia — tiada kos SMS. Memerlukan nombor penjaga disimpan dalam kenalan murid.",yo:"Ó ń ṣí WhatsApp pẹ̀lú ìfiránṣẹ́ tí ó ti ṣetán — kò sí owó SMS. Ó nílò nọ́mbà alágbàtọ́ tí a ti fi pamọ́ nínú ìbáṣepọ̀ akẹ́kọ̀ọ́ náà.",ig:"Na-emepe WhatsApp na ozi dị njikere — enweghị ọnụ SMS. Ọ chọrọ nọmba onye nlekọta echekwara na kọntaktị nwa akwụkwọ."},
 att_wa_msg:{en:"Assalam-o-Alaikum — {school}: your child {name} (Class {cls}) was absent today ({date}). Please inform the school.",ur:"السلام علیکم — {school}: آپ کا بچہ {name} (جماعت {cls}) آج {date} غیر حاضر رہا۔ براہ کرم اسکول کو اطلاع دیں۔",bn:"আসসালামু আলাইকুম — {school}: আপনার সন্তান {name} (শ্রেণি {cls}) আজ ({date}) অনুপস্থিত ছিল। অনুগ্রহ করে স্কুলকে জানাবেন।",hi:"अस्सलाम-ओ-अलैकुम — {school}: आपका बच्चा {name} (कक्षा {cls}) आज ({date}) अनुपस्थित था। कृपया स्कूल को सूचित करें।",ne:"अस्सलाम-ओ-अलैकुम — {school}: तपाईंको बच्चा {name} (कक्षा {cls}) आज ({date}) अनुपस्थित थियो। कृपया विद्यालयलाई जानकारी दिनुहोस्।",sw:"Assalamu alaikum — {school}: mtoto wako {name} (Darasa {cls}) hayupo leo ({date}). Tafadhali mjulishe shule.",ar:"السلام عليكم — {school}: تغيّب طفلك {name} (الصف {cls}) اليوم ({date}). يرجى إبلاغ المدرسة.",zh:"Assalam-o-Alaikum — {school}：您的孩子 {name}（{cls}班）今天缺席（{date}）。请告知学校。",es:"Assalam-o-Alaikum — {school}: tu hijo/a {name} (Clase {cls}) estuvo ausente hoy ({date}). Por favor, informa a la escuela.",fr:"Assalam-o-Alaikum — {school} : votre enfant {name} (classe {cls}) était absent aujourd'hui ({date}). Veuillez en informer l'école.",pt:"Assalam-o-Alaikum — {school}: o teu filho/a {name} (Turma {cls}) faltou hoje ({date}). Por favor, informa a escola.",ru:"Assalam-o-Alaikum — {school}: ваш ребёнок {name} (класс {cls}) сегодня отсутствовал ({date}). Пожалуйста, сообщите в школу.",id:"Assalam-o-Alaikum — {school}: anak Anda {name} (Kelas {cls}) tidak hadir hari ini ({date}). Mohon beri tahu sekolah.",de:"Assalam-o-Alaikum – {school}: Ihr Kind {name} (Klasse {cls}) war heute ({date}) abwesend. Bitte informieren Sie die Schule.",ja:"Assalam-o-Alaikum — {school}：お子様 {name}（{cls}組）は今日欠席しました（{date}）。学校にお知らせください。",pa:"Assalam-o-Alaikum — {school}: تہاڈا بچہ {name} (کلاس {cls}) اج ({date}) غیر حاضر سی۔ مہربانی کر کے سکول نوں دسو۔",mr:"Assalam-o-Alaikum — {school}: तुमचे मूल {name} (वर्ग {cls}) आज गैरहजर होते ({date}). कृपया शाळेला कळवा.",te:"Assalam-o-Alaikum — {school}: మీ బిడ్డ {name} (తరగతి {cls}) ఈరోజు ({date}) హాజరు కాలేదు. దయచేసి పాఠశాలకు తెలియజేయండి.",fa:"Assalam-o-Alaikum — {school}: فرزند شما {name} (کلاس {cls}) امروز ({date}) غایب بود. لطفاً به مدرسه اطلاع دهید.",tr:"Assalam-o-Alaikum — {school}: çocuğunuz {name} (Sınıf {cls}) bugün yoktu ({date}). Lütfen okulu bilgilendirin.",ta:"Assalam-o-Alaikum — {school}: உங்கள் குழந்தை {name} (வகுப்பு {cls}) இன்று ({date}) வரவில்லை. தயவுசெய்து பள்ளிக்குத் தெரிவிக்கவும்.",vi:"Assalam-o-Alaikum — {school}: con của bạn {name} (Lớp {cls}) đã vắng mặt hôm nay ({date}). Vui lòng báo cho nhà trường.",ko:"Assalam-o-Alaikum — {school}: 자녀 {name}({cls}반)가 오늘 결석했습니다({date}). 학교에 알려 주세요.",tl:"Assalam-o-Alaikum — {school}: ang iyong anak na si {name} (Klaseng {cls}) ay wala ngayon ({date}). Mangyaring ipaalam sa paaralan.",ha:"Assalam-o-Alaikum — {school}: yaronku {name} (Aji {cls}) bai zo ba yau ({date}). Da fatan za a sanar da makaranta.",it:"Assalam-o-Alaikum — {school}: tuo figlio {name} (classe {cls}) era assente oggi ({date}). Si prega di informare la scuola.",ps:"Assalam-o-Alaikum — {school}: ستاسو ماشوم {name} (ټولګی {cls}) نن ({date}) غیرحاضر و. مهرباني وکړئ ښوونځي ته خبر ورکړئ.",ms:"Assalam-o-Alaikum — {school}: anak anda {name} (Kelas {cls}) tidak hadir hari ini ({date}). Sila maklumkan kepada sekolah.",yo:"Assalam-o-Alaikum — {school}: ọmọ rẹ {name} (Kíláàsì {cls}) kò sí lónìí ({date}). Jọ̀wọ́ sọ fún ilé-ìwé náà.",ig:"Assalam-o-Alaikum — {school}: nwa gị {name} (Klas {cls}) anọghị taa ({date}). Biko gwa ụlọ akwụkwọ."},
+att_wa_msg_late:{en:"Assalam-o-Alaikum — {school}: your child {name} (Class {cls}) arrived late today ({date}). Please ensure they arrive on time.",ur:"السلام علیکم — {school}: آپ کا بچہ {name} (جماعت {cls}) آج {date} دیر سے آیا۔ براہ کرم وقت پر پہنچنے کو یقینی بنائیں۔",bn:"আসসালামু আলাইকুম — {school}: আপনার সন্তান {name} (শ্রেণি {cls}) আজ ({date}) দেরিতে এসেছে। অনুগ্রহ করে সময়মতো আসা নিশ্চিত করুন।",hi:"अस्सलाम-ओ-अलैकुम — {school}: आपका बच्चा {name} (कक्षा {cls}) आज ({date}) देर से आया। कृपया समय पर आने को सुनिश्चित करें।",ne:"अस्सलामु अलैकुम — {school}: तपाईंको बच्चा {name} (कक्षा {cls}) आज ({date}) ढिलो आयो। कृपया समयमै आउने सुनिश्चित गर्नुहोस्।",sw:"Assalamu alaikum — {school}: mtoto wako {name} (Darasa {cls}) alichelewa leo ({date}). Tafadhali hakikisha anafika kwa wakati.",ar:"السلام عليكم — {school}: تأخر طفلك {name} (الصف {cls}) اليوم ({date}). يرجى الحرص على وصوله في الوقت المحدد.",zh:"Assalam-o-Alaikum — {school}：您的孩子 {name}（{cls}班）今天迟到了（{date}）。请确保他/她准时到校。",es:"Assalam-o-Alaikum — {school}: tu hijo/a {name} (Clase {cls}) llegó tarde hoy ({date}). Por favor, asegúrate de que llegue a tiempo.",fr:"Assalam-o-Alaikum — {school} : votre enfant {name} (classe {cls}) est arrivé en retard aujourd'hui ({date}). Veuillez veiller à ce qu'il arrive à l'heure.",pt:"Assalam-o-Alaikum — {school}: o teu filho/a {name} (Turma {cls}) chegou atrasado hoje ({date}). Por favor, garante que chega a horas.",ru:"Assalam-o-Alaikum — {school}: ваш ребёнок {name} (класс {cls}) сегодня опоздал ({date}). Пожалуйста, следите, чтобы он приходил вовремя.",id:"Assalam-o-Alaikum — {school}: anak Anda {name} (Kelas {cls}) terlambat hari ini ({date}). Mohon pastikan ia datang tepat waktu.",de:"Assalam-o-Alaikum – {school}: Ihr Kind {name} (Klasse {cls}) kam heute ({date}) zu spät. Bitte sorgen Sie dafür, dass es pünktlich kommt.",ja:"Assalam-o-Alaikum — {school}：お子様 {name}（{cls}組）は今日遅刻しました（{date}）。時間通りに登校できるようお願いします。",pa:"Assalam-o-Alaikum — {school}: تہاڈا بچہ {name} (کلاس {cls}) اج ({date}) دیر نال آیا۔ مہربانی کر کے وقت تے پہنچن نوں یقینی بناؤ۔",mr:"Assalam-o-Alaikum — {school}: तुमचे मूल {name} (वर्ग {cls}) आज उशिरा आले ({date}). कृपया वेळेवर येण्याची खात्री करा.",te:"Assalam-o-Alaikum — {school}: మీ బిడ్డ {name} (తరగతి {cls}) ఈరోజు ({date}) ఆలస్యంగా వచ్చారు. దయచేసి సమయానికి వచ్చేలా చూడండి.",fa:"Assalam-o-Alaikum — {school}: فرزند شما {name} (کلاس {cls}) امروز ({date}) دیر رسید. لطفاً مطمئن شوید به‌موقع می‌رسد.",tr:"Assalam-o-Alaikum — {school}: çocuğunuz {name} (Sınıf {cls}) bugün geç geldi ({date}). Lütfen zamanında gelmesini sağlayın.",ta:"Assalam-o-Alaikum — {school}: உங்கள் குழந்தை {name} (வகுப்பு {cls}) இன்று ({date}) தாமதமாக வந்தார். தயவுசெய்து சரியான நேரத்தில் வருவதை உறுதி செய்யவும்.",vi:"Assalam-o-Alaikum — {school}: con của bạn {name} (Lớp {cls}) đã đến muộn hôm nay ({date}). Vui lòng đảm bảo cháu đến đúng giờ.",ko:"Assalam-o-Alaikum — {school}: 자녀 {name}({cls}반)가 오늘 지각했습니다({date}). 제시간에 도착할 수 있도록 해 주세요.",tl:"Assalam-o-Alaikum — {school}: ang iyong anak na si {name} (Klaseng {cls}) ay nahuli ngayon ({date}). Mangyaring tiyakin na dumarating siya sa oras.",ha:"Assalam-o-Alaikum — {school}: yaronku {name} (Aji {cls}) ya makara yau ({date}). Da fatan za a tabbatar ya zo akan lokaci.",it:"Assalam-o-Alaikum — {school}: tuo figlio {name} (classe {cls}) è arrivato in ritardo oggi ({date}). Si prega di assicurarsi che arrivi in orario.",ps:"Assalam-o-Alaikum — {school}: ستاسو ماشوم {name} (ټولګی {cls}) نن ({date}) ناوخته راغی. مهرباني وکړئ ډاډ ترلاسه کړئ چې پر وخت راځي.",ms:"Assalam-o-Alaikum — {school}: anak anda {name} (Kelas {cls}) lewat hari ini ({date}). Sila pastikan dia tiba tepat pada waktunya.",yo:"Assalam-o-Alaikum — {school}: ọmọ rẹ {name} (Kíláàsì {cls}) pẹ́ lónìí ({date}). Jọ̀wọ́ rí i dájú pé ó dé ní àkókò.",ig:"Assalam-o-Alaikum — {school}: nwa gị {name} (Klas {cls}) bịara oge taa ({date}). Biko hụ na ọ na-abịa n'oge."},
 att_no_contact:{en:"No guardian number saved",ur:"سرپرست کا نمبر محفوظ نہیں",bn:"অভিভাবকের নম্বর সংরক্ষিত নেই",hi:"अभিভावक का नंबर सहेजा नहीं है",ne:"अभिभावकको नम्बर सुरक्षित छैन",sw:"Hakuna namba ya mlezi iliyohifadhiwa",ar:"لم يُحفظ رقم ولي أمر",zh:"未保存监护人号码",es:"No hay número de tutor guardado",fr:"Aucun numéro de tuteur enregistré",pt:"Não há número de encarregado guardado",ru:"Номер опекуна не сохранен.",id:"Tidak ada nomor wali yang tersimpan",de:"Keine Vormundsnummer gespeichert",ja:"保護者の番号が保存されていません",pa:"کوئی سرپرست نمبر محفوظ نئیں",mr:"पालक क्रमांक जतन केलेला नाही",te:"గార్డియన్ నంబర్ ఏదీ సేవ్ చేయబడలేదు",fa:"شمارهٔ سرپرستی ذخیره نشده است",tr:"Kayıtlı veli numarası yok",ta:"பாதுகாவலர் எண் எதுவும் சேமிக்கப்படவில்லை",vi:"Chưa lưu số điện thoại người giám hộ",ko:"보호자 번호가 저장되지 않았습니다",tl:"Walang nakasave na numero ng tagapag-alaga",ha:"Ba a adana lambar mai kula ba",it:"Nessun numero di tutore salvato",ps:"د سرپرست هېڅ شمېره نه ده خوندي شوې",ms:"Tiada nombor penjaga disimpan",yo:"A kò fi nọ́mbà alágbàtọ́ pamọ́",ig:"Echekwaghị nọmba onye nlekọta"},
 att_register:{en:"Monthly register",ur:"ماہانہ رجسٹر",bn:"মাসিক রেজিস্টার",hi:"मासिक रजिस्टर",ne:"मासिक रजिस्टर",sw:"Rejista ya kila mwezi",ar:"السجل الشهري",zh:"月度登记册",es:"Registro mensual",fr:"Registre mensuel",pt:"Registo mensal",ru:"Ежемесячный журнал",id:"Daftar bulanan",de:"Monatliches Register",ja:"月次登録簿",pa:"ماہانہ رجسٹر",mr:"मासिक नोंदणी",te:"నెలవారీ నమోదు",fa:"دفتر ماهانه",tr:"Aylık defter",ta:"மாதாந்திர பதிவு",vi:"Sổ tháng",ko:"월간 등록부",tl:"Buwanang talaan",ha:"Rijistar wata",it:"Registro mensile",ps:"میاشتنی راجستر",ms:"Daftar bulanan",yo:"Ìwé oṣù",ig:"Akwụkwọ ọnwa"},
 att_month:{en:"Month",ur:"مہینہ",bn:"মাস",hi:"महीना",ne:"महिना",sw:"Mwezi",ar:"الشهر",zh:"月份",es:"Mes",fr:"Mois",pt:"Mês",ru:"Месяц",id:"Bulan",de:"Monat",ja:"月",pa:"مہینہ",mr:"महिना",te:"నెల",fa:"ماه",tr:"Ay",ta:"மாதம்",vi:"Tháng",ko:"월",tl:"Buwan",ha:"Wata",it:"Mese",ps:"میاشت",ms:"Bulan",yo:"Oṣù",ig:"Ọnwa"},
@@ -18193,6 +18285,7 @@ bc_use_placeholders:{en:"Name, father, class and school fill themselves in: {nam
 ask_no_broadcast:{en:"No parent in this class has a WhatsApp number saved.",ur:"اس کلاس میں کسی والد کا واٹس ایپ نمبر درج نہیں ہے۔",bn:"এই ক্লাসের কোনো অভিভাবকের WhatsApp নম্বর সংরক্ষিত নেই।",hi:"इस कक्षा में किसी अभिभावक का WhatsApp नंबर सहेजा नहीं है।",ne:"यो कक्षाका कुनै अभिभावकको WhatsApp नम्बर सुरक्षित छैन।",sw:"Hakuna mzazi wa darasa hili aliye na nambari ya WhatsApp iliyohifadhiwa.",ar:"لا يوجد رقم واتساب محفوظ لأي ولي أمر في هذا الصف.",zh:"本班没有家长保存了 WhatsApp 号码。",es:"Ningún padre de esta clase tiene un número de WhatsApp guardado.",fr:"Aucun parent de cette classe n'a de numéro WhatsApp enregistré.",pt:"Nenhum pai desta turma tem número de WhatsApp guardado.",ru:"Ни у одного родителя в этом классе не сохранен номер WhatsApp.",id:"Tidak ada orang tua di kelas ini yang menyimpan nomor WhatsApp.",de:"Kein Elternteil in dieser Klasse hat eine WhatsApp-Nummer gespeichert.",ja:"このクラスの保護者でWhatsApp番号を保存している方はいません。",pa:"ایس کلاس دے کسے والدین دا WhatsApp نمبر محفوظ نئیں۔",mr:"या वर्गातील कोणत्याही पालकाचा WhatsApp क्रमांक जतन केलेला नाही.",te:"ఈ తరగతిలోని తల్లిదండ్రులెవరూ WhatsApp నంబర్‌ని సేవ్ చేయలేదు.",fa:"هیچ والدی در این کلاس شمارهٔ WhatsApp ذخیره‌شده ندارد.",tr:"Bu sınıfta hiçbir velinin kayıtlı WhatsApp numarası yok.",ta:"இந்த வகுப்பில் எந்தப் பெற்றோரும் வாட்ஸ்அப் எண் சேமிக்கவில்லை.",vi:"Không có phụ huynh nào trong lớp này lưu số WhatsApp.",ko:"이 반의 학부모 중 WhatsApp 번호를 저장한 분이 없습니다.",tl:"Walang magulang sa klaseng ito na may nakasave na numero ng WhatsApp.",ha:"Babu iyaye a wannan aji da ke da lambar WhatsApp da aka adana.",it:"Nessun genitore in questa classe ha un numero WhatsApp salvato.",ps:"په دې ټولګي کې د هېڅ مور او پلار WhatsApp شمېره نه ده خوندي شوې.",ms:"Tiada ibu bapa dalam kelas ini menyimpan nombor WhatsApp.",yo:"Kò sí òbí kan nínú kíláàsì yìí tí ó ní nọ́mbà WhatsApp tí a ti fi pamọ́.",ig:"Enweghị nne maọbụ nna na klas a nwere nọmba WhatsApp echekwara."},
 bc_msg_absent:{en:"Assalam-o-Alaikum, {name} ({father}) of class {class} was absent from school today ({date}). Please send your child tomorrow. — {school}",ur:"السلام علیکم، {name} ({father}) کلاس {class} آج اسکول نہیں آیا/آئی ({date})۔ براہ کرم کل بچے کو اسکول بھیجیں۔ — {school}",bn:"আসসালামু আলাইকুম, {name} ({father}), ক্লাস {class}, আজ স্কুলে আসেনি ({date})। অনুগ্রহ করে আগামীকাল আপনার সন্তানকে স্কুলে পাঠান। — {school}",hi:"अस्सलाम-ओ-अलैकुम, {name} ({father}), कक्षा {class}, आज स्कूल नहीं आया/आई ({date})। कृपया कल अपने बच्चे को स्कूल भेजें। — {school}",ne:"अस्सलामु अलैकुम, {name} ({father}), कक्षा {class}, आज विद्यालय आएन ({date})। कृपया भोलि आफ्नो बच्चालाई विद्यालय पठाउनुहोस्। — {school}",sw:"Assalamu alaikum, {name} ({father}) wa darasa la {class} hakufika shuleni leo ({date}). Tafadhali mtume mtoto wako kesho. — {school}",ar:"السلام عليكم، {name} ({father}) من الصف {class} لم يحضر إلى المدرسة اليوم ({date}). يرجى إرسال طفلك غدًا. — {school}",zh:"Assalam-o-Alaikum，{name}（{father}）{class} 班今天缺席了（{date}）。请明天送孩子上学。— {school}",es:"Assalam-o-Alaikum, {name} ({father}) de la clase {class} estuvo ausente de la escuela hoy ({date}). Por favor, envía a tu hijo/a mañana. — {school}",fr:"Assalam-o-Alaikum, {name} ({father}) de la classe {class} était absent de l'école aujourd'hui ({date}). Veuillez envoyer votre enfant demain. — {school}",pt:"Assalam-o-Alaikum, {name} ({father}) da turma {class} faltou à escola hoje ({date}). Por favor, envia o teu filho/a amanhã. — {school}",ru:"Assalam-o-Alaikum, {name} ({father}), класс {class}, сегодня отсутствовал в школе ({date}). Пожалуйста, отправьте ребёнка завтра. — {school}",id:"Assalam-o-Alaikum, {name} ({father}) dari kelas {class} tidak hadir di sekolah hari ini ({date}). Mohon kirim anak Anda besok. — {school}",de:"Assalam-o-Alaikum, {name} ({father}) der Klasse {class} war heute ({date}) nicht in der Schule. Bitte schicken Sie Ihr Kind morgen. — {school}",ja:"Assalam-o-Alaikum、{name}（{father}）{class}組は今日学校を欠席しました（{date}）。明日お子様を登校させてください。— {school}",pa:"Assalam-o-Alaikum، {name} ({father})، کلاس {class}، اج ({date}) سکول توں غیر حاضر سی۔ مہربانی کر کے کل اپنے بچے نوں بھیجو۔ — {school}",mr:"Assalam-o-Alaikum, {name} ({father}), वर्ग {class}, आज शाळेत गैरहजर होते ({date}). कृपया तुमच्या मुलाला उद्या पाठवा. — {school}",te:"Assalam-o-Alaikum, {class} తరగతి {name} ({father}) ఈరోజు ({date}) పాఠశాలకు హాజరు కాలేదు. దయచేసి రేపు మీ బిడ్డను పంపండి. — {school}",fa:"Assalam-o-Alaikum، {name} ({father}) از کلاس {class} امروز ({date}) در مدرسه غایب بود. لطفاً فردا فرزندتان را بفرستید. — {school}",tr:"Assalam-o-Alaikum, {class} sınıfından {name} ({father}) bugün okula gelmedi ({date}). Lütfen çocuğunuzu yarın gönderin. — {school}",ta:"Assalam-o-Alaikum, {class} ஆம் வகுப்பு {name} ({father}) இன்று ({date}) பள்ளிக்கு வரவில்லை. தயவுசெய்து நாளை உங்கள் குழந்தையை அனுப்பவும். — {school}",vi:"Assalam-o-Alaikum, {name} ({father}) của lớp {class} đã vắng mặt ở trường hôm nay ({date}). Vui lòng cho con bạn đi học vào ngày mai. — {school}",ko:"Assalam-o-Alaikum, {name}({father}) {class}반이 오늘 학교에 결석했습니다({date}). 내일 자녀를 등교시켜 주세요. — {school}",tl:"Assalam-o-Alaikum, si {name} ({father}) ng klaseng {class} ay wala sa paaralan ngayon ({date}). Mangyaring papasukin ang iyong anak bukas. — {school}",ha:"Assalam-o-Alaikum, {name} ({father}) na aji {class} bai zo makaranta ba yau ({date}). Da fatan za a aiko da yaronku gobe. — {school}",it:"Assalam-o-Alaikum, {name} ({father}) della classe {class} era assente da scuola oggi ({date}). Per favore, manda tuo figlio domani. — {school}",ps:"Assalam-o-Alaikum، {name} ({father}) د {class} ټولګي، نن ({date}) له ښوونځي څخه غیرحاضر و. مهرباني وکړئ سبا خپل ماشوم ولېږئ. — {school}",ms:"Assalam-o-Alaikum, {name} ({father}) dari kelas {class} tidak hadir ke sekolah hari ini ({date}). Sila hantar anak anda esok. — {school}",yo:"Assalam-o-Alaikum, {name} ({father}) ti kíláàsì {class} kò wá sí ilé-ìwé lónìí ({date}). Jọ̀wọ́ rán ọmọ rẹ lọ́la. — {school}",ig:"Assalam-o-Alaikum, {name} ({father}) nke klas {class} abịaghị ụlọ akwụkwọ taa ({date}). Biko zipu nwa gị echi. — {school}"},
 bc_msg_fee:{en:"Assalam-o-Alaikum, the fee for {name} ({father}), class {class}, is due. Please pay at the school office. — {school}",ur:"السلام علیکم، {name} ({father}) کلاس {class} کی فیس واجب الادا ہے۔ براہ کرم اسکول دفتر میں ادا کریں۔ — {school}",bn:"আসসালামু আলাইকুম, {name} ({father}), ক্লাস {class}-এর ফি বকেয়া আছে। অনুগ্রহ করে স্কুল অফিসে জমা দিন। — {school}",hi:"अस्सलाम-ओ-अलैकुम, {name} ({father}), कक्षा {class} की फीस बकाया है। कृपया स्कूल कार्यालय में जमा करें। — {school}",ne:"अस्सलामु अलैकुम, {name} ({father}), कक्षा {class} को शुल्क बाँकी छ। कृपया विद्यालय कार्यालयमा बुझाउनुहोस्। — {school}",sw:"Assalamu alaikum, ada ya {name} ({father}), darasa la {class}, inastahili kulipwa. Tafadhali lipa ofisini shuleni. — {school}",ar:"السلام عليكم، رسوم {name} ({father})، الصف {class}، مستحقة. يرجى الدفع في مكتب المدرسة. — {school}",zh:"Assalam-o-Alaikum，{name}（{father}）{class} 班的费用到期了。请到学校办公室缴纳。— {school}",es:"Assalam-o-Alaikum, la cuota de {name} ({father}), clase {class}, está vencida. Por favor, paga en la oficina de la escuela. — {school}",fr:"Assalam-o-Alaikum, les frais de {name} ({father}), classe {class}, sont dus. Veuillez payer au bureau de l'école. — {school}",pt:"Assalam-o-Alaikum, a propina de {name} ({father}), turma {class}, está por pagar. Por favor, paga na secretaria da escola. — {school}",ru:"Assalam-o-Alaikum, взнос за {name} ({father}), класс {class}, подлежит оплате. Пожалуйста, оплатите в офисе школы. — {school}",id:"Assalam-o-Alaikum, biaya untuk {name} ({father}), kelas {class}, sudah jatuh tempo. Silakan bayar di kantor sekolah. — {school}",de:"Assalam-o-Alaikum, die Gebühr für {name} ({father}), Klasse {class}, ist fällig. Bitte zahlen Sie im Schulbüro. — {school}",ja:"Assalam-o-Alaikum、{name}（{father}）{class}組の料金の期限が来ています。学校の事務室でお支払いください。— {school}",pa:"Assalam-o-Alaikum، {name} ({father})، کلاس {class} دی فیس واجب اے۔ مہربانی کر کے سکول دے دفتر وچ ادا کرو۔ — {school}",mr:"Assalam-o-Alaikum, {name} ({father}) यांचे शुल्क, वर्ग {class}, देय आहे. कृपया शाळेच्या कार्यालयात भरा. — {school}",te:"Assalam-o-Alaikum, {class} తరగతి {name} ({father}) ఫీజు చెల్లించాల్సి ఉంది. దయచేసి పాఠశాల కార్యాలయంలో చెల్లించండి. — {school}",fa:"Assalam-o-Alaikum، شهریهٔ {name} ({father})، کلاس {class}، سررسید شده است. لطفاً در دفتر مدرسه پرداخت کنید. — {school}",tr:"Assalam-o-Alaikum, {name} ({father}) adlı öğrencinin, {class} sınıfı, ücreti vadesi geldi. Lütfen okul ofisinde ödeyin. — {school}",ta:"Assalam-o-Alaikum, {class} ஆம் வகுப்பு {name} ({father}) கட்டணம் செலுத்த வேண்டியுள்ளது. தயவுசெய்து பள்ளி அலுவலகத்தில் செலுத்தவும். — {school}",vi:"Assalam-o-Alaikum, học phí của {name} ({father}), lớp {class}, đã đến hạn. Vui lòng đóng tại văn phòng nhà trường. — {school}",ko:"Assalam-o-Alaikum, {name}({father}) {class}반의 수수료 납부 기한이 되었습니다. 학교 사무실에서 납부해 주세요. — {school}",tl:"Assalam-o-Alaikum, ang bayad para kay {name} ({father}), klaseng {class}, ay dapat nang bayaran. Mangyaring magbayad sa tanggapan ng paaralan. — {school}",ha:"Assalam-o-Alaikum, kuɗin {name} ({father}), aji {class}, ya yi. Da fatan za a biya a ofishin makaranta. — {school}",it:"Assalam-o-Alaikum, la tassa per {name} ({father}), classe {class}, è dovuta. Si prega di pagare presso l'ufficio della scuola. — {school}",ps:"Assalam-o-Alaikum، د {name} ({father})، ټولګي {class}، فیس ورکول کېدونکی دی. مهرباني وکړئ د ښوونځي په دفتر کې یې ورکړئ. — {school}",ms:"Assalam-o-Alaikum, yuran untuk {name} ({father}), kelas {class}, sudah perlu dibayar. Sila bayar di pejabat sekolah. — {school}",yo:"Assalam-o-Alaikum, owó {name} ({father}), kíláàsì {class}, ti tó. Jọ̀wọ́ san ní ọ́fíìsì ilé-ìwé. — {school}",ig:"Assalam-o-Alaikum, ego {name} ({father}), klas {class}, eruola. Biko kwụọ ya n'ụlọ ọrụ ụlọ akwụkwọ. — {school}"},
+bc_amount_due:{en:"Amount due: {amount}",ur:"واجب الادا رقم: {amount}",bn:"বকেয়া পরিমাণ: {amount}",hi:"बकाया राशि: {amount}",ne:"बाँकी रकम: {amount}",sw:"Kiasi kinachodaiwa: {amount}",ar:"المبلغ المستحق: {amount}",zh:"应付金额：{amount}",es:"Importe a pagar: {amount}",fr:"Montant dû : {amount}",pt:"Valor em dívida: {amount}",ru:"Сумма к оплате: {amount}",id:"Jumlah yang harus dibayar: {amount}",de:"Fälliger Betrag: {amount}",ja:"支払金額：{amount}",pa:"واجب رقم: {amount}",mr:"देय रक्कम: {amount}",te:"చెల్లించాల్సిన మొత్తం: {amount}",fa:"مبلغ سررسید: {amount}",tr:"Ödenecek tutar: {amount}",ta:"செலுத்த வேண்டிய தொகை: {amount}",vi:"Số tiền cần đóng: {amount}",ko:"납부할 금액: {amount}",tl:"Halagang dapat bayaran: {amount}",ha:"Adadin da ake bi: {amount}",it:"Importo dovuto: {amount}",ps:"ورکول کېدونکې اندازه: {amount}",ms:"Jumlah perlu dibayar: {amount}",yo:"Iye tí ó yẹ kí a san: {amount}",ig:"Ego a ga-akwụ: {amount}"},
 bc_msg_result:{en:"Assalam-o-Alaikum, the result of {name} ({father}), class {class}, has been published. Please collect the report card from the school. — {school}",ur:"السلام علیکم، {name} ({father}) کلاس {class} کا نتیجہ جاری ہو گیا ہے۔ براہ کرم رپورٹ کارڈ اسکول سے وصول کریں۔ — {school}",bn:"আসসালামু আলাইকুম, {name} ({father}), ক্লাস {class}-এর ফলাফল প্রকাশিত হয়েছে। অনুগ্রহ করে স্কুল থেকে রিপোর্ট কার্ড সংগ্রহ করুন। — {school}",hi:"अस्सलाम-ओ-अलैकुम, {name} ({father}), कक्षा {class} का परिणाम जारी हो गया है। कृपया स्कूल से रिपोर्ट कार्ड लें। — {school}",ne:"अस्सलामु अलैकुम, {name} ({father}), कक्षा {class} को नतिजा प्रकाशित भएको छ। कृपया विद्यालयबाट रिपोर्ट कार्ड लिनुहोस्। — {school}",sw:"Assalamu alaikum, matokeo ya {name} ({father}), darasa la {class}, yametangazwa. Tafadhali chukua kadi ya ripoti shuleni. — {school}",ar:"السلام عليكم، تم إعلان نتيجة {name} ({father})، الصف {class}. يرجى استلام بطاقة التقرير من المدرسة. — {school}",zh:"Assalam-o-Alaikum，{name}（{father}）{class} 班的成绩已公布。请到学校领取成绩单。— {school}",es:"Assalam-o-Alaikum, el resultado de {name} ({father}), clase {class}, ha sido publicado. Por favor, recoge la boleta de calificaciones en la escuela. — {school}",fr:"Assalam-o-Alaikum, le résultat de {name} ({father}), classe {class}, a été publié. Veuillez récupérer le bulletin de notes à l'école. — {school}",pt:"Assalam-o-Alaikum, o resultado de {name} ({father}), turma {class}, foi publicado. Por favor, recolhe o boletim de notas na escola. — {school}",ru:"Assalam-o-Alaikum, результаты {name} ({father}), класс {class}, опубликованы. Пожалуйста, заберите табель успеваемости в школе. — {school}",id:"Assalam-o-Alaikum, hasil ujian {name} ({father}), kelas {class}, telah diterbitkan. Silakan ambil rapor dari sekolah. — {school}",de:"Assalam-o-Alaikum, das Ergebnis von {name} ({father}), Klasse {class}, wurde veröffentlicht. Bitte holen Sie das Zeugnis in der Schule ab. — {school}",ja:"Assalam-o-Alaikum、{name}（{father}）{class}組の結果が発表されました。学校で成績表をお受け取りください。— {school}",pa:"Assalam-o-Alaikum، {name} ({father})، کلاس {class} دا نتیجہ جاری ہو گیا اے۔ مہربانی کر کے سکول توں رپورٹ کارڈ لے لو۔ — {school}",mr:"Assalam-o-Alaikum, {name} ({father}) यांचा निकाल, वर्ग {class}, जाहीर झाला आहे. कृपया शाळेतून गुणपत्रिका घ्या. — {school}",te:"Assalam-o-Alaikum, {class} తరగతి {name} ({father}) ఫలితాలు ప్రకటించబడ్డాయి. దయచేసి పాఠశాల నుండి రిపోర్ట్ కార్డు తీసుకోండి. — {school}",fa:"Assalam-o-Alaikum، نتیجهٔ {name} ({father})، کلاس {class}، منتشر شد. لطفاً کارنامه را از مدرسه بگیرید. — {school}",tr:"Assalam-o-Alaikum, {name} ({father}) adlı öğrencinin, {class} sınıfı, sonucu açıklandı. Lütfen karneyi okuldan alın. — {school}",ta:"Assalam-o-Alaikum, {class} ஆம் வகுப்பு {name} ({father}) முடிவுகள் வெளியிடப்பட்டுள்ளன. தயவுசெய்து பள்ளியிலிருந்து மதிப்பெண் அட்டையைப் பெற்றுக்கொள்ளுங்கள். — {school}",vi:"Assalam-o-Alaikum, kết quả của {name} ({father}), lớp {class}, đã được công bố. Vui lòng nhận phiếu báo kết quả tại trường. — {school}",ko:"Assalam-o-Alaikum, {name}({father}) {class}반의 결과가 발표되었습니다. 학교에서 성적표를 받아 가세요. — {school}",tl:"Assalam-o-Alaikum, nailathala na ang resulta ni {name} ({father}), klaseng {class}. Mangyaring kunin ang report card sa paaralan. — {school}",ha:"Assalam-o-Alaikum, an fitar da sakamakon {name} ({father}), aji {class}. Da fatan za a karɓi katin sakamako daga makaranta. — {school}",it:"Assalam-o-Alaikum, il risultato di {name} ({father}), classe {class}, è stato pubblicato. Si prega di ritirare la pagella a scuola. — {school}",ps:"Assalam-o-Alaikum، د {name} ({father})، ټولګي {class}، پایله خپره شوه. مهرباني وکړئ له ښوونځي څخه راپور کارت واخلئ. — {school}",ms:"Assalam-o-Alaikum, keputusan {name} ({father}), kelas {class}, telah diterbitkan. Sila ambil kad laporan dari sekolah. — {school}",yo:"Assalam-o-Alaikum, a ti ṣe àtẹ̀jáde èsì {name} ({father}), kíláàsì {class}. Jọ̀wọ́ gba káàdì ìròyìn láti ilé-ìwé. — {school}",ig:"Assalam-o-Alaikum, ebipụtala nsonaazụ {name} ({father}), klas {class}. Biko were kaadị akụkọ site n'ụlọ akwụkwọ. — {school}"},
 bc_msg_datesheet:{en:"Assalam-o-Alaikum, the exam date sheet for class {class} has been announced. Please check with your child. — {school}",ur:"السلام علیکم، کلاس {class} کی امتحانی ڈیٹ شیٹ کا اعلان ہو گیا ہے۔ براہ کرم اپنے بچے سے پوچھیں۔ — {school}",bn:"আসসালামু আলাইকুম, ক্লাস {class}-এর পরীক্ষার ডেট শিট ঘোষণা করা হয়েছে। অনুগ্রহ করে আপনার সন্তানের কাছে জেনে নিন। — {school}",hi:"अस्सलाम-ओ-अलैकुम, कक्षा {class} की परीक्षा तिथि पत्रक घोषित हो गया है। कृपया अपने बच्चे से पूछें। — {school}",ne:"अस्सलामु अलैकुम, कक्षा {class} को परीक्षा तालिका घोषणा भएको छ। कृपया आफ्नो बच्चासँग सोध्नुहोस्। — {school}",sw:"Assalamu alaikum, ratiba ya mtihani ya darasa la {class} imetangazwa. Tafadhali uliza mtoto wako. — {school}",ar:"السلام عليكم، تم الإعلان عن جدول امتحانات الصف {class}. يرجى السؤال من طفلك. — {school}",zh:"Assalam-o-Alaikum，{class} 班的考试时间表已公布。请与您的孩子确认。— {school}",es:"Assalam-o-Alaikum, se ha anunciado el calendario de exámenes de la clase {class}. Por favor, consúltalo con tu hijo/a. — {school}",fr:"Assalam-o-Alaikum, le calendrier des examens de la classe {class} a été annoncé. Veuillez vérifier avec votre enfant. — {school}",pt:"Assalam-o-Alaikum, o calendário de exames da turma {class} foi anunciado. Por favor, confirma com o teu filho/a. — {school}",ru:"Assalam-o-Alaikum, расписание экзаменов для класса {class} объявлено. Пожалуйста, уточните у своего ребёнка. — {school}",id:"Assalam-o-Alaikum, jadwal ujian untuk kelas {class} telah diumumkan. Silakan tanyakan kepada anak Anda. — {school}",de:"Assalam-o-Alaikum, der Prüfungstermin für die Klasse {class} wurde bekannt gegeben. Bitte erkundigen Sie sich bei Ihrem Kind. — {school}",ja:"Assalam-o-Alaikum、{class}組の試験時間割が発表されました。お子様とご確認ください。— {school}",pa:"Assalam-o-Alaikum، کلاس {class} دی امتحان دی ڈیٹ شیٹ دا اعلان ہو گیا اے۔ مہربانی کر کے اپنے بچے نال ویکھو۔ — {school}",mr:"Assalam-o-Alaikum, वर्ग {class} ची परीक्षा वेळापत्रक जाहीर झाले आहे. कृपया तुमच्या मुलाकडून तपासा. — {school}",te:"Assalam-o-Alaikum, {class} తరగతి పరీక్షల తేదీల పట్టిక ప్రకటించబడింది. దయచేసి మీ బిడ్డను అడిగి తెలుసుకోండి. — {school}",fa:"Assalam-o-Alaikum، برنامهٔ امتحانات کلاس {class} اعلام شد. لطفاً با فرزندتان بررسی کنید. — {school}",tr:"Assalam-o-Alaikum, {class} sınıfının sınav tarih çizelgesi açıklandı. Lütfen çocuğunuzla kontrol edin. — {school}",ta:"Assalam-o-Alaikum, {class} ஆம் வகுப்புக்கான தேர்வு அட்டவணை அறிவிக்கப்பட்டுள்ளது. தயவுசெய்து உங்கள் குழந்தையிடம் கேட்டுத் தெரிந்துகொள்ளுங்கள். — {school}",vi:"Assalam-o-Alaikum, lịch thi của lớp {class} đã được công bố. Vui lòng kiểm tra cùng con bạn. — {school}",ko:"Assalam-o-Alaikum, {class}반 시험 시간표가 발표되었습니다. 자녀와 함께 확인해 주세요. — {school}",tl:"Assalam-o-Alaikum, inihayag na ang iskedyul ng pagsusulit para sa klaseng {class}. Mangyaring tingnan ito kasama ang iyong anak. — {school}",ha:"Assalam-o-Alaikum, an sanar da jadawalin ranakun jarrabawa na aji {class}. Da fatan za a duba da yaronku. — {school}",it:"Assalam-o-Alaikum, è stata annunciata la data dell'esame per la classe {class}. Per favore verifica con tuo figlio. — {school}",ps:"Assalam-o-Alaikum، د {class} ټولګي د ازموینې مهالوېش اعلان شو. مهرباني وکړئ له خپل ماشوم سره وګورئ. — {school}",ms:"Assalam-o-Alaikum, jadual peperiksaan untuk kelas {class} telah diumumkan. Sila semak dengan anak anda. — {school}",yo:"Assalam-o-Alaikum, a ti kéde ìṣètò ọjọ́ ìdánwò fún kíláàsì {class}. Jọ̀wọ́ bá ọmọ rẹ ṣàyẹ̀wò. — {school}",ig:"Assalam-o-Alaikum, ekwuputala usoro ụbọchị ule nke klas {class}. Biko lelee ya na nwa gị. — {school}"},
 bc_msg_general:{en:"Assalam-o-Alaikum, a message from {school} for the parents of class {class}.",ur:"السلام علیکم، {school} کی طرف سے کلاس {class} کے والدین کے لیے ایک پیغام۔",bn:"আসসালামু আলাইকুম, ক্লাস {class}-এর অভিভাবকদের জন্য {school} থেকে একটি বার্তা।",hi:"अस्सलाम-ओ-अलैकुम, कक्षा {class} के अभिभावकों के लिए {school} की ओर से एक संदेश।",ne:"अस्सलामु अलैकुम, कक्षा {class} का अभिभावकहरूका लागि {school} बाट एउटा सन्देश।",sw:"Assalamu alaikum, ujumbe kutoka {school} kwa wazazi wa darasa la {class}.",ar:"السلام عليكم، رسالة من {school} لأولياء أمور الصف {class}.",zh:"Assalam-o-Alaikum，来自 {school} 的消息，致 {class} 班各位家长。",es:"Assalam-o-Alaikum, un mensaje de {school} para los padres de la clase {class}.",fr:"Assalam-o-Alaikum, un message de {school} pour les parents de la classe {class}.",pt:"Assalam-o-Alaikum, uma mensagem de {school} para os pais da turma {class}.",ru:"Assalam-o-Alaikum, сообщение от {school} для родителей класса {class}.",id:"Assalam-o-Alaikum, pesan dari {school} untuk orang tua kelas {class}.",de:"Assalam-o-Alaikum, eine Nachricht von {school} für die Eltern der Klasse {class}.",ja:"Assalam-o-Alaikum、{school}から{class}組の保護者の皆様へのメッセージです。",pa:"Assalam-o-Alaikum، {school} ولوں کلاس {class} دے والدین لئی پیغام اے۔",mr:"Assalam-o-Alaikum, {school} कडून वर्ग {class} च्या पालकांसाठी संदेश.",te:"Assalam-o-Alaikum, {class} తరగతి తల్లిదండ్రుల కోసం {school} నుండి ఒక సందేశం.",fa:"Assalam-o-Alaikum، پیامی از {school} برای والدین کلاس {class}.",tr:"Assalam-o-Alaikum, {school} okulundan {class} sınıfı velilerine bir mesaj.",ta:"Assalam-o-Alaikum, {class} ஆம் வகுப்பு பெற்றோருக்காக {school} இடமிருந்து ஒரு செய்தி.",vi:"Assalam-o-Alaikum, tin nhắn từ {school} gửi phụ huynh lớp {class}.",ko:"Assalam-o-Alaikum, {school}에서 {class}반 학부모님들께 보내는 메시지입니다.",tl:"Assalam-o-Alaikum, isang mensahe mula sa {school} para sa mga magulang ng klaseng {class}.",ha:"Assalam-o-Alaikum, saƙo daga {school} ga iyayen aji {class}.",it:"Assalam-o-Alaikum, un messaggio da {school} per i genitori della classe {class}.",ps:"Assalam-o-Alaikum، له {school} څخه د {class} ټولګي د مور او پلار لپاره پیغام دی.",ms:"Assalam-o-Alaikum, pesanan daripada {school} untuk ibu bapa kelas {class}.",yo:"Assalam-o-Alaikum, ìfiránṣẹ́ láti {school} fún àwọn òbí kíláàsì {class}.",ig:"Assalam-o-Alaikum, ozi sitere na {school} nye ndị nne na nna nke klas {class}."},
@@ -18248,6 +18341,7 @@ tr_phone:{en:"Driver phone",ur:"ڈرائیور کا فون",bn:"চালকে�
 tr_fee:{en:"Monthly fee",ur:"ماہانہ فیس",bn:"মাসিক ফি",hi:"मासिक शुल्क",ne:"मासिक शुल्क",sw:"Ada ya kila mwezi",ar:"الرسوم الشهرية",zh:"月费",es:"Cuota mensual",fr:"Frais mensuels",pt:"Propina mensal",ru:"Ежемесячная плата",id:"Biaya bulanan",de:"Monatliche Gebühr",ja:"月額料金",pa:"ماہانہ فیس",mr:"मासिक शुल्क",te:"నెలవారీ రుసుము",fa:"شهریهٔ ماهانه",tr:"Aylık ücret",ta:"மாதாந்திர கட்டணம்",vi:"Học phí tháng",ko:"월 수수료",tl:"Buwanang bayad",ha:"Kuɗin wata",it:"Retta mensile",ps:"میاشتنی فیس",ms:"Yuran bulanan",yo:"Owó oṣù",ig:"Ego ọnwa"},
 tr_stops:{en:"Stops (one per line)",ur:"اسٹاپ (ہر لائن پر ایک)",bn:"স্টপ (প্রতি লাইনে একটি)",hi:"स्टॉप (प्रति पंक्ति एक)",ne:"स्टपहरू (प्रति लाइन एउटा)",sw:"Vituo (kimoja kwa mstari)",ar:"المحطات (واحدة في كل سطر)",zh:"站点（每行一个）",es:"Paradas (una por línea)",fr:"Arrêts (un par ligne)",pt:"Paragens (uma por linha)",ru:"Остановки (по одной в строке)",id:"Halte (satu per baris)",de:"Haltestellen (eine pro Zeile)",ja:"停留所（1行に1つ）",pa:"سٹاپ (ہر لائن تے اک)",mr:"थांबे (प्रत्येक ओळीत एक)",te:"స్టాప్‌లు (ఒక పంక్తికి ఒకటి)",fa:"ایستگاه‌ها (هر خط یکی)",tr:"Duraklar (satır başına bir tane)",ta:"நிறுத்தங்கள் (ஒரு வரிக்கு ஒன்று)",vi:"Điểm dừng (mỗi dòng một điểm)",ko:"정류장(한 줄에 하나씩)",tl:"Mga hintuan (isa bawat linya)",ha:"Tashoshi (ɗaya ga kowane layi)",it:"Fermate (una per linea)",ps:"تمځایونه (په هره کرښه کې یو)",ms:"Hentian (satu setiap baris)",yo:"Àwọn ìdúró (ọ̀kan fún ìlà kọ̀ọ̀kan)",ig:"Nkwụsị (otu kwa ahịrị)"},
 tr_add_route:{en:"Add route",ur:"روٹ شامل کریں",bn:"রুট যোগ করুন",hi:"रूट जोड़ें",ne:"रुट थप्नुहोस्",sw:"Ongeza njia",ar:"أضف خطًا",zh:"添加路线",es:"Añadir ruta",fr:"Ajouter un itinéraire",pt:"Adicionar rota",ru:"Добавить маршрут",id:"Tambah rute",de:"Route hinzufügen",ja:"ルートを追加",pa:"رستہ شامل کرو",mr:"मार्ग जोडा",te:"మార్గాన్ని జోడించండి",fa:"افزودن مسیر",tr:"Güzergâh ekle",ta:"பாதையைச் சேர்க்கவும்",vi:"Thêm tuyến đường",ko:"노선 추가",tl:"Magdagdag ng ruta",ha:"Ƙara hanya",it:"Aggiungi percorso",ps:"لاره اضافه کړئ",ms:"Tambah laluan",yo:"Fi ipa ọ̀nà kún",ig:"Tinye ụzọ"},
+tr_route_deleted:{en:"Route deleted",ur:"روٹ حذف کر دیا گیا",bn:"রুট মুছে ফেলা হয়েছে",hi:"रूट हटा दिया गया",ne:"रुट मेटाइयो",sw:"Njia imefutwa",ar:"تم حذف المسار",zh:"路线已删除",es:"Ruta eliminada",fr:"Itinéraire supprimé",pt:"Rota eliminada",ru:"Маршрут удалён",id:"Rute dihapus",de:"Route gelöscht",ja:"ルートを削除しました",pa:"روٹ مٹا دتا گیا",mr:"मार्ग हटविला",te:"మార్గం తొలగించబడింది",fa:"مسیر حذف شد",tr:"Güzergâh silindi",ta:"வழி நீக்கப்பட்டது",vi:"Đã xóa tuyến",ko:"노선이 삭제되었습니다",tl:"Na-delete ang ruta",ha:"An share hanya",it:"Percorso eliminato",ps:"لاره ړنګه شوه",ms:"Laluan dipadam",yo:"Ọ̀nà ti paarẹ́",ig:"Ehichapụla ụzọ"},
 tr_no_routes:{en:"No routes yet.",ur:"ابھی کوئی روٹ نہیں۔",bn:"এখনো কোনো রুট নেই।",hi:"अभी कोई रूट नहीं।",ne:"अहिलेसम्म कुनै रुट छैन।",sw:"Bado hakuna njia.",ar:"لا توجد خطوط بعد.",zh:"尚无路线。",es:"Aún no hay rutas.",fr:"Pas encore d'itinéraires.",pt:"Ainda não há rotas.",ru:"Маршрутов пока нет.",id:"Belum ada rute.",de:"Noch keine Routen.",ja:"ルートはまだありません。",pa:"اجے کوئی رستے نئیں۔",mr:"अजून मार्ग नाहीत.",te:"ఇంకా మార్గాలు లేవు.",fa:"هنوز مسیری نیست.",tr:"Henüz güzergâh yok.",ta:"இன்னும் பாதைகள் இல்லை.",vi:"Chưa có tuyến đường.",ko:"노선이 아직 없습니다.",tl:"Wala pang mga ruta.",ha:"Babu hanyoyi tukuna.",it:"Nessun percorso ancora.",ps:"لا هېڅ لاره نشته.",ms:"Tiada laluan lagi.",yo:"Kò sí ipa ọ̀nà lọ́wọ́lọ́wọ́.",ig:"Enwebeghị ụzọ."},
 tr_assign:{en:"Assign",ur:"تفویض کریں",bn:"বরাদ্দ করুন",hi:"सौंपें",ne:"तोक्नुहोस्",sw:"Panga",ar:"عيّن",zh:"分配",es:"Asignar",fr:"Attribuer",pt:"Atribuir",ru:"Назначить",id:"Tugaskan",de:"Zuweisen",ja:"割り当て",pa:"تفویض کرو",mr:"नेमून द्या",te:"కేటాయించండి",fa:"اختصاص دهید",tr:"Ata",ta:"ஒதுக்கு",vi:"Giao",ko:"배정",tl:"Italaga",ha:"Sanya",it:"Assegna",ps:"وټاکئ",ms:"Tugaskan",yo:"Yàn",ig:"Kenye"},
 tr_student:{en:"Student",ur:"طالب علم",bn:"শিক্ষার্থী",hi:"छात्र",ne:"विद्यार्थी",sw:"Mwanafunzi",ar:"الطالب",zh:"学生",es:"Estudiante",fr:"Élève",pt:"Aluno",ru:"Ученик",id:"Siswa",de:"Schüler",ja:"生徒",pa:"طالب علم",mr:"विद्यार्थी",te:"విద్యార్థి",fa:"دانش‌آموز",tr:"Öğrenci",ta:"மாணவர்",vi:"Học sinh",ko:"학생",tl:"Mag-aaral",ha:"Ɗalibi",it:"Studente",ps:"زده کوونکی",ms:"Murid",yo:"Akẹ́kọ̀ọ́",ig:"Nwa akwụkwọ"},
@@ -18890,7 +18984,7 @@ function certPrintHTML(certId){
   return h;
 }
 /* ---- certificates register UI ---- */
-let certIssueFor=null,certQ="";
+let certIssueFor=null,certQ="",certVoidArm=null;
 function viewCert(){
   let h='<div class="card"><h2>'+esc(t("cert_issue"))+'</h2><div id="c-msg"></div><div class="grid2">'+
     '<div class="field"><label>'+esc(t("f_name"))+'</label><select id="c-stu">'+
@@ -18931,7 +19025,7 @@ function afterCert(){
       {issueDate:$("c-date").value,reason:$("c-reason").value,remarks:$("c-remarks").value,purpose:$("c-purpose").value,conduct:$("c-conduct").value});
     if(!r.ok){$("c-msg").innerHTML='<div class="msg err">'+esc(r.error)+"</div>";return;}
     certIssueFor=null;
-    $("c-msg").innerHTML='<div class="msg okm">'+esc(t("cert_issued_ok"))+": <b>"+esc(r.cert.serial)+"</b></div>";
+    $("c-msg").innerHTML='<div class="msg okm">'+esc(t("cert_issued_ok"))+": <b>"+esc(r.cert.serial)+"</b> • "+esc(t("verify_code"))+": <b>"+esc(r.cert.verifyCode||"—")+"</b></div>";
     drawRows();
   };
   const drawRows=function(){
@@ -18944,11 +19038,11 @@ function afterCert(){
         norm(c.type).indexOf(needle)>=0||norm(c.issuedAt).indexOf(needle)>=0;
     });
     $("c-rows").innerHTML=list.map(function(c){
-      return "<tr><td><b>"+esc(c.serial)+"</b></td><td>"+esc(certTypeName(c.type))+"</td><td>"+esc(c.snapshot.display)+
+      return "<tr><td><b>"+esc(c.serial)+'</b><br><span class="muted">'+esc(t("verify_code"))+": "+esc(c.verifyCode||"—")+"</span></td><td>"+esc(certTypeName(c.type))+"</td><td>"+esc(c.snapshot.display)+
         '<br><span class="muted">'+esc(c.snapshot.admNo)+"</span></td><td>"+fmtDate(c.issuedAt)+"</td><td>"+
         (c.status==="void"?'<span class="flag">'+esc(t("cert_voided"))+'</span>':'<span class="flag okf">'+esc(t("cert_issued"))+"</span>")+"</td>"+
         '<td><button type="button" class="btn btn-sm" data-cprint="'+c.id+'">'+esc(t("cert_reprint"))+"</button> "+
-        (c.status==="void"?"":'<button type="button" class="btn btn-sm btn-danger" data-cvoid="'+c.id+'">'+esc(t("cert_void"))+"</button>")+
+        (c.status==="void"?"":'<button type="button" class="btn btn-sm btn-danger" data-cvoid="'+c.id+'">'+esc(certVoidArm===c.id?t("cert_void")+"?":t("cert_void"))+"</button>")+
         ' <button type="button" class="btn btn-sm" data-chist="'+c.id+'">'+esc(t("history"))+"</button></td></tr>"+
         '<tr id="chist-'+c.id+'" style="display:none"><td colspan="6"><div class="hist">'+histHTML(c)+"</div></td></tr>";
     }).join("")||'<tr><td colspan="6">'+emptyStateHTML(t("es_cert_t"),t("es_cert_h"),t("es_cert_b"),"cert")+"</td></tr>";
@@ -18956,8 +19050,12 @@ function afterCert(){
       b.onclick=function(){doPrint(certPrintHTML(b.getAttribute("data-cprint")));};});
     Array.prototype.forEach.call(document.querySelectorAll("[data-cvoid]"),function(b){
       b.onclick=function(){
-        const c=getCertificate(b.getAttribute("data-cvoid"));
-        if(c&&confirm(t("cert_void")+" "+c.serial+"?")){voidCertificate(c.id);render();}
+        const id=b.getAttribute("data-cvoid");
+        const c=getCertificate(id);
+        if(!c)return;
+        if(certVoidArm!==id){certVoidArm=id;drawRows();return;}
+        certVoidArm=null;
+        voidCertificate(id);render();
       };});
     Array.prototype.forEach.call(document.querySelectorAll("[data-chist]"),function(b){
       b.onclick=function(){const r=$("chist-"+b.getAttribute("data-chist"));r.style.display=r.style.display==="none"?"":"none";};});
@@ -18972,10 +19070,10 @@ function certDossierHTML(st){
   if(!list.length)h+='<p class="muted">'+esc(t("no_records"))+"</p>";
   list.forEach(function(c){
     h+='<div class="toolbar" style="border-bottom:1px dotted var(--line);padding:.3rem 0"><span><b>'+esc(c.serial)+
-      "</b> • "+esc(certTypeName(c.type))+" • "+fmtDate(c.issuedAt)+"</span>"+
+      "</b> • "+esc(certTypeName(c.type))+" • "+fmtDate(c.issuedAt)+'<br><span class="muted">'+esc(t("verify_code"))+": "+esc(c.verifyCode||"—")+"</span></span>"+
       (c.status==="void"?' <span class="flag">'+esc(t("cert_voided"))+"</span>":"")+
       ' <button type="button" class="btn btn-sm" data-dcprint="'+c.id+'">'+esc(t("cert_reprint"))+"</button>"+
-      (c.status==="void"?"":' <button type="button" class="btn btn-sm btn-danger" data-dcvoid="'+c.id+'">'+esc(t("cert_void"))+"</button>")+"</div>";
+      (c.status==="void"?"":' <button type="button" class="btn btn-sm btn-danger" data-dcvoid="'+c.id+'">'+esc(certVoidArm===c.id?t("cert_void")+"?":t("cert_void"))+"</button>")+"</div>";
   });
   h+='<button type="button" class="btn btn-sm btn-primary" id="dos-issuecert" style="margin-top:.5rem">'+esc(t("cert_issue"))+"</button></div>";
   return h;
