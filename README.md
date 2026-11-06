@@ -24,3 +24,6 @@ To move data between phones: Settings → Backup → send the file → other pho
 ## Live
 
 https://JumaKhan-kakar.github.io/school-record-system/
+## Round 68 — Teacher Tools
+
+- **Tools tab** — teacher tools in one place: scientific calculator, maths solvers, class utilities, subject explainer, theorem solver, science practicals, and art.
