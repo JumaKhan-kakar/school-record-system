@@ -4,13 +4,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>School Record System</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231a6fd4'/%3E%3Cpath d='M18 34l10 10 18-22' stroke='%23fff' stroke-width='7' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Cpath d='M18 34l10 10 18-22' stroke='%23fff' stroke-width='7' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <style>
 /* ============ base ============ */
 :root{
-  --bg:#f4f6f8; --card:#ffffff; --ink:#1c2733; --muted:#67727e;
-  --brand:#1a6fd4; --brand-d:#1259ab; --ok:#1e8e3e; --warn:#b26a00;
-  --bad:#c5221f; --line:#dfe5ea; --chip:#e8f0fe;
+  --bg:#f0f7f6; --card:#ffffff; --ink:#16211f; --muted:#4b5b58;
+  --brand:#0f766e; --brand-d:#0b3d3a; --ok:#15803d; --warn:#b45309;
+  --bad:#dc2626; --line:#d5e5e1; --chip:#e6f4f1;
+  --navy:#0b3d3a; --brand-2:#14b8a6; --brand-soft:#e6f4f1;
+  --cta:#f59e0b;
+  --cta-h:#d97706; --brand-h:#115e59; --ok-bg:#dcfce7; --warn-bg:#fef3c7;
+  --r-sm:8px; --r:12px; --r-lg:18px;
+  --sh-1:0 4px 12px rgba(15,60,55,.08);
+  --sh-2:0 8px 24px rgba(15,60,55,.12);
+  --sh-3:0 8px 30px rgba(15,60,55,.16);
+  --ease:cubic-bezier(.2,.7,.3,1);
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -58,8 +66,8 @@ select[multiple]{min-height:9.5rem;}
 .msg{border-radius:10px;padding:.6rem .8rem;margin:.5rem 0;font-weight:600}
 .msg.err{background:#fdecea;color:var(--bad);border:1px solid #f5c6c2}
 .err-input{border-color:#c5221f!important;box-shadow:0 0 0 2px rgba(197,34,31,.18)}
-.msg.okm{background:#e6f4ea;color:var(--ok);border:1px solid #b7dfc0}
-.msg.warnm{background:#fef7e0;color:var(--warn);border:1px solid #f3df9a}
+.msg.okm{background:var(--ok-bg);color:var(--ok);border:1px solid #b7dfc0}
+.msg.warnm{background:var(--warn-bg);color:var(--warn);border:1px solid #f3df9a}
 /* ============ tables ============ */
 .twrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table.grid{border-collapse:collapse;width:100%;min-width:640px;background:#fff}
@@ -70,7 +78,7 @@ table.grid input.cell{width:64px;padding:.35rem .3rem;border:1px solid var(--lin
 table.grid input.cell.bad{border-color:var(--bad);background:#fdecea}
 tr.totalrow td{background:#eef3f8;font-weight:700}
 .flag{display:inline-block;background:#fdecea;color:var(--bad);border-radius:6px;padding:.1rem .5rem;font-size:.82rem;font-weight:700}
-.flag.okf{background:#e6f4ea;color:var(--ok)}
+.flag.okf{background:var(--ok-bg);color:var(--ok)}
 .chip{display:inline-block;background:var(--chip);color:var(--brand-d);border-radius:999px;padding:.15rem .7rem;font-size:.85rem;font-weight:600;margin:.1rem}
 /* ============ misc ============ */
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.6rem}
@@ -162,6 +170,87 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:1rem 0}
 .prt .rc-info{display:flex;justify-content:space-between;font-size:12px;margin-bottom:.5rem;flex-wrap:wrap;gap:.3rem}
 .prt .idcard svg{display:block;max-width:100%;max-height:100%}
 
+/* ============ Round 81: professional SaaS design system ============ */
+/* Look only: palette + depth + motion. No new network, no new assets.
+   All motion is transform/opacity; reduced-motion kills it (see the media
+   query at the end of this block). */
+/* header: deep-navy gradient, brand mark */
+.hdr{background:linear-gradient(90deg,var(--navy) 0%,var(--brand) 65%,var(--brand-2) 100%);box-shadow:0 2px 12px rgba(15,60,55,.28)}
+.hdr .brandmark{display:flex;align-items:center;gap:.6rem;min-width:0}
+.hdr-logo{width:36px;height:36px;border-radius:10px;overflow:hidden;flex:none;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.28)}
+.hdr-logo img,.hdr-logo svg{width:36px;height:36px;display:block}
+.hdr .school{text-shadow:0 1px 2px rgba(0,0,0,.2)}
+/* tabs: designed pills with icons, group gaps, gradient active state */
+.tabs{gap:.35rem;padding:.5rem .6rem;scrollbar-width:thin}
+.tab{display:inline-flex;align-items:center;gap:.35rem;border:1px solid var(--line);background:#fff;border-radius:12px;padding:.5rem .8rem;min-height:44px;cursor:pointer;color:var(--ink);font-weight:600;transition:background .16s var(--ease),color .16s var(--ease),transform .16s var(--ease),box-shadow .16s var(--ease),border-color .16s var(--ease)}
+.tab-ic{font-size:1rem;line-height:1}
+.tab-lb{white-space:nowrap}
+.tab:hover{transform:translateY(-1px);box-shadow:var(--sh-1);border-color:#b8d8d1}
+.tab[aria-selected="true"]{background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;border-color:transparent;font-weight:700;box-shadow:0 4px 14px rgba(15,60,55,.35)}
+.tab.grp-first{margin-inline-start:.6rem}
+/* cards + KPI tiles: layered depth, entrance rise, accent bars */
+.card{border-radius:var(--r);box-shadow:var(--sh-1);border-color:#e2e9e7}
+#view>.card{animation:rise .24s var(--ease) both}
+#view>.hero{animation:rise .3s var(--ease) both}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.dash-card,.brief-card{position:relative;overflow:hidden}
+.dash-card::before,.brief-card::before{content:"";position:absolute;inset:0 0 auto 0;height:4px;background:linear-gradient(90deg,var(--brand),var(--brand-2),#5eead4)}
+.brief-list{list-style:none;margin:.4rem 0 0;padding:0}
+.brief-list li{padding:.45rem .6rem .45rem 1.6rem;position:relative;border-top:1px solid #edf2f1}
+.brief-list li:first-child{border-top:0}
+.brief-list li::before{content:"";position:absolute;inset-inline-start:.35rem;top:50%;width:8px;height:8px;margin-top:-4px;border-radius:50%;background:var(--brand-2);box-shadow:0 0 0 3px var(--brand-soft)}
+.kpi{border-radius:var(--r);box-shadow:var(--sh-1);position:relative;overflow:hidden;padding-top:1rem}
+.kpi::before{content:"";position:absolute;inset:0 0 auto 0;height:4px;background:linear-gradient(90deg,var(--brand),var(--brand-2))}
+.kpi .n{font-size:1.8rem}
+.chip{border:1px solid #cfe4de;background:linear-gradient(180deg,#f4faf8,#e6f4f1);box-shadow:0 1px 2px rgba(15,60,55,.05)}
+/* tables: panel frame, zebra rows, hover */
+.twrap{border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh-1);background:#fff}
+table.grid th{background:linear-gradient(180deg,#f2f8f6,#e2efec);font-weight:700}
+table.grid tr:nth-child(even):not(.totalrow) td{background:#f7faf9}
+table.grid tr:hover td{background:#e9f4f0}
+table.grid tr:focus-within td{background:var(--brand-soft)}
+/* buttons + inputs: press states, focus rings */
+.btn{border-radius:10px;box-shadow:0 1px 2px rgba(15,60,55,.06);transition:transform .12s var(--ease),box-shadow .16s var(--ease),filter .16s var(--ease),background .16s var(--ease)}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:linear-gradient(135deg,var(--brand),var(--brand-2));box-shadow:0 4px 14px rgba(15,60,55,.30)}
+.btn-primary:hover{filter:brightness(1.06)}
+/* Round 81 Palette B (ChatGPT): amber CTA on the key action buttons — the
+   login + signup submits and the fee Pay button in the records table.
+   (The salary Pay submit stays teal: the mockup's Pay is the fee-table one.) */
+#lg-go,#sg-go{background:var(--cta);border-color:transparent;color:#231600;box-shadow:0 4px 14px rgba(245,158,11,.35)}
+#lg-go:hover,#sg-go:hover{background:var(--cta-h)}
+.fee-pay{background:var(--cta);border-color:transparent;color:#231600;box-shadow:0 2px 8px rgba(245,158,11,.30)}
+.fee-pay:hover{background:var(--cta-h)}
+.field input,.field select,.field textarea{border-radius:var(--r-sm)}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(15,60,55,.15);outline:none}
+.btn:focus-visible,.field input:focus-visible,.field select:focus-visible,.field textarea:focus-visible,.tab:focus-visible,.langbtn:focus-visible{outline:3px solid rgba(15,60,55,.45);outline-offset:1px}
+/* messages slide in; skeleton bars pulse (opacity only) */
+.msg{animation:slidein .2s var(--ease) both;border-inline-start:4px solid currentColor}
+@keyframes slidein{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.skel{height:14px;border-radius:6px;background:#e2e9e7;animation:skelpulse 1.2s ease-in-out infinite}
+.skel.short{width:60%}
+@keyframes skelpulse{50%{opacity:.5}}
+/* hero (login + signup): navy gradient stage, floating card, canvas depth */
+.hero{position:relative;overflow:hidden;border-radius:var(--r-lg);background:linear-gradient(160deg,var(--navy) 0%,var(--brand) 55%,var(--brand-2) 100%);padding:2.2rem .9rem;box-shadow:var(--sh-2)}
+.hero-canvas{position:absolute;inset:0;width:100%;height:100%;opacity:.55;pointer-events:none}
+.hero-card{position:relative;z-index:1;animation:herofloat 5s ease-in-out infinite}
+@keyframes herofloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.hero-trust{display:flex;flex-wrap:wrap;gap:.35rem;justify-content:center;margin:.7rem 0 .2rem}
+/* pricing: featured plan card */
+.pricing-card h2{font-size:1.5rem}
+.plan-feat{border-radius:var(--r);border:1px solid #cfe4de;background:linear-gradient(180deg,#f4faf8,#e6f4f1);box-shadow:var(--sh-1);padding:.9rem;margin:.8rem 0}
+.plan-feat .big{font-size:1.6rem;font-weight:800;color:var(--brand-d)}
+/* laptop: tabs may wrap into grouped rows; hero breathes */
+@media(min-width:900px){
+  .tabs{flex-wrap:wrap;overflow-x:visible}
+  .tab.grp-first{margin-inline-start:1rem}
+  .hero{padding:3rem 1.2rem}
+}
+/* reduced motion: everything still, canvas draws one static frame (JS) */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+
 /* ============ print ============ */
 @page{size:A4;margin:11mm}
 @media print{
@@ -187,7 +276,8 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:1rem 0}
 <div class="app" id="app">
   <header class="hdr no-print">
     <div class="row">
-      <div>
+      <div class="brandmark">
+        <span class="hdr-logo" id="hdr-logo" aria-hidden="true"></span>
         <div class="school" id="hdr-school">School Record System</div>
       </div>
       <div class="langwrap">
@@ -14775,8 +14865,10 @@ function countryPriceText(code){
   return p.cur+" "+fmtNum(p.price)+" "+t("pricing_per_month")+(p.note?" ("+p.note+")":"");
 }
 function pricingHTML(){
-  let h='<div class="card" style="max-width:640px;margin:2rem auto"><h2>💰 '+esc(t("pricing_title"))+'</h2>'+
-    '<p class="muted">'+esc(t("pricing_hint"))+"</p>"+
+  const pk0=countryPack("PK");
+  let h='<div class="card pricing-card" style="max-width:640px;margin:2rem auto"><h2>💰 '+esc(t("pricing_title"))+'</h2>'+
+    '<p class="muted">'+esc(t("pricing_hint"))+'</p>'+
+    '<div class="plan-feat"><div class="muted">'+esc(pk0.name)+'</div><div class="big">'+esc(pk0.cur+" "+fmtNum(pk0.price))+'</div><div>'+esc(t("pricing_per_month"))+' • '+esc(pk0.cur+" "+fmtNum(annualPrice(pk0)))+' '+esc(t("pricing_per_year"))+' ('+esc(t("pricing_save"))+' '+esc(pk0.cur+" "+fmtNum(annualSave(pk0)))+')</div><div class="muted">'+esc(pk0.rails)+' • '+esc(pk0.board)+'</div></div>'+
     '<div class="twrap"><table class="grid"><tr><th>'+esc(t("country"))+'</th><th>'+esc(t("sub_price"))+'</th><th>'+esc(t("pricing_annual"))+'</th><th>'+esc(t("sub_rails"))+'</th><th>'+esc(t("pricing_board"))+"</th></tr>"+
     COUNTRY_PACKS.map(function(p){
       return "<tr><td>"+esc(p.name)+"</td><td><b>"+esc(p.cur+" "+fmtNum(p.price))+"</b> "+esc(t("pricing_per_month"))+(p.note?"<br><span class=\"muted\">"+esc(p.note)+"</span>":"")+"</td><td><b>"+esc(p.cur+" "+fmtNum(annualPrice(p)))+"</b> "+esc(t("pricing_per_year"))+"<br><span class=\"muted\">"+esc(t("pricing_save"))+" "+esc(p.cur+" "+fmtNum(annualSave(p)))+"</span></td><td>"+esc(p.rails)+"</td><td>"+esc(p.board)+"</td></tr>";
@@ -15520,6 +15612,8 @@ function applyLang(){
   document.documentElement.lang=L;
   document.documentElement.dir=langDir();
   $("hdr-school").textContent=headerSchoolName();
+  const hl=$("hdr-logo");
+  if(hl){const lg=(db().settings||{}).logoDataUrl;hl.innerHTML=lg?'<img src="'+lg+'" alt="">':logoSVG(36);}
   $("lang-toggle").textContent=(LANGS[L]||LANGS.en).native+" ▾";
   const lms=$("lang-menu-search");if(lms)lms.placeholder=t("lang_search");
 }
@@ -15651,6 +15745,13 @@ pay_methods_hint:{en:"Tick the methods parents may use. Only the ticked methods 
 sub_renew_intl:{en:"International schools: ask the admin for a Payoneer payment request — pay by card or bank transfer, and access is switched on after payment.",ur:"بین الاقوامی اسکول: ایڈمن سے Payoneer ادائیگی کی درخواست مانگیں — کارڈ یا بینک ٹرانسفر سے ادائیگی کریں، اور ادائیگی کے بعد رسائی آن کر دی جائے گی۔",bn:"আন্তর্জাতিক স্কুল: অ্যাডমিনের কাছে Payoneer পেমেন্টের অনুরোধ করুন — কার্ড বা ব্যাংক ট্রান্সফারে পেমেন্ট করুন, পেমেন্টের পর অ্যাক্সেস চালু করা হবে।",hi:"अंतरराष्ट्रीय स्कूल: एडमिन से Payoneer भुगतान अनुरोध माँगें — कार्ड या बैंक ट्रांसफ़र से भुगतान करें, भुगतान के बाद एक्सेस चालू कर दिया जाएगा।",ne:"अन्तर्राष्ट्रिय विद्यालयहरू: एडमिनसँग Payoneer भुक्तानी अनुरोध माग्नुहोस् — कार्ड वा बैंक स्थानान्तरणबाट भुक्तानी गर्नुहोस्, भुक्तानीपछि पहुँच खोलिन्छ।",sw:"Shule za kimataifa: mwombe msimamizi ombi la malipo la Payoneer — lipa kwa kadi au uhamisho wa benki, na ufikiaji utawashwa baada ya malipo.",ar:"المدارس الدولية: اطلب من المدير طلب دفع عبر Payoneer — ادفع بالبطاقة أو التحويل البنكي، وسيتم تشغيل الوصول بعد الدفع.",zh:"国际学校：请向管理员索取 Payoneer 付款请求——可通过银行卡或银行转账付款，付款后即开通使用权限。",es:"Escuelas internacionales: pidan al administrador una solicitud de pago de Payoneer; paguen con tarjeta o transferencia bancaria y el acceso se activará después del pago.",fr:"Écoles internationales : demandez à l'administrateur une demande de paiement Payoneer — payez par carte ou virement bancaire, et l'accès sera activé après le paiement.",pt:"Escolas internacionais: peçam ao administrador um pedido de pagamento Payoneer — paguem por cartão ou transferência bancária e o acesso será ativado após o pagamento.",ru:"Международные школы: попросите у администратора запрос платежа Payoneer — оплатите картой или банковским переводом, доступ включат после оплаты.",id:"Sekolah internasional: minta permintaan pembayaran Payoneer kepada admin — bayar dengan kartu atau transfer bank, dan akses akan diaktifkan setelah pembayaran.",de:"Internationale Schulen: Bitten Sie den Administrator um eine Payoneer-Zahlungsanfrage — zahlen Sie per Karte oder Banküberweisung, der Zugang wird nach der Zahlung freigeschaltet.",ja:"海外の学校：管理者にPayoneerの支払いリクエストを依頼してください — カードまたは銀行振込でお支払いいただくと、お支払い後にアクセスが有効になります。",pa:"بین الاقوامی سکول: ایڈمن توں Payoneer ادائیگی دی درخواست منگو — کارڈ یا بینک ٹرانسفر نال ادا کرو، تے ادائیگی توں بعد رسائی چالو کر دتی جاوے گی۔",mr:"आंतरराष्ट्रीय शाळा: प्रशासकाकडे Payoneer भरणा विनंती मागा — कार्ड किंवा बँक हस्तांतरणाद्वारे भरा, भरणा केल्यावर प्रवेश सुरू केला जाईल.",te:"అంతర్జాతీయ పాఠశాలలు: నిర్వాహకుడిని Payoneer చెల్లింపు అభ్యర్థన అడగండి — కార్డ్ లేదా బ్యాంక్ బదిలీ ద్వారా చెల్లించండి, చెల్లింపు తర్వాత యాక్సెస్ ఆన్ చేయబడుతుంది.",fa:"مدارس بین‌المللی: از مدیر درخواست پرداخت Payoneer بخواهید — با کارت یا انتقال بانکی پرداخت کنید و دسترسی پس از پرداخت فعال می‌شود.",tr:"Uluslararası okullar: yöneticiden bir Payoneer ödeme isteği isteyin — kart veya banka havalesi ile ödeyin, erişim ödemeden sonra açılır.",ta:"சர்வதேச பள்ளிகள்: நிர்வாகியிடம் Payoneer கட்டண கோரிக்கையைக் கேளுங்கள் — அட்டை அல்லது வங்கிப் பரிமாற்றம் மூலம் செலுத்தவும், கட்டணம் செலுத்திய பிறகு அணுகல் இயக்கப்படும்.",vi:"Trường quốc tế: hãy xin quản trị viên yêu cầu thanh toán Payoneer — thanh toán bằng thẻ hoặc chuyển khoản ngân hàng, quyền truy cập sẽ được bật sau khi thanh toán.",ko:"국제 학교: 관리자에게 Payoneer 결제 요청을 요청하세요 — 카드나 은행 송금으로 납부하시면 납부 후 이용이 활성화됩니다.",tl:"Mga internasyonal na paaralan: humingi sa admin ng kahilingan sa pagbabayad sa Payoneer — magbayad sa pamamagitan ng card o bank transfer, at bubuksan ang access pagkatapos ng bayad.",ha:"Makarantun ƙasashen waje: ku roƙi admin buƙatar biyan kuɗi ta Payoneer — ku biya da katin ko canja wurin banki, kuma za a kunna damar ku bayan biya.",it:"Scuole internazionali: chiedete all'amministratore una richiesta di pagamento Payoneer — pagate con carta o bonifico bancario e l'accesso verrà attivato dopo il pagamento.",ps:"نړیوال ښوونځي: له مدیر څخه د Payoneer د تادیې غوښتنه وکړئ — د کارت یا بانکي لېږد له لارې ورکړئ، او لاسرسی به له تادیې وروسته فعال شي.",ms:"Sekolah antarabangsa: minta permintaan pembayaran Payoneer daripada admin — bayar dengan kad atau pindahan bank, dan akses akan diaktifkan selepas pembayaran.",yo:"Àwọn ilé-ìwé àgbáyé: béèrè lọ́wọ́ adámì fún ìbéèrè ìsanwó Payoneer — san nípa káàdì tàbí gbé owó lọ sí báǹkì, a ó sì tan ìwọ̀lẹ̀ lẹ́yìn ìsanwó.",ig:"Ụlọ akwụkwọ mba ụwa: rịọ onye nchịkwa arịrịọ ịkwụ ụgwọ Payoneer — kwụọ site na kaadị maọbụ mbufe ụlọ akụ, a ga-agbanye ohere gị mgbe ịkwụchara ụgwọ."},
 });
 
+/* ================= i18n additions: Round 81 professional SaaS look ================= */
+Object.assign(T,{
+hero_trial:{en:"30-day free trial",ur:"30 دن کی مفت آزمائش",bn:"30 দিনের বিনামূল্যে ট্রায়াল",hi:"30 दिन का मुफ़्त ट्रायल",ne:"30-दिने नि:शुल्क परीक्षण",sw:"Jaribio la bure la siku 30",ar:"تجربة مجانية لمدة 30 يومًا",zh:"30 天免费试用",es:"Prueba gratuita de 30 días",fr:"Essai gratuit de 30 jours",pt:"Teste gratuito de 30 dias",ru:"Бесплатный пробный период — 30 дней",id:"Uji coba gratis 30 hari",de:"30 Tage kostenlose Testversion",ja:"30日間無料試用",pa:"30 دن دی مفت آزمائش",mr:"30 दिवसांची मोफत चाचणी",te:"30 రోజుల ఉచిత విచారణ",fa:"آزمایش رایگان ۳۰ روزه",tr:"30 günlük ücretsiz deneme",ta:"30 நாள் இலவச விசாரணை",vi:"Dùng thử miễn phí 30 ngày",ko:"30일 무료 체험",tl:"Libreng pagsubok sa loob ng 30 araw",ha:"Gwaji kyauta na kwana 30",it:"Prova gratuita di 30 giorni",ps:"د 30 ورځو وړیا ازمېښت",ms:"Percubaan percuma 30 hari",yo:"Ìdánwò ọ̀fẹ́ fún ọjọ́ 30",ig:"Nnwale n'efu nke ụbọchị 30"},
+hero_price:{en:"Flat price — never per student",ur:"فلیٹ قیمت — فی طالب علم کبھی نہیں",bn:"ফ্ল্যাট দাম — কখনও প্রতি শিক্ষার্থী নয়",hi:"फ्लैट कीमत — कभी प्रति छात्र नहीं",ne:"फ्ल्याट मूल्य — कहिल्यै प्रति विद्यार्थी होइन",sw:"Bei moja — kamwe si kwa kila mwanafunzi",ar:"سعر ثابت — وليس لكل طالب",zh:"统一价格——绝不按学生收费",es:"Precio fijo: nunca por alumno",fr:"Prix fixe — jamais par élève",pt:"Preço fixo — nunca por aluno",ru:"Фиксированная цена — не за ученика",id:"Harga tetap — bukan per siswa",de:"Festpreis — nie pro Schüler",ja:"定額制——生徒ごとの課金なし",pa:"فلیٹ قیمت — فی طالب علم کدی نئیں",mr:"फ्लॅट किंमत — कधीही प्रति विद्यार्थी नाही",te:"ఫ్లాట్ ధర — విద్యార్థికి ఎప్పుడూ కాదు",fa:"قیمت ثابت — هرگز به‌ازای هر دانش‌آموز نیست",tr:"Sabit fiyat — öğrenci başına asla değil",ta:"நிலையான விலை — மாணவருக்கு ஒருபோதும் இல்லை",vi:"Giá cố định — không bao giờ tính theo học sinh",ko:"정액 요금 — 학생당 과금 없음",tl:"Isang presyo lang — hindi bawat mag-aaral",ha:"Farashi ɗaya — ba ga kowane ɗalibi ba",it:"Prezzo fisso — mai per studente",ps:"یو شان بیه — هېڅکله د هر زده کوونکي لپاره نه",ms:"Harga tetap — tidak pernah kira setiap pelajar",yo:"Owó kan ṣoṣo — kì í ṣe fún akẹ́kọ̀ọ́ kọ̀ọ̀kan",ig:"Ọnụ ahịa dị larịị — ọ dịghị mgbe ọ bụla nwa akwụkwọ"},
+hero_offline:{en:"Works offline",ur:"آف لائن چلتا ہے",bn:"অফলাইনে চলে",hi:"ऑफ़लाइन चलता है",ne:"अफलाइन चल्छ",sw:"Hufanya kazi bila mtandao",ar:"يعمل دون اتصال",zh:"离线可用",es:"Funciona sin conexión",fr:"Fonctionne hors ligne",pt:"Funciona offline",ru:"Работает офлайн",id:"Bekerja offline",de:"Funktioniert offline",ja:"オフラインで動作",pa:"آف لائن چلدا اے",mr:"ऑफलाइन चालते",te:"ఆఫ్‌లైన్‌లో పనిచేస్తుంది",fa:"آفلاین کار می‌کند",tr:"Çevrimdışı çalışır",ta:"ஆஃப்லைனில் வேலை செய்யும்",vi:"Hoạt động ngoại tuyến",ko:"오프라인으로 작동",tl:"Gumagana nang offline",ha:"Yana aiki ba tare da intanet ba",it:"Funziona offline",ps:"آفلاین کار کوي",ms:"Berfungsi luar talian",yo:"Ó ń ṣiṣẹ́ láìsí ìtàkùn",ig:"Na-arụ ọrụ na-anọghị n'ịntanetị"},
+});
+
 Object.assign(T,{
 tools_th_pyth:{en:"Pythagoras theorem",ur:"قضیہ فیثاغورث",bn:"পিথাগোরাসের উপপাদ্য",hi:"पाइथागोरस प्रमेय",ne:"पाइथागोरस प्रमेय",sw:"Nadharia ya Pythagoras",ar:"نظرية فيثاغورس",zh:"勾股定理",es:"Teorema de Pitágoras",fr:"Théorème de Pythagore",pt:"Teorema de Pitágoras",ru:"Теорема Пифагора",id:"Teorema Pythagoras",de:"Satz des Pythagoras",ja:"ピタゴラスの定理",pa:"قضیہ فیثاغورث",mr:"पायथागोरसचे प्रमेय",te:"పైథాగరస్ సిద్ధాంతం",fa:"قضیه فیثاغورس",tr:"Pisagor teoremi",ta:"பிதாகரஸ் தேற்றம்",vi:"Định lý Pythagoras",ko:"피타고라스 정리",tl:"Teorama ni Pythagoras",ha:"Ka'idar Pythagoras",it:"Teorema di Pitagora",ps:"د فیثاغورث قضیه",ms:"Teorem Pythagoras",yo:"Ẹ̀kọ́ Pythagoras",ig:"Usoro Pythagoras"},
 tools_th_anglesum:{en:"Angles in a triangle",ur:"مثلث کے زاویے",bn:"ত্রিভুজের কোণ",hi:"त्रिभुज के कोण",ne:"त्रिभुजका कोणहरू",sw:"Pembe za pembetatu",ar:"زوايا المثلث",zh:"三角形的内角",es:"Ángulos de un triángulo",fr:"Angles d'un triangle",pt:"Ângulos de um triângulo",ru:"Углы треугольника",id:"Sudut-sudut segitiga",de:"Winkel im Dreieck",ja:"三角形の角",pa:"تکون دے زاویے",mr:"त्रिकोणाचे कोन",te:"త్రిభుజంలో కోణాలు",fa:"زاویه‌های مثلث",tr:"Üçgenin açıları",ta:"முக்கோணத்தின் கோணங்கள்",vi:"Các góc trong tam giác",ko:"삼각형의 각",tl:"Mga anggulo ng tatsulok",ha:"Kusurwoyin uku-uku",it:"Angoli di un triangolo",ps:"د مثلث زاویې",ms:"Sudut dalam segi tiga",yo:"Àwọn igun onígun-mẹ́ta",ig:"Akụkụ nke triaṅgụl"},
@@ -15711,9 +15812,62 @@ tools_days:{en:"days",ur:"دن",bn:"দিন",hi:"दिन",ne:"दिनह�
 const TABS=[["home","nav_home"],["adm","nav_adm"],["dob","nav_dob"],["exam","nav_exam"],["result","nav_result"],["att","nav_att"],["fee","nav_fee"],["staff","nav_staff"],["bc","nav_bc"],["hw","nav_hw"],["tr","nav_transport"],["lib","nav_library"],["cmp","nav_complaints"],["tt","nav_tt"],["he","nav_highered"],["lab","nav_lab"],["cert","nav_cert"],["tools","nav_tools"],["admin","nav_admin"],["settings","nav_settings"]];
 /* Which tab each module toggle controls (Round 22). Shared by renderTabs and quickLinksHTML. */
 const TAB_ON={fee:feesOn,att:attOn,staff:staffOn,bc:bcOn,hw:hwOn,tr:transportOn,lib:libOn,cmp:cmpOn,tt:ttOn,lab:labOn,cert:certOn,he:heOn,admin:function(){return typeof Cloud!=="undefined"&&!!Cloud.isSuperAdmin;}};
+/* ================= Round 81: professional SaaS look — nav icons, groups, hero canvas =================
+   Look only. TAB_ICON is the icon per tab (emoji, offline-safe, matches the
+   app's existing emoji). TAB_GROUPS is the grouping hint for the Round 53
+   regrouping (5 groups: Students, Teaching, Money & People, Parents, School)
+   — data-group attributes + grp-first gaps only; Round 53 confirms the
+   mapping and adds grouped rendering + group labels. Home is the dashboard
+   and stays ungrouped, always first. */
+const TAB_ICON={home:"🏠",adm:"👤",dob:"🎂",exam:"📝",result:"📊",att:"✅",fee:"💰",staff:"👥",bc:"📣",hw:"📚",tr:"🚌",lib:"📖",cmp:"💬",tt:"🗓️",he:"🎓",lab:"🧪",cert:"📜",tools:"🛠️",admin:"👑",settings:"⚙️"};
+const TAB_GROUPS={students:["adm","dob"],teaching:["exam","result","att","hw","tt","he","lab","tools"],money:["fee","staff","bc"],parents:["cmp","tr","lib","cert"],school:["admin","settings"]};
+function tabGroup(id){for(const g in TAB_GROUPS)if(TAB_GROUPS[g].indexOf(id)>=0)return g;return "";}
+/* Login/signup hero canvas: slow floating shapes, pure JS, no library.
+   Pauses when the page is hidden, stops itself when the canvas leaves the
+   DOM (a render replaces the view), draws one static frame on
+   prefers-reduced-motion, and does nothing when there is no 2d context
+   (jsdom, or a browser without canvas). */
+let heroCanvasRaf=0,heroCanvasResize=null;
+function heroCanvasStop(){
+  if(heroCanvasRaf){try{cancelAnimationFrame(heroCanvasRaf);}catch(e){}heroCanvasRaf=0;}
+  if(heroCanvasResize&&typeof window!=="undefined"&&window.removeEventListener){window.removeEventListener("resize",heroCanvasResize);heroCanvasResize=null;}
+}
+function heroCanvasStart(){
+  if(typeof document==="undefined")return;
+  const cv=document.getElementById("hero-canvas");
+  if(!cv||typeof cv.getContext!=="function")return;
+  heroCanvasStop();
+  const ctx=cv.getContext("2d");
+  if(!ctx)return;
+  const dpr=Math.min(typeof window!=="undefined"&&window.devicePixelRatio?window.devicePixelRatio:1,1.5);
+  const size=function(){const r=cv.getBoundingClientRect();cv.width=Math.max(1,Math.round(r.width*dpr));cv.height=Math.max(1,Math.round(r.height*dpr));};
+  size();
+  const shapes=[];for(let i=0;i<14;i++)shapes.push({x:Math.random(),y:Math.random(),r:8+Math.random()*26,s:.00004+Math.random()*.00008,a:.05+Math.random()*.09});
+  const draw=function(t){
+    const w=cv.width,h=cv.height;if(!w||!h)return;
+    ctx.clearRect(0,0,w,h);
+    shapes.forEach(function(s){
+      const y=((s.y-t*s.s)%1+1)%1;
+      ctx.beginPath();ctx.arc(s.x*w,y*h,s.r*dpr,0,6.2832);
+      ctx.fillStyle="rgba(255,255,255,"+s.a+")";ctx.fill();
+    });
+  };
+  if(typeof window!=="undefined"&&window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches){draw(0);return;}
+  heroCanvasResize=function(){if(!cv.isConnected){heroCanvasStop();return;}size();};
+  if(typeof window!=="undefined"&&window.addEventListener)window.addEventListener("resize",heroCanvasResize);
+  const step=function(ts){
+    if(!cv.isConnected){heroCanvasStop();return;}
+    if(typeof document!=="undefined"&&document.hidden){heroCanvasRaf=requestAnimationFrame(step);return;}
+    draw(ts||0);heroCanvasRaf=requestAnimationFrame(step);
+  };
+  heroCanvasRaf=requestAnimationFrame(step);
+}
 function renderTabs(){
+  let prevGroup="";
   $("tabs").innerHTML=TABS.filter(function(x){return !TAB_ON[x[0]]||TAB_ON[x[0]]();}).map(function(x){
-    return '<button type="button" role="tab" class="tab" data-tab="'+x[0]+'" aria-selected="'+(curTab===x[0])+'">'+esc(t(x[1]))+"</button>";
+    const g=tabGroup(x[0]);
+    const first=g&&g!==prevGroup;prevGroup=g;
+    return '<button type="button" role="tab" class="tab'+(first?" grp-first":"")+'" data-tab="'+x[0]+'"'+(g?' data-group="'+g+'"':"")+' aria-selected="'+(curTab===x[0])+'"><span class="tab-ic" aria-hidden="true">'+(TAB_ICON[x[0]]||"•")+'</span><span class="tab-lb">'+esc(t(x[1]))+"</span></button>";
   }).join("");
   Array.prototype.forEach.call($("tabs").children,function(b){
     b.onclick=function(){curTab=b.getAttribute("data-tab");render();};
@@ -16472,10 +16626,11 @@ function renderLogin(){
     :err==="account_blocked"?'<div class="msg err">'+esc(t("login_blocked"))+'</div>'
     :err==="school_blocked"?'<div class="msg err">'+esc(t("login_school_blocked"))+'</div>':"";
   if(err)Cloud.authError="";
-  $("view").innerHTML='<div class="card" style="max-width:420px;margin:2rem auto;text-align:center">'+
+  $("view").innerHTML='<div class="hero"><canvas id="hero-canvas" class="hero-canvas" aria-hidden="true"></canvas><div class="card hero-card" style="max-width:420px;margin:2rem auto;text-align:center">'+
     '<div style="margin:.4rem 0 .2rem">'+logoSVG(72)+'</div>'+
     '<h1 style="margin:.2rem 0;font-size:1.4rem">'+esc(t("app_name"))+'</h1>'+
     '<p class="muted" style="margin:.2rem 0 .8rem">'+esc(t("login_promise"))+'</p>'+
+    '<div class="hero-trust"><span class="chip">✓ '+esc(t("hero_trial"))+'</span><span class="chip">✓ '+esc(t("hero_price"))+'</span><span class="chip">✓ '+esc(t("hero_offline"))+'</span></div>'+
     '<button type="button" class="btn btn-primary" id="lg-demo" style="width:100%">🎓 '+esc(t("demo_try"))+'</button>'+
     '<button type="button" class="btn" id="lg-signup" style="width:100%;margin-top:.5rem">🏫 '+esc(t("signup_title"))+'</button>'+
     '<div style="margin:1rem 0 .5rem;border-top:1px solid var(--line);padding-top:1rem;text-align:start">'+
@@ -16488,7 +16643,8 @@ function renderLogin(){
     '<div style="margin-top:1rem;text-align:center"><button type="button" class="btn btn-sm" id="lg-parent">👨‍👩‍👧 '+esc(t("parent_title"))+"</button> "+
     '<button type="button" class="btn btn-sm" id="lg-verify">✅ '+esc(t("verify_title"))+"</button> "+
     '<button type="button" class="btn btn-sm" id="lg-pricing">💰 '+esc(t("pricing_title"))+"</button></div>"+
-    "</div>";
+    "</div></div>";
+  heroCanvasStart();
   const ld=$("lg-demo");
   if(ld)ld.onclick=function(){const r=enterDemo();if(r.ok)render();else $("lg-msg").innerHTML='<div class="msg err">'+esc(r.error)+"</div>";};
   $("lg-go").onclick=function(){
@@ -16515,7 +16671,7 @@ function renderSignup(){
   applyLang();
   $("tabs").innerHTML="";
   const opts=COUNTRY_PACKS.map(function(p){return '<option value="'+p.code+'"'+(p.code==="PK"?" selected":"")+'>'+esc(p.name)+"</option>";}).join("");
-  $("view").innerHTML='<div class="card" style="max-width:480px;margin:2rem auto"><h2>🏫 '+esc(t("signup_title"))+"</h2>"+
+  $("view").innerHTML='<div class="hero"><canvas id="hero-canvas" class="hero-canvas" aria-hidden="true"></canvas><div class="card hero-card" style="max-width:480px;margin:2rem auto"><h2>🏫 '+esc(t("signup_title"))+"</h2>"+
     '<p class="muted">'+esc(t("signup_hint"))+"</p>"+
     '<div class="field"><label>'+esc(t("signup_school"))+'</label><input id="sg-name" autocomplete="off"></div>'+
     '<div class="field"><label>'+esc(t("signup_contact"))+'</label><input id="sg-contact" autocomplete="off"></div>'+
@@ -16526,7 +16682,8 @@ function renderSignup(){
     '<div class="field"><label>'+esc(t("signup_students"))+'</label><input id="sg-students" type="number" min="0" inputmode="numeric"></div>'+
     '<div id="sg-msg"></div>'+
     '<button type="button" class="btn btn-primary" id="sg-go" style="width:100%">'+esc(t("signup_send"))+"</button>"+
-    '<div style="margin-top:1rem"><button type="button" class="btn btn-sm" id="sg-back">← '+esc(t("parent_back"))+"</button></div></div>";
+    '<div style="margin-top:1rem"><button type="button" class="btn btn-sm" id="sg-back">← '+esc(t("parent_back"))+"</button></div></div></div>";
+  heroCanvasStart();
   const back=$("sg-back");
   if(back)back.onclick=function(){signupMode=false;render();};
   const go=$("sg-go");
@@ -16550,7 +16707,7 @@ function render(){
   if(signupMode){renderSignup();return;}
   if(parentMode){renderParent();return;}
   if(typeof Cloud!=="undefined"&&Cloud.enabled&&!demoMode){
-    if(!Cloud.authResolved){$("tabs").innerHTML="";$("view").innerHTML='<div class="card"><p class="muted">⏳ '+esc(t("connecting"))+'</p></div>';return;}
+    if(!Cloud.authResolved){$("tabs").innerHTML="";$("view").innerHTML='<div class="card"><p class="muted">⏳ '+esc(t("connecting"))+'</p><div class="skel"></div><div class="skel short" style="margin-top:.5rem"></div></div>';return;}
     if(!Cloud.user){renderLogin();return;}
   }
   if((curTab==="fee"&&!feesOn())||(curTab==="att"&&!attOn())||(curTab==="staff"&&!staffOn())||(curTab==="bc"&&!bcOn())||(curTab==="hw"&&!hwOn())||(curTab==="tr"&&!transportOn())||(curTab==="lib"&&!libOn())||(curTab==="cmp"&&!cmpOn())||(curTab==="he"&&!heOn())||(curTab==="tt"&&!ttOn())||(curTab==="lab"&&!labOn())||(curTab==="cert"&&!certOn())||(curTab==="admin"&&!(typeof Cloud!=="undefined"&&Cloud.isSuperAdmin)))curTab="home";
@@ -16899,7 +17056,7 @@ function dashStatsHTML(){
   const groups={};
   db().students.forEach(function(s){const k=clsLabel(s.cls,s.section);groups[k]=(groups[k]||0)+1;});
   const keys=Object.keys(groups).sort();
-  let h='<div class="card"><h3>'+esc(t("dash_title"))+'</h3><div class="toolbar">'+
+  let h='<div class="card dash-card"><h3>'+esc(t("dash_title"))+'</h3><div class="toolbar">'+
     '<span class="chip">'+esc(t("kpi_students"))+": <b>"+db().students.length+"</b></span>"+
     keys.map(function(k){
       return '<button type="button" class="chip" data-clsgo="'+esc(k)+'" style="cursor:pointer">'+esc(k)+": <b>"+groups[k]+"</b></button>";
@@ -17534,7 +17691,7 @@ function briefingHTML(){
     if(d.state!=="active")items.push(t("brief_renew")+": "+(d.state==="overdue"?t("sub_overdue"):t("sub_due_in").replace("{days}",d.days)));
   }
   if(!items.length)return "";
-  return '<div class="card"><h3>☀️ '+esc(t("brief_title"))+'</h3><ul>'+
+  return '<div class="card brief-card"><h3>☀️ '+esc(t("brief_title"))+'</h3><ul class="brief-list">'+
     items.map(function(x){return "<li>"+esc(x)+"</li>";}).join("")+"</ul></div>";
 }
 function viewHome(){
@@ -21657,7 +21814,7 @@ const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,LAN
   addLabItem:addLabItem,updateLabItem:updateLabItem,deleteLabItem:deleteLabItem,
   addMaint:addMaint,labAlerts:labAlerts,maintTotal:maintTotal,
   exportCSV:exportCSV,exportJSON:exportJSON,importJSON:importJSON,mergeJSON:mergeJSON,seedDemo:seedDemo,
-  emptyStateHTML:emptyStateHTML,headerSchoolName:headerSchoolName,enterDemo:enterDemo,leaveDemo:leaveDemo,isDemoMode:isDemoMode,logoSVG:logoSVG,langListRows:langListRows,wireLangList:wireLangList,drawHeaderLangList:drawHeaderLangList,DEMO_LS_KEY:DEMO_LS_KEY,
+  emptyStateHTML:emptyStateHTML,headerSchoolName:headerSchoolName,enterDemo:enterDemo,leaveDemo:leaveDemo,isDemoMode:isDemoMode,logoSVG:logoSVG,TAB_ICON:TAB_ICON,TAB_GROUPS:TAB_GROUPS,heroCanvasStart:heroCanvasStart,langListRows:langListRows,wireLangList:wireLangList,drawHeaderLangList:drawHeaderLangList,DEMO_LS_KEY:DEMO_LS_KEY,
   takeSnapshot:takeSnapshot,snapshotsList:snapshotsList,restoreSnapshot:restoreSnapshot,
   csvTemplateText:csvTemplateText,importStudentsCSV:importStudentsCSV,parseCSV:parseCSV,regPhotoHTML:regPhotoHTML,
   normUrduDigits:normUrduDigits,parseRegisterLine:parseRegisterLine,parseRegisterLines:parseRegisterLines,
