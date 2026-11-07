@@ -11473,8 +11473,13 @@ const Cloud = {
         if(self.school.name){db().settings.schoolName=self.school.name;Store.trySave();}
         return self.fs.collection("platformAdmins").doc(u.uid).get().then(function(asnap){
           self.isSuperAdmin=asnap.exists;
+          /* Round 83: after the rules fix, a non-admin teacher's read of
+             platform/ai is DENIED — that must mean "no platform key", never
+             a failed sign-in. A denied read is swallowed here; any other
+             failure above still reaches the outer catch and signs out. */
           return self.fs.collection("platform").doc("ai").get().then(function(psnap){
             self.platformKey=(psnap.exists&&(psnap.data()||{}).geminiKey)||"";
+          }).catch(function(){self.platformKey="";}).then(function(){
             self.authResolved=true;self.ready=true;
             self.pushPublicInfo();
             self.localBeforeSync=JSON.stringify(db());
@@ -11543,7 +11548,9 @@ const Cloud = {
       D.marks[ex][st]=Object.assign({},d.subjects||{});
       return;
     }
-    if(coll==="settings"){if(d.settings)D.settings=Object.assign({},D.settings,d.settings);if(d.seq)D.seq=Object.assign({},D.seq,d.seq);return;}
+    /* Round 83: a stale key still sitting in the cloud settings doc must
+       never overwrite the phone's own key when it arrives here. */
+    if(coll==="settings"){if(d.settings){const _s83i=Object.assign({},d.settings);delete _s83i.geminiKey;D.settings=Object.assign({},D.settings,_s83i);}if(d.seq)D.seq=Object.assign({},D.seq,d.seq);return;}
     if(coll==="timetable"){D.timetable[id]=d.grid||{};return;}
     if(coll==="attendance"){D.attendance[id]=d.recs||{};return;}
     if(coll==="staffAtt"){D.staffAtt[id]=d.recs||{};return;}
@@ -11614,7 +11621,11 @@ const Cloud = {
     Object.keys(d.staffAtt||{}).forEach(function(k){f.staffAtt[k]={date:k,recs:d.staffAtt[k]};});
     Object.keys(d.dateSheets||{}).forEach(function(k){f.dateSheets[k]={examId:k,entries:d.dateSheets[k].entries||[]};});
     Object.keys(d.admitIssued||{}).forEach(function(k){f.admitIssued[k]={examId:k,at:d.admitIssued[k].at,count:d.admitIssued[k].count};});
-    f.settings.main={settings:d.settings,seq:d.seq};
+    /* Round 83: the teacher's Gemini key never leaves their own phone.
+       The settings doc synced to Firestore carries every setting EXCEPT
+       geminiKey — a synced copy must never hold a credential. */
+    const _s83s=Object.assign({},d.settings);delete _s83s.geminiKey;
+    f.settings.main={settings:_s83s,seq:d.seq};
     return f;
   },
   pushDoc: function(coll,id,data){
@@ -11667,16 +11678,15 @@ const Cloud = {
         .catch(function(){return null;});
     }catch(e){return Promise.resolve(null);}
   },
-  getPublicTimetable: function(schoolId){
+  getPublicTimetable: function(schoolId, clsKey){
     const self=this;
-    if(!self.fs||!schoolId)return Promise.resolve([]);
+    if(!self.fs||!schoolId||!clsKey)return Promise.resolve(null);
     try{
-      return self.fs.collection("schools").doc(schoolId).collection("publicTimetable").get().then(function(snap){
-        const out=[];
-        snap.forEach(function(d){out.push(Object.assign({id:d.id},d.data()||{}));});
-        return out;
-      }).catch(function(){return [];});
-    }catch(e){return Promise.resolve([]);}
+      return self.fs.collection("schools").doc(schoolId).collection("publicTimetable").doc(clsKey).get().then(function(d){
+        if(!d.exists)return null;
+        return Object.assign({id:d.id},d.data()||{});
+      }).catch(function(){return null;});
+    }catch(e){return Promise.resolve(null);}
   },
   pushPublicRoot: function(coll,id,data){
     const self=this;
@@ -16514,8 +16524,7 @@ function renderParent(){
         const ttKey=clsLabel(payload.student.cls,payload.student.section);
         const renderTT=function(grid){ttBox.innerHTML=ttParentHTML(ttKey,grid)||'<div class="card" style="max-width:640px;margin:1rem auto"><p class="muted">'+esc(t("tt_no_tt"))+"</p></div>";};
         if(Cloud.fs&&schoolId){
-          Cloud.getPublicTimetable(schoolId).then(function(all){
-            const row=(all||[]).find(function(x){return x.cls===ttKey;});
+          Cloud.getPublicTimetable(schoolId, ttKey).then(function(row){
             renderTT(row?row.grid:null);
           });
         }else{
@@ -18933,6 +18942,7 @@ platform_key_hint:{en:"One Gemini key for the whole platform. Paste it once here
 platform_key_set:{en:"A platform key is set.",ur:"پلیٹفارم کی مقرر ہے۔",bn:"প্ল্যাটফর্ম কী সেট করা আছে।",hi:"प्लेटफ़ॉर्म कुंजी सेट है।",ne:"प्लेटफर्म की सेट छ।",sw:"Ufunguo wa jukwaa umewekwa.",ar:"تم تعيين مفتاح المنصة.",zh:"已设置平台密钥。",es:"Hay una clave de plataforma configurada.",fr:"Une clé de plateforme est configurée.",pt:"Está definida uma chave de plataforma.",ru:"Ключ платформы установлен.",id:"Kunci platform sudah diatur.",de:"Ein Plattformschlüssel ist festgelegt.",ja:"プラットフォームキーが設定されています。",pa:"پلیٹ فارم دی کنجی لگی ہوئی اے۔",mr:"प्लॅटफॉर्म की सेट केली आहे.",te:"ప్లాట్‌ఫారమ్ కీ సెట్ చేయబడింది.",fa:"کلید پلتفرم تنظیم شده است.",tr:"Bir platform anahtarı ayarlanmış.",ta:"ஒரு இயங்குதள விசை அமைக்கப்பட்டுள்ளது.",vi:"Đã đặt khóa nền tảng.",ko:"플랫폼 키가 설정되었습니다.",tl:"Nakatakda na ang susi ng platform.",ha:"An saita maɓallin dandamali.",it:"È impostata una chiave di piattaforma.",ps:"د پلیټفارم کیلي ټاکل شوې ده.",ms:"Kunci platform telah ditetapkan.",yo:"A ti ṣètò kọ́kọ́rọ́ pẹpẹ.",ig:"Edebere igodo ikpo okwu."},
 platform_key_none:{en:"No platform key set yet.",ur:"ابھی کوئی پلیٹفارم کی مقرر نہیں۔",bn:"এখনো কোনো প্ল্যাটফর্ম কী সেট করা হয়নি।",hi:"अभी कोई प्लेटफ़ॉर्म कुंजी सेट नहीं है।",ne:"अहिलेसम्म कुनै प्लेटफर्म की सेट छैन।",sw:"Hakuna ufunguo wa jukwaa uliowekwa bado.",ar:"لم يتم تعيين مفتاح منصة بعد.",zh:"尚未设置平台密钥。",es:"Aún no hay clave de plataforma configurada.",fr:"Aucune clé de plateforme configurée pour l'instant.",pt:"Ainda não está definida nenhuma chave de plataforma.",ru:"Ключ платформы еще не установлен.",id:"Belum ada kunci platform yang diatur.",de:"Noch kein Plattformschlüssel festgelegt.",ja:"プラットフォームキーはまだ設定されていません。",pa:"اجے کوئی پلیٹ فارم کنجی نئیں لگی۔",mr:"अजून प्लॅटफॉर्म की सेट केलेली नाही.",te:"ప్లాట్‌ఫారమ్ కీ ఇంకా సెట్ చేయబడలేదు.",fa:"هنوز کلید پلتفرمی تنظیم نشده است.",tr:"Henüz platform anahtarı ayarlanmadı.",ta:"இதுவரை இயங்குதள விசை அமைக்கப்படவில்லை.",vi:"Chưa đặt khóa nền tảng.",ko:"플랫폼 키가 아직 설정되지 않았습니다.",tl:"Wala pang nakatakdang susi ng platform.",ha:"Ba a saita maɓallin dandamali ba tukuna.",it:"Nessuna chiave della piattaforma ancora impostata.",ps:"لا هېڅ د پلیټفارم کیلي نه ده ټاکل شوې.",ms:"Tiada kunci platform ditetapkan lagi.",yo:"A kò tíì ṣètò kọ́kọ́rọ́ pẹpẹ.",ig:"Edebeghị igodo ikpo okwu."},
 platform_key_saved:{en:"Platform key saved — every school's AI is now on.",ur:"پلیٹفارم کی محفوظ ہو گئی — ہر اسکول کی اے آئی اب چالو ہے۔",bn:"প্ল্যাটফর্ম কী সংরক্ষিত হয়েছে — প্রতিটি স্কুলের এআই এখন চালু।",hi:"प्लेटफ़ॉर्म कुंजी सहेजी गई — हर स्कूल की एआई अब चालू है।",ne:"प्लेटफर्म की सुरक्षित भयो — हरेक विद्यालयको एआई अब चालु छ।",sw:"Ufunguo wa jukwaa umehifadhiwa — AI ya kila shule sasa imewashwa.",ar:"تم حفظ مفتاح المنصة — الذكاء الاصطناعي في كل مدرسة يعمل الآن.",zh:"平台密钥已保存——每所学校的 AI 现已开启。",es:"Clave de plataforma guardada: la IA de cada escuela ya está activada.",fr:"Clé de plateforme enregistrée : l'IA de chaque école est maintenant activée.",pt:"Chave de plataforma guardada: a IA de cada escola já está ligada.",ru:"Ключ платформы сохранен — искусственный интеллект каждой школы теперь включен.",id:"Kunci platform tersimpan — AI setiap sekolah kini aktif.",de:"Plattformschlüssel gespeichert – die KI jeder Schule ist jetzt aktiviert.",ja:"プラットフォームキーを保存しました — すべての学校のAIが有効になりました。",pa:"پلیٹ فارم کنجی محفوظ ہو گئی — ہر سکول دی AI ہن چالو اے۔",mr:"प्लॅटफॉर्म की जतन झाली — आता प्रत्येक शाळेचे AI चालू आहे.",te:"ప్లాట్‌ఫారమ్ కీ సేవ్ చేయబడింది — ప్రతి పాఠశాల యొక్క AI ఇప్పుడు ఆన్‌లో ఉంది.",fa:"کلید پلتفرم ذخیره شد — هوش مصنوعی هر مدرسه اکنون روشن است.",tr:"Platform anahtarı kaydedildi — her okulun AI'sı artık açık.",ta:"இயங்குதள விசை சேமிக்கப்பட்டது - ஒவ்வொரு பள்ளியின் AI இப்போது இயக்கத்தில் உள்ளது.",vi:"Đã lưu khóa nền tảng — AI của mọi trường đã bật.",ko:"플랫폼 키가 저장되었습니다 — 모든 학교의 AI가 활성화되었습니다.",tl:"Nai-save na ang susi ng platform — naka-on na ang AI ng bawat paaralan.",ha:"An adana maɓallin dandamali — AI na kowace makaranta yanzu a kunne yake.",it:"Chiave della piattaforma salvata: l'intelligenza artificiale di ogni scuola è ora attiva.",ps:"د پلیټفارم کیلي خوندي شوه — د هر ښوونځي AI اوس فعاله ده.",ms:"Kunci platform disimpan — AI setiap sekolah kini dihidupkan.",yo:"A ti fi kọ́kọ́rọ́ pẹpẹ pamọ́ — AI ti ilé-ìwé kọ̀ọ̀kan ti tán báyìí.",ig:"Echekwala igodo ikpo okwu — AI nke ụlọ akwụkwọ ọ bụla adịla ugbu a."},
+platform_key_note:{en:"Shared AI keys are no longer stored here. Each teacher uses their own key in Settings on their own phone.",ur:"مشترکہ AI کیز اب یہاں محفوظ نہیں کی جاتیں۔ ہر استاد اپنی کی Settings میں اپنے فون پر استعمال کرتا ہے۔",bn:"শেয়ার করা AI কী আর এখানে সংরক্ষণ করা হয় না। প্রত্যেক শিক্ষক নিজের ফোনে Settings-এ নিজের কী ব্যবহার করেন।",hi:"साझा AI कुंजियाँ अब यहाँ संग्रहीत नहीं की जातीं। प्रत्येक शिक्षक अपने फ़ोन पर Settings में अपनी कुंजी उपयोग करता है।",ne:"साझा AI कीहरू अब यहाँ भण्डारण गरिँदैन। प्रत्येक शिक्षकले आफ्नो फोनमा Settings मा आफ्नै की प्रयोग गर्छन्।",sw:"Funguo za AI zinazoshirikiwa hazihifadhiwi hapa tena. Kila mwalimu hutumia ufunguo wake mwenyewe katika Settings kwenye simu yake.",ar:"لم تعد مفاتيح الذكاء الاصطناعي المشتركة تُحفظ هنا. يستخدم كل معلم مفتاحه الخاص في الإعدادات على هاتفه.",zh:"共享 AI 密钥不再存储于此。每位教师在自己手机的“设置”中使用自己的密钥。",es:"Las claves de IA compartidas ya no se guardan aquí. Cada docente usa su propia clave en Ajustes en su propio teléfono.",fr:"Les clés d'IA partagées ne sont plus stockées ici. Chaque enseignant utilise sa propre clé dans Paramètres sur son téléphone.",pt:"As chaves de IA partilhadas já não são guardadas aqui. Cada professor usa a sua própria chave em Definições no seu telefone.",ru:"Общие ключи ИИ здесь больше не хранятся. Каждый учитель использует свой ключ в «Настройках» на своём телефоне.",id:"Kunci AI bersama tidak lagi disimpan di sini. Setiap guru menggunakan kuncinya sendiri di Pengaturan pada ponselnya.",de:"Gemeinsame KI-Schlüssel werden hier nicht mehr gespeichert. Jede Lehrkraft verwendet ihren eigenen Schlüssel in den Einstellungen auf dem eigenen Handy.",ja:"共有 AI キーはここに保存されなくなりました。各教師は自分の携帯電話の設定で自分のキーを使います。",pa:"ਸਾਂਝੀਆਂ AI ਕੁੰਜੀਆਂ ਹੁਣ ਇੱਥੇ ਸੰਭਾਲੀਆਂ ਨਹੀਂ ਜਾਂਦੀਆਂ। ਹਰ ਅਧਿਆਪਕ ਆਪਣੇ ਫ਼ੋਨ ਦੀਆਂ Settings ਵਿੱਚ ਆਪਣੀ ਕੁੰਜੀ ਵਰਤਦਾ ਹੈ।",mr:"सामायिक AI की येथे यापुढे जतन केल्या जात नाहीत. प्रत्येक शिक्षक आपल्या फोनवरील Settings मध्ये स्वतःची की वापरतो.",te:"షేర్ చేయబడిన AI కీలు ఇక ఇక్కడ నిల్వ చేయబడవు. ప్రతి ఉపాధ్యాయుడు తన ఫోన్‌లో Settings లో తన స్వంత కీని ఉపయోగిస్తాడు.",fa:"کلیدهای هوش مصنوعی مشترک دیگر اینجا ذخیره نمی‌شوند. هر معلم از کلید خودش در تنظیمات گوشی خودش استفاده می‌کند.",tr:"Paylaşılan yapay zekâ anahtarları artık burada saklanmıyor. Her öğretmen kendi telefonundaki Ayarlar'da kendi anahtarını kullanır.",ta:"பகிரப்பட்ட AI விசைகள் இனி இங்கே சேமிக்கப்படாது. ஒவ்வொரு ஆசிரியரும் தங்கள் தொலைபேசியில் அமைப்புகளில் தங்கள் சொந்த விசையைப் பயன்படுத்துகிறார்கள்.",vi:"Các khóa AI dùng chung không còn được lưu ở đây nữa. Mỗi giáo viên dùng khóa riêng của mình trong Cài đặt trên điện thoại của mình.",ko:"공유 AI 키는 더 이상 여기에 저장되지 않습니다. 각 교사는 자신의 휴대전화 설정에서 자신의 키를 사용합니다.",tl:"Hindi na naka-imbak dito ang mga shared AI key. Ang bawat guro ay gumagamit ng sarili niyang key sa Settings sa sarili niyang telepono.",ha:"Ba a adana maɓallan AI na rabawa a nan kuma. Kowane malami yana amfani da nasa maɓallinsa a Settings a wayarsa.",it:"Le chiavi IA condivise non vengono più memorizzate qui. Ogni insegnante usa la propria chiave in Impostazioni sul proprio telefono.",ps:"شریک شوي AI کیليګانې نور دلته نه ساتل کېږي. هر ښوونکی په خپل ټلیفون کې په Settings کې خپله کیلي کاروي.",ms:"Kunci AI yang dikongsi tidak lagi disimpan di sini. Setiap guru menggunakan kuncinya sendiri dalam Tetapan pada telefonnya.",yo:"A kò sí fi kọ́kọ́rọ́ AI tí a pín pamọ́ níbí mọ́. Olùkọ́ kọ̀ọ̀kan ń lo kọ́kọ́rọ́ tirẹ̀ nínú Settings lórí fóònù tirẹ̀.",ig:"Anaghị echekwa igodo AI a na-ekekọrịta ebe a ọzọ. Onye nkuzi ọ bụla na-eji igodo nke ya na Settings na ekwentị ya."},
 ai_platform:{en:"The platform provides the AI key — nothing to do here.",ur:"پلیٹفارم اے آئی کی فراہم کرتا ہے — یہاں کچھ کرنے کی ضرورت نہیں۔",bn:"প্ল্যাটফর্ম এআই কী সরবরাহ করে — এখানে কিছু করার নেই।",hi:"प्लेटफ़ॉर्म एआई कुंजी देता है — यहां कुछ करने की ज़रूरत नहीं।",ne:"प्लेटफर्मले एआई की दिन्छ — यहाँ केही गर्नु पर्दैन।",sw:"Jukwaa hutoa ufunguo wa AI — hakuna cha kufanya hapa.",ar:"المنصة توفر مفتاح الذكاء الاصطناعي — لا شيء عليك فعله هنا.",zh:"平台提供 AI 密钥——此处无需操作。",es:"La plataforma proporciona la clave de IA: no hay nada que hacer aquí.",fr:"La plateforme fournit la clé IA : rien à faire ici.",pt:"A plataforma fornece a chave de IA: não há nada a fazer aqui.",ru:"Платформа предоставляет ключ AI — здесь делать нечего.",id:"Platform menyediakan kunci AI — tidak ada yang perlu dilakukan di sini.",de:"Die Plattform stellt den KI-Schlüssel bereit – hier gibt es nichts zu tun.",ja:"AIキーはプラットフォームが提供します — ここですることはありません。",pa:"پلیٹ فارم AI کنجی دیندا اے — اتھے کجھ کرن نوں نئیں۔",mr:"प्लॅटफॉर्म AI की देतो — येथे काही करायचे नाही.",te:"ప్లాట్‌ఫారమ్ AI కీని అందిస్తుంది - ఇక్కడ ఏమీ చేయాల్సిన అవసరం లేదు.",fa:"پلتفرم کلید هوش مصنوعی را می‌دهد — اینجا کاری نیست.",tr:"Platform AI anahtarını sağlar — burada yapılacak bir şey yok.",ta:"இயங்குதளம் AI விசையை வழங்குகிறது - இங்கு எதுவும் செய்ய முடியாது.",vi:"Nền tảng cung cấp khóa AI — không cần làm gì ở đây.",ko:"AI 키는 플랫폼에서 제공합니다 — 여기서 할 일은 없습니다.",tl:"Ibinibigay ng platform ang AI key — walang dapat gawin dito.",ha:"Dandamali yana ba da maɓallin AI — babu abin yi a nan.",it:"La piattaforma fornisce la chiave AI: niente da fare qui.",ps:"پلیټفارم AI کیلي ورکوي — دلته هېڅ کار نشته.",ms:"Platform menyediakan kunci AI — tiada apa-apa perlu dilakukan di sini.",yo:"Pẹpẹ náà ni ó ń fún ní kọ́kọ́rọ́ AI — kò sí nǹkan láti ṣe níbí.",ig:"Ikpo okwu na-enye igodo AI — enweghị ihe ime ebe a."},
 admin_block:{en:"Block",ur:"بلاک کریں",bn:"ব্লক করুন",hi:"ब्लॉक करें",ne:"ब्लक गर्नुहोस्",sw:"Zuia",ar:"حظر",zh:"屏蔽",es:"Bloquear",fr:"Bloquer",pt:"Bloquear",ru:"Заблокировать",id:"Blokir",de:"Sperren",ja:"ブロック",pa:"بلاک کرو",mr:"ब्लॉक करा",te:"నిరోధించు",fa:"مسدود کنید",tr:"Engelle",ta:"தடு",vi:"Chặn",ko:"차단",tl:"I-block",ha:"Toshe",it:"Blocca",ps:"بند کړئ",ms:"Sekat",yo:"Dènà",ig:"Gbochie"},
 admin_unblock:{en:"Unblock",ur:"ان بلاک کریں",bn:"আনব্লক করুন",hi:"अनब्लॉक करें",ne:"अनब्लक गर्नुहोस्",sw:"Ondoa zuio",ar:"إلغاء الحظر",zh:"取消屏蔽",es:"Desbloquear",fr:"Débloquer",pt:"Desbloquear",ru:"Разблокировать",id:"Buka blokir",de:"Entsperren",ja:"ブロックを解除",pa:"ان بلاک کرو",mr:"ब्लॉक काढा",te:"అన్‌బ్లాక్ చేయండి",fa:"رفع مسدودیت",tr:"Engeli kaldır",ta:"தடைநீக்கு",vi:"Bỏ chặn",ko:"차단 해제",tl:"I-unblock",ha:"Buɗe toshe",it:"Sblocca",ps:"بند لرې کړئ",ms:"Nyahsekat",yo:"Ṣí ìdènà",ig:"Wepụ mgbochi"},
@@ -19967,11 +19977,7 @@ function viewAdmin(){
   if(typeof Cloud==="undefined"||!Cloud.isSuperAdmin)return '<div class="card"><p class="muted">'+esc(t("login_notallowed"))+'</p></div>';
   return '<div class="card"><h2>👑 '+esc(t("sub_admin"))+'</h2><p class="muted">'+esc(t("sub_admin_hint"))+'</p>'+
     '<div class="card" style="margin:.5rem 0"><h3>✨ '+esc(t("ai_title"))+'</h3>'+
-    '<p class="muted">'+esc(t("platform_key_hint"))+'</p>'+
-    '<div class="field"><label>'+esc(t("ai_key_label"))+'</label>'+
-    '<input id="adm-gemini" type="password" value="" placeholder="AIza..." autocomplete="off"></div>'+
-    '<div class="toolbar"><button type="button" class="btn btn-primary" id="adm-gemini-save">'+esc(t("save"))+'</button> <button type="button" class="btn" id="adm-gemini-test">'+esc(t("ai_test"))+'</button></div>'+
-    '<div id="adm-gemini-msg">'+(Cloud.platformKey?'<div class="msg ok">'+esc(t("platform_key_set"))+'</div>':'<div class="muted">'+esc(t("platform_key_none"))+'</div>')+'</div></div>'+
+    '<p class="muted">'+esc(t("platform_key_note"))+'</p></div>'+
     '<div id="adm-sync"></div><div id="adm-summary"></div><div id="adm-signups"></div><div id="adm-list"><p class="muted">⏳ '+esc(t("connecting"))+'</p></div></div>';
 }
 function adminSchoolHTML(row){
@@ -20097,34 +20103,9 @@ function renderAdminTeachers(schoolId){
   });
 }
 function afterAdmin(){
-  const gs=$("adm-gemini-save");
-  if(gs)gs.onclick=function(){
-    const k=$("adm-gemini").value.trim(),mg=$("adm-gemini-msg");
-    if(!k){mg.innerHTML='<div class="msg err">'+esc(t("ai_no_key"))+'</div>';return;}
-    mg.innerHTML='<div class="msg">'+esc(t("gemini_thinking"))+'</div>';
-    Cloud.setPlatformKey(k).then(function(r){
-      if(r&&r.ok){mg.innerHTML='<div class="msg ok">'+esc(t("platform_key_saved"))+'</div>';$("adm-gemini").value="";}
-      else{mg.innerHTML='<div class="msg err">'+esc(t("ai_save_failed"))+'</div>';}
-    });
-  };
-  const gt2=$("adm-gemini-test");
-  geminiTestBind(gt2,$("adm-gemini-msg"));
-  if(gt2)gt2.onclick=function(){
-    const mg=$("adm-gemini-msg");
-    if(!Cloud.platformKey){mg.innerHTML='<div class="msg err">'+esc(t("ai_no_key"))+'</div>';return;}
-    if(!geminiTestGuard(gt2,mg))return;
-    mg.innerHTML='<div class="msg">'+esc(t("gemini_thinking"))+'</div>';
-    geminiPing(Cloud.platformKey,function(){mg.innerHTML='<div class="msg">'+esc(t("gemini_waiting"))+'</div>';}).then(function(r){
-      geminiTestDone(gt2);
-      if(r.ok){mg.innerHTML='<div class="msg ok">'+esc(t("ai_test_ok"))+'</div>';return;}
-      if(r.reason==="other"&&r.status){
-        if(r.status===500||r.status===502||r.status===503){mg.innerHTML='<div class="msg err">'+esc(t("gemini_status_busy").replace("{status}",String(r.status)))+'</div>';return;}
-        mg.innerHTML='<div class="msg err">'+esc(t("gemini_status").replace("{status}",String(r.status)))+'</div>';return;
-      }
-      const msgs={no_key:"ai_no_key",invalid_key:"gemini_key_bad",not_allowed:"gemini_key_bad",model:"gemini_model",busy:"gemini_busy_final",net:"gemini_offline",empty:"gemini_empty",other:"ai_test_bad"};
-      mg.innerHTML='<div class="msg err">'+esc(t(msgs[r.reason]||"ai_test_bad"))+'</div>';
-    });
-  };
+  /* Round 83: the platform-key save/test card is gone (see viewAdmin) —
+     there is no key input to bind, so the old handlers are removed, not
+     left pointing at elements that no longer exist. */
   loadAdminSignups();
   const sgBox=$("adm-signups");
   if(sgBox)sgBox.onclick=function(ev){
