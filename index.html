@@ -12544,7 +12544,33 @@ function attSummary(date,cls){
     if(v==="P")s.P++;else if(v==="A")s.A++;else if(v==="L")s.L++;else if(v==="V")s.V++;else s.unmarked++;
   });
   s.pct=s.total?Math.round(s.P/s.total*100):0;
+  /* ---- Round 82: the three honest attendance numbers. pct (the rate) is
+     Present ÷ enrolled — unmarked pupils sit in the denominator, so a
+     half-marked register reads low. coverage is Marked ÷ enrolled (how much
+     of the register was actually taken); among is Present ÷ marked (null
+     when nothing was marked yet — rendered as —, never 0%). Late stays its
+     own category in the breakdown; it is never counted as absent. ---- */
+  s.marked=s.total-s.unmarked;
+  s.coverage=s.total?Math.round(s.marked/s.total*100):0;
+  s.among=s.marked?Math.round(s.P/s.marked*100):null;
   return s;
+}
+/* ---- Round 82: the coverage metrics only ("Marked: 6/22 (27%) · Present
+   of marked: 33%"). among is null when nothing was marked yet — shown as
+   —, never 0% and never NaN. ---- */
+function attMetricsHTML(s){
+  return esc(t("att_marked"))+": "+s.marked+"/"+s.total+" ("+s.coverage+"%) · "+esc(t("att_of_marked"))+": "+(s.among===null?"—":s.among+"%");
+}
+/* ---- Round 82: the full honest attendance line for the dashboard —
+   breakdown first, then the two coverage metrics. Late / Leave / Unmarked
+   show only when non-zero, so a fully-marked day reads clean. ---- */
+function attDetailHTML(s){
+  const parts=[esc(t("att_p"))+": "+s.P,esc(t("att_a"))+": "+s.A];
+  if(s.L)parts.push(esc(t("att_l"))+": "+s.L);
+  if(s.V)parts.push(esc(t("att_v"))+": "+s.V);
+  if(s.unmarked)parts.push(esc(t("brief_unmarked"))+": "+s.unmarked);
+  parts.push(attMetricsHTML(s));
+  return parts.join(" · ");
 }
 function attAbsentees(date,cls){
   const list=cls?attStudents(cls):db().students;
@@ -13738,7 +13764,7 @@ function schoolSummary(){
     feeCollected+=feePaid(rec);
   });
   const att=attSummary(todayISO(),"");
-  return {students:(d.students||[]).length,staff:staffActive().length,feeDue:feeDue,feeCollected:feeCollected,attPct:att.total?att.pct:null,at:tsNow()};
+  return {students:(d.students||[]).length,staff:staffActive().length,feeDue:feeDue,feeCollected:feeCollected,attPct:att.total?att.pct:null,attPresent:att.P,attTotal:att.total,attMarked:att.marked,at:tsNow()};
 }
 function hoAggregate(rows){
   const agg={schools:rows.length,active:0,trial:0,expired:0,blocked:0,students:0,staff:0,feeDue:0,feeCollected:0,mrr:0,renewalsDue:0,reported:0};
@@ -15752,6 +15778,13 @@ hero_price:{en:"Flat price — never per student",ur:"فلیٹ قیمت — فی
 hero_offline:{en:"Works offline",ur:"آف لائن چلتا ہے",bn:"অফলাইনে চলে",hi:"ऑफ़लाइन चलता है",ne:"अफलाइन चल्छ",sw:"Hufanya kazi bila mtandao",ar:"يعمل دون اتصال",zh:"离线可用",es:"Funciona sin conexión",fr:"Fonctionne hors ligne",pt:"Funciona offline",ru:"Работает офлайн",id:"Bekerja offline",de:"Funktioniert offline",ja:"オフラインで動作",pa:"آف لائن چلدا اے",mr:"ऑफलाइन चालते",te:"ఆఫ్‌లైన్‌లో పనిచేస్తుంది",fa:"آفلاین کار می‌کند",tr:"Çevrimdışı çalışır",ta:"ஆஃப்லைனில் வேலை செய்யும்",vi:"Hoạt động ngoại tuyến",ko:"오프라인으로 작동",tl:"Gumagana nang offline",ha:"Yana aiki ba tare da intanet ba",it:"Funziona offline",ps:"آفلاین کار کوي",ms:"Berfungsi luar talian",yo:"Ó ń ṣiṣẹ́ láìsí ìtàkùn",ig:"Na-arụ ọrụ na-anọghị n'ịntanetị"},
 });
 
+/* ================= i18n additions: Round 82 honest attendance ================= */
+Object.assign(T,{
+att_of_all:{en:"of all enrolled",ur:"کل داخل طلبہ میں سے",bn:"ভর্তিকৃত সব শিক্ষার্থীর মধ্যে",hi:"सभी नामांकित में से",ne:"सबै भर्ना भएकामध्ये",sw:"kati ya wote walioandikishwa",ar:"من جميع المسجَّلين",zh:"占全部在册学生的",es:"de todos los matriculados",fr:"de tous les inscrits",pt:"de todos os matriculados",ru:"от всех зачисленных",id:"dari semua yang terdaftar",de:"von allen Eingeschriebenen",ja:"在籍者全体の",pa:"سارے داخل طلبہ وچوں",mr:"सर्व नावनोंदणी केलेल्यांपैकी",te:"నమోదైన వారందరిలో",fa:"از همهٔ ثبت‌نام‌شدگان",tr:"kayıtlıların tümünden",ta:"பதிவு செய்யப்பட்ட அனைவரிலும்",vi:"trong tổng số học sinh đã ghi danh",ko:"전체 재학생 중",tl:"sa lahat ng naka-enrol",ha:"daga cikin duka waɗanda aka yi wa rajista",it:"di tutti gli iscritti",ps:"د ټولو نوم لیکنه شویو څخه",ms:"daripada semua yang berdaftar",yo:"nínú gbogbo àwọn tí a forúkọ sílẹ̀",ig:"n'ime ụmụ akwụkwọ niile debanyere aha"},
+att_marked:{en:"Marked",ur:"نشان زدہ",bn:"চিহ্নিত",hi:"चिह्नित",ne:"चिन्ह लगाइएको",sw:"Waliowekwa alama",ar:"مُعلَّم",zh:"已标记",es:"Marcados",fr:"Marqués",pt:"Marcados",ru:"Отмеченные",id:"Ditandai",de:"Markiert",ja:"記入済み",pa:"نشان لگیا",mr:"नोंद केलेले",te:"గుర్తించబడిన",fa:"علامت‌زده",tr:"İşaretlenmiş",ta:"குறிக்கப்பட்ட",vi:"Đã đánh dấu",ko:"표시됨",tl:"Namarkahan",ha:"An yi wa alama",it:"Contrassegnati",ps:"په نښه شوي",ms:"Ditandakan",yo:"Tí a samisi",ig:"Akara akara"},
+att_of_marked:{en:"Present of marked",ur:"نشان زدہ میں سے حاضر",bn:"চিহ্নিতদের মধ্যে উপস্থিত",hi:"चिह्नित में से उपस्थित",ne:"चिन्ह लगाइएकामध्ये उपस्थित",sw:"Waliopo kati ya waliowekwa alama",ar:"الحاضرون من المُعلَّمين",zh:"已标记者中的出勤",es:"Presentes de los marcados",fr:"Présents parmi les marqués",pt:"Presentes dos marcados",ru:"Присутствующие из отмеченных",id:"Hadir dari yang ditandai",de:"Anwesend von den Markierten",ja:"記入済みのうち出席",pa:"نشان لگے وچوں حاضر",mr:"नोंद केलेल्यांपैकी उपस्थित",te:"గుర్తించబడిన వారిలో హాజరు",fa:"حاضران از میان علامت‌زدگان",tr:"İşaretlenenler arasında mevcut",ta:"குறிக்கப்பட்டவர்களில் வருகை",vi:"Có mặt trong số đã đánh dấu",ko:"표시된 인원 중 출석",tl:"Naroroon sa mga namarkahan",ha:"Halarta daga cikin waɗanda aka yi wa alama",it:"Presenti tra i contrassegnati",ps:"حاضر د په نښه شویو څخه",ms:"Hadir dalam kalangan yang ditandakan",yo:"Wíwà láàárín àwọn tí a samisi",ig:"Ọbịbịa n'ime ndị akara akara"},
+});
+
 Object.assign(T,{
 tools_th_pyth:{en:"Pythagoras theorem",ur:"قضیہ فیثاغورث",bn:"পিথাগোরাসের উপপাদ্য",hi:"पाइथागोरस प्रमेय",ne:"पाइथागोरस प्रमेय",sw:"Nadharia ya Pythagoras",ar:"نظرية فيثاغورس",zh:"勾股定理",es:"Teorema de Pitágoras",fr:"Théorème de Pythagore",pt:"Teorema de Pitágoras",ru:"Теорема Пифагора",id:"Teorema Pythagoras",de:"Satz des Pythagoras",ja:"ピタゴラスの定理",pa:"قضیہ فیثاغورث",mr:"पायथागोरसचे प्रमेय",te:"పైథాగరస్ సిద్ధాంతం",fa:"قضیه فیثاغورس",tr:"Pisagor teoremi",ta:"பிதாகரஸ் தேற்றம்",vi:"Định lý Pythagoras",ko:"피타고라스 정리",tl:"Teorama ni Pythagoras",ha:"Ka'idar Pythagoras",it:"Teorema di Pitagora",ps:"د فیثاغورث قضیه",ms:"Teorem Pythagoras",yo:"Ẹ̀kọ́ Pythagoras",ig:"Usoro Pythagoras"},
 tools_th_anglesum:{en:"Angles in a triangle",ur:"مثلث کے زاویے",bn:"ত্রিভুজের কোণ",hi:"त्रिभुज के कोण",ne:"त्रिभुजका कोणहरू",sw:"Pembe za pembetatu",ar:"زوايا المثلث",zh:"三角形的内角",es:"Ángulos de un triángulo",fr:"Angles d'un triangle",pt:"Ângulos de um triângulo",ru:"Углы треугольника",id:"Sudut-sudut segitiga",de:"Winkel im Dreieck",ja:"三角形の角",pa:"تکون دے زاویے",mr:"त्रिकोणाचे कोन",te:"త్రిభుజంలో కోణాలు",fa:"زاویه‌های مثلث",tr:"Üçgenin açıları",ta:"முக்கோணத்தின் கோணங்கள்",vi:"Các góc trong tam giác",ko:"삼각형의 각",tl:"Mga anggulo ng tatsulok",ha:"Kusurwoyin uku-uku",it:"Angoli di un triangolo",ps:"د مثلث زاویې",ms:"Sudut dalam segi tiga",yo:"Àwọn igun onígun-mẹ́ta",ig:"Akụkụ nke triaṅgụl"},
@@ -17063,7 +17096,8 @@ function dashStatsHTML(){
     }).join("")+"</div>";
   h+='<span class="chip">'+esc(t("dash_exams"))+": <b>"+db().exams.length+"</b></span>"+
     (certOn()?'<span class="chip">'+esc(t("dash_certs"))+": <b>"+db().certificates.filter(function(c){return c.status!=="void";}).length+"</b></span>":"")+
-    (attOn()&&db().students.length?'<span class="chip">'+esc(t("dash_att"))+": <b>"+attSummary(todayISO(),"").P+"/"+db().students.length+" ("+attSummary(todayISO(),"").pct+"%)</b></span>":"")+"</div>";
+    (attOn()&&db().students.length?(function(){const _as=attSummary(todayISO(),"");return '<span class="chip">'+esc(t("dash_att"))+": <b>"+_as.P+"/"+db().students.length+" ("+_as.pct+"%)</b> "+esc(t("att_of_all"))+"</span>";})():"")+
+    (attOn()&&db().students.length?'<div class="muted" style="margin:.35rem 0 0">'+attDetailHTML(attSummary(todayISO(),""))+"</div>":"")+"</div>";
   if(feesOn()&&(db().feeRecords||[]).length){
     const fs=feeSummary(todayISO().slice(0,7));
     h+='<div class="toolbar"><span class="chip">'+esc(t("dash_fee"))+": "+esc(t("fee_collected"))+" <b>"+fs.collected+"</b> • "+esc(t("fee_outstanding"))+" <b>"+fs.outstanding+"</b></span></div>";
@@ -17637,7 +17671,7 @@ function briefingHTML(){
   const today=todayISO(),m=today.slice(0,7),items=[];
   if(attOn()){
     const at=attSummary(today);
-    items.push(t("brief_att")+": "+at.P+" "+t("att_p")+", "+at.A+" "+t("att_a")+(at.L?", "+at.L+" "+t("att_l"):"")+(at.unmarked?", "+at.unmarked+" "+t("brief_unmarked"):"")+" / "+at.total);
+    items.push(t("brief_att")+": "+at.P+" "+t("att_p")+", "+at.A+" "+t("att_a")+(at.L?", "+at.L+" "+t("att_l"):"")+(at.unmarked?", "+at.unmarked+" "+t("brief_unmarked"):"")+" / "+at.total+" · "+at.pct+"% "+t("att_of_all")+" · "+attMetricsHTML(at));
   }
   if(feesOn()){
     let defn=0,defAmt=0;
@@ -19947,7 +19981,7 @@ function adminSchoolHTML(row){
     '<button type="button" class="btn btn-sm" data-teachers="'+s.id+'">'+esc(t("admin_teachers"))+'</button></div>'+
     '<div id="adm-teachers-'+s.id+'"></div>'+
     '<span class="muted">'+esc(s.plan==="trial"?t("plan_trial"):t("plan_paid"))+' • '+esc(cycle==="annual"?t("sub_annual"):t("sub_monthly"))+' • '+esc(t("sub_until"))+': '+esc(until||"—")+' • '+esc(pk.cur+" "+fmtNum(amt))+'</span><br><span class="muted">'+esc(t("sub_rails"))+": "+esc(pk.rails)+(((s.country||"PK")!=="PK")?" • "+esc(t("sub_renew_intl")):"")+'</span>'+
-    (function(){const sm=row.info&&row.info.summary;if(!sm)return '<br><span class="muted">'+esc(t("ho_no_summary"))+"</span>";return '<br><span class="muted">'+esc(t("ho_students"))+": "+sm.students+" • "+esc(t("ho_staff"))+": "+sm.staff+" • "+esc(t("ho_att_today"))+": "+(sm.attPct===null?"—":sm.attPct+"%")+" • "+esc(t("ho_fee_collected"))+": "+esc(pk.cur+" "+fmtNum(sm.feeCollected))+" / "+esc(t("ho_fee_due"))+": "+esc(pk.cur+" "+fmtNum(sm.feeDue))+"</span>";})();
+    (function(){const sm=row.info&&row.info.summary;if(!sm)return '<br><span class="muted">'+esc(t("ho_no_summary"))+"</span>";return '<br><span class="muted">'+esc(t("ho_students"))+": "+sm.students+" • "+esc(t("ho_staff"))+": "+sm.staff+" • "+esc(t("ho_att_today"))+": "+(sm.attPct===null||sm.attPct===undefined?"—":((typeof sm.attPresent==="number"&&typeof sm.attTotal==="number"&&typeof sm.attMarked==="number")?sm.attPresent+"/"+sm.attTotal+" ("+sm.attPct+"% "+esc(t("att_of_all"))+") · "+esc(t("att_marked"))+": "+sm.attMarked+"/"+sm.attTotal:sm.attPct+"%"))+" • "+esc(t("ho_fee_collected"))+": "+esc(pk.cur+" "+fmtNum(sm.feeCollected))+" / "+esc(t("ho_fee_due"))+": "+esc(pk.cur+" "+fmtNum(sm.feeDue))+"</span>";})();
   if(due.state!=="active"){
     h+='<div class="toolbar" style="margin-top:.4rem">'+
       (waLink?'<a class="btn btn-sm" href="'+waLink+'" target="_blank">💬 '+esc(t("sub_remind_wa"))+'</a>':"")+
@@ -21803,7 +21837,7 @@ const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,LAN
   annualPrice:annualPrice,annualSave:annualSave,subAmountFor:subAmountFor,subCycleMonths:subCycleMonths,addMonthsISO:addMonthsISO,subDue:subDue,reportSubPayment:reportSubPayment,subPaymentsList:subPaymentsList,waNumber:waNumber,subReminderMsg:subReminderMsg,ANNUAL_DISC:ANNUAL_DISC,
   askAnswer:askAnswer,askNorm:askNorm,askFindStudent:askFindStudent,askFindClass:askFindClass,askBuild:askBuild,ASK_INTENTS:ASK_INTENTS,
   setTTCell:setTTCell,ttConflicts:ttConflicts,ttClasses:ttClasses,ttCell:ttCell,
-  attGet:attGet,setAtt:setAtt,attMarkAll:attMarkAll,attSummary:attSummary,attAbsentees:attAbsentees,
+  attGet:attGet,setAtt:setAtt,attMarkAll:attMarkAll,attSummary:attSummary,attDetailHTML:attDetailHTML,attMetricsHTML:attMetricsHTML,attAbsentees:attAbsentees,
   addStaff:addStaff,setStaffActive:setStaffActive,staffActive:staffActive,staffName:staffName,staffGet:staffGet,setStaffAtt:setStaffAtt,staffMarkAll:staffMarkAll,staffAttSummary:staffAttSummary,staffAbsentees:staffAbsentees,workingDaysInMonth:workingDaysInMonth,staffMonthStats:staffMonthStats,salaryRecord:salaryRecord,salaryPaid:salaryPaid,salaryStatus:salaryStatus,generateSalary:generateSalary,generateAllSalaries:generateAllSalaries,salarySetAdjust:salarySetAdjust,recordSalaryPayment:recordSalaryPayment,salarySummary:salarySummary,salarySlipHTML:salarySlipHTML,askFindStaff:askFindStaff,
   dateSheetFor:dateSheetFor,dateSheetEntries:dateSheetEntries,setDateSheet:setDateSheet,admitCodeFor:admitCodeFor,admitCardHTML:admitCardHTML,admitCardsBatchHTML:admitCardsBatchHTML,dateSheetHTML:dateSheetHTML,issueAdmitCards:issueAdmitCards,withdrawAdmitCards:withdrawAdmitCards,bcOn:bcOn,bcClasses:bcClasses,bcResolve:bcResolve,bcRecipients:bcRecipients,bcNoContact:bcNoContact,bcNoContactList:bcNoContactList,createBroadcast:createBroadcast,bcGet:bcGet,bcNext:bcNext,bcWaLink:bcWaLink,broadcastMark:broadcastMark,bcSummary:bcSummary,schoolSummary:schoolSummary,hoAggregate:hoAggregate,hoSummaryHTML:hoSummaryHTML,adminSchoolHTML:adminSchoolHTML,hwOn:hwOn,hwList:hwList,hwDueCount:hwDueCount,addHomework:addHomework,hwSetDone:hwSetDone,deleteHomework:deleteHomework,hwItemHTML:hwItemHTML,hwParentHTML:hwParentHTML,transportOn:transportOn,routeById:routeById,transportFeeFor:transportFeeFor,addRoute:addRoute,setRouteFee:setRouteFee,deleteRoute:deleteRoute,routeStudents:routeStudents,setStudentTransport:setStudentTransport,transportChipHTML:transportChipHTML,libOn:libOn,todayISO:todayISO,addDaysISO:addDaysISO,libBookById:libBookById,libOutstanding:libOutstanding,libAvailable:libAvailable,addBook:addBook,deleteBook:deleteBook,issueBook:issueBook,returnBook:returnBook,libOverdue:libOverdue,libStudentLoans:libStudentLoans,libDossierHTML:libDossierHTML,admAppOn:admAppOn,pendingApplications:pendingApplications,submitApplication:submitApplication,reviewApplication:reviewApplication,appCardHTML:appCardHTML,cmpOn:cmpOn,cmpCatName:cmpCatName,openComplaints:openComplaints,submitComplaint:submitComplaint,replyComplaint:replyComplaint,resolveComplaint:resolveComplaint,cmpCardHTML:cmpCardHTML,ttPublish:ttPublish,ttParentHTML:ttParentHTML,publishAllTimetables:publishAllTimetables,slugifySchool:slugifySchool,pendingSignups:pendingSignups,submitSignup:submitSignup,signupReqCardHTML:signupReqCardHTML,validEmail:validEmail,inviteTempPassword:inviteTempPassword,isSchoolAdmin:isSchoolAdmin,heOn:heOn,heGradeFor:heGradeFor,hePctFor:hePctFor,heAttGate:heAttGate,heProgramById:heProgramById,heCourseById:heCourseById,heProgramCourses:heProgramCourses,heEnrollmentOf:heEnrollmentOf,addHeProgram:addHeProgram,deleteHeProgram:deleteHeProgram,addHeCourse:addHeCourse,deleteHeCourse:deleteHeCourse,enrollHe:enrollHe,recordHeResult:recordHeResult,heBestResults:heBestResults,heGPA:heGPA,heCGPA:heCGPA,heStanding:heStanding,
   addFeeHead:addFeeHead,deleteFeeHead:deleteFeeHead,feeBill:feeBill,feeGenerate:feeGenerate,feeHeadsFor:feeHeadsFor,
