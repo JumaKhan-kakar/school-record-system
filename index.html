@@ -270,6 +270,14 @@ table.grid tr:focus-within td{background:var(--brand-soft)}
   .rcard .rc-id{font-size:12px}
   .rcard table{font-size:12px}
 }
+/* ============ settings sections + sticky save bar (round 57) ============ */
+.set-sec-h{display:flex;align-items:center;gap:.5rem;width:100%;text-align:start;background:none;border:0;padding:.55rem .2rem;min-height:52px;font-size:1.1rem;font-weight:700;color:var(--ink);cursor:pointer}
+.set-sec-h:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:8px}
+.set-sec-chev{flex:none;color:var(--brand);font-size:1rem}
+.set-sec>.set-sec-b>.card{border:0;box-shadow:none;padding:0;margin:0 0 .4rem}
+.set-savebar{position:sticky;bottom:0;z-index:45;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:.6rem .8rem;margin-top:.6rem;display:flex;gap:.6rem;align-items:center;box-shadow:0 -2px 12px rgba(20,40,60,.14)}
+.set-savebar .btn{flex:1;min-height:52px;font-size:1.05rem}
+.set-savebar .muted{flex:none}
 </style>
 </head>
 <body>
@@ -19367,6 +19375,13 @@ docimp_all_girls:{en:"Set all to Girl",ur:"سب کو لڑکی کریں",bn:"স�
 docimp_camera:{en:"Take a photo",ur:"تصویر لیں",bn:"ছবি তুলুন",hi:"फ़ोटो लें",ne:"फोटो लिनुहोस्",sw:"Piga picha",ar:"التقط صورة",zh:"拍照",es:"Tomar una foto",fr:"Prendre une photo",pt:"Tirar uma foto",ru:"Сделать фото",id:"Ambil foto",de:"Foto aufnehmen",ja:"写真を撮る",pa:"تصویر لو",mr:"फोटो घ्या",te:"ఫోటో తీయండి",fa:"عکس بگیرید",tr:"Fotoğraf çek",ta:"புகைப்படம் எடுக்கவும்",vi:"Chụp ảnh",ko:"사진 찍기",tl:"Kumuha ng larawan",ha:"Ɗauki hoto",it:"Scatta una foto",ps:"عکس واخلئ",ms:"Ambil gambar",yo:"Ya fọ́tò",ig:"Were foto"},
 docimp_fmt_doc:{en:"Old Word (.doc)",ur:"پرانا Word (.doc)",bn:"পুরনো Word (.doc)",hi:"पुराना Word (.doc)",ne:"पुरानो Word (.doc)",sw:"Word ya zamani (.doc)",ar:"Word قديم (.doc)",zh:"旧 Word（.doc）",es:"Word antiguo (.doc)",fr:"Word ancien (.doc)",pt:"Word antigo (.doc)",ru:"Старый Word (.doc)",id:"Word lama (.doc)",de:"Altes Word (.doc)",ja:"古い Word（.doc）",pa:"پرانا Word (.doc)",mr:"जुने Word (.doc)",te:"పాత Word (.doc)",fa:"Word قدیمی (.doc)",tr:"Eski Word (.doc)",ta:"பழைய Word (.doc)",vi:"Word cũ (.doc)",ko:"오래된 Word(.doc)",tl:"Lumang Word (.doc)",ha:"Tsohon Word (.doc)",it:"Vecchio Word (.doc)",ps:"زوړ Word (.doc)",ms:"Word lama (.doc)",yo:"Word àtijọ́ (.doc)",ig:"Word ochie (.doc)"},
 docimp_fmt_xls:{en:"Old Excel (.xls)",ur:"پرانا Excel (.xls)",bn:"পুরনো Excel (.xls)",hi:"पुराना Excel (.xls)",ne:"पुरानो Excel (.xls)",sw:"Excel ya zamani (.xls)",ar:"Excel قديم (.xls)",zh:"旧 Excel（.xls）",es:"Excel antiguo (.xls)",fr:"Excel ancien (.xls)",pt:"Excel antigo (.xls)",ru:"Старый Excel (.xls)",id:"Excel lama (.xls)",de:"Altes Excel (.xls)",ja:"古い Excel（.xls）",pa:"پرانا Excel (.xls)",mr:"जुने Excel (.xls)",te:"పాత Excel (.xls)",fa:"Excel قدیمی (.xls)",tr:"Eski Excel (.xls)",ta:"பழைய Excel (.xls)",vi:"Excel cũ (.xls)",ko:"오래된 Excel(.xls)",tl:"Lumang Excel (.xls)",ha:"Tsohon Excel (.xls)",it:"Vecchio Excel (.xls)",ps:"زوړ Excel (.xls)",ms:"Excel lama (.xls)",yo:"Excel àtijọ́ (.xls)",ig:"Excel ochie (.xls)"},
+set_sec_school:{en:"School",ur:"اسکول",bn:"বিদ্যালয়",hi:"विद्यालय",ne:"विद्यालय",sw:"Shule",ar:"المدرسة",zh:"学校",es:"Escuela",fr:"École",pt:"Escola",ru:"Школа",id:"Sekolah",de:"Schule",ja:"学校",pa:"اسکول",mr:"शाळा",te:"పాఠశాల",fa:"مدرسه",tr:"Okul",ta:"பள்ளி",vi:"Trường học",ko:"학교",tl:"Paaralan",ha:"Makaranta",it:"Scuola",ps:"ښوونځی",ms:"Sekolah",yo:"Ilé-ẹ̀kọ́",ig:"Ụlọ akwụkwọ"},
+set_sec_lang:{en:"Language & region",ur:"زبان اور علاقہ",bn:"ভাষা ও অঞ্চল",hi:"भाषा और क्षेत्र",ne:"भाषा र क्षेत्र",sw:"Lugha na eneo",ar:"اللغة والمنطقة",zh:"语言与地区",es:"Idioma y región",fr:"Langue et région",pt:"Idioma e região",ru:"Язык и регион",id:"Bahasa & wilayah",de:"Sprache und Region",ja:"言語と地域",pa:"زبان تے علاقہ",mr:"भाषा आणि प्रदेश",te:"భాష & ప్రాంతం",fa:"زبان و منطقه",tr:"Dil ve bölge",ta:"மொழி & பகுதி",vi:"Ngôn ngữ & khu vực",ko:"언어 및 지역",tl:"Wika at rehiyon",ha:"Harshe da yanki",it:"Lingua e regione",ps:"ژبه او سیمه",ms:"Bahasa & wilayah",yo:"Èdè àti agbègbè",ig:"Asụsụ na mpaghara"},
+set_sec_fees:{en:"Fees & payments",ur:"فیس اور ادائیگیاں",bn:"ফি ও পেমেন্ট",hi:"शुल्क और भुगतान",ne:"शुल्क र भुक्तानी",sw:"Ada na malipo",ar:"الرسوم والمدفوعات",zh:"费用与付款",es:"Cuotas y pagos",fr:"Frais et paiements",pt:"Taxas e pagamentos",ru:"Сборы и платежи",id:"Biaya & pembayaran",de:"Gebühren und Zahlungen",ja:"料金と支払い",pa:"فیس تے ادائیگیاں",mr:"शुल्क आणि भरणा",te:"ఫీజులు & చెల్లింపులు",fa:"شهریه و پرداخت‌ها",tr:"Ücretler ve ödemeler",ta:"கட்டணங்கள் & கொடுப்பனவுகள்",vi:"Học phí & thanh toán",ko:"수수료 및 결제",tl:"Mga bayarin at pagbabayad",ha:"Kuɗi da biyan kuɗi",it:"Tasse e pagamenti",ps:"فیسونه او تادیات",ms:"Yuran & bayaran",yo:"Owó ilé-ẹ̀kọ́ àti ìsanwó",ig:"Ụgwọ na ịkwụ ụgwọ"},
+set_sec_grades:{en:"Results & grading",ur:"نتائج اور گریڈنگ",bn:"ফলাফল ও গ্রেডিং",hi:"परिणाम और ग्रेडिंग",ne:"नतिजा र ग्रेडिङ",sw:"Matokeo na uwekaji alama",ar:"النتائج والتقديرات",zh:"成绩与评分",es:"Resultados y calificaciones",fr:"Résultats et notation",pt:"Resultados e avaliação",ru:"Результаты и оценки",id:"Hasil & penilaian",de:"Ergebnisse und Bewertung",ja:"結果と評価",pa:"نتیجے تے گریڈنگ",mr:"निकाल आणि श्रेणीकरण",te:"ఫలితాలు & గ్రేడింగ్",fa:"نتایج و نمره‌دهی",tr:"Sonuçlar ve notlandırma",ta:"முடிவுகள் & மதிப்பீடு",vi:"Kết quả & chấm điểm",ko:"결과 및 채점",tl:"Mga resulta at pagmamarka",ha:"Sakamako da kimantawa",it:"Risultati e voti",ps:"پایلې او ارزونه",ms:"Keputusan & penggredan",yo:"Àbájáde àti ìdánwò",ig:"Nsonaazụ na ọkwa"},
+set_sec_board:{en:"Age & board rules",ur:"عمر اور بورڈ کے اصول",bn:"বয়স ও বোর্ডের নিয়ম",hi:"आयु और बोर्ड नियम",ne:"उमेर र बोर्ड नियम",sw:"Umri na sheria za bodi",ar:"قواعد العمر والمجلس",zh:"年龄与考试局规则",es:"Reglas de edad y de la junta",fr:"Règles d'âge et du jury",pt:"Regras de idade e da banca",ru:"Возраст и правила совета",id:"Aturan usia & dewan",de:"Alters- und Prüfungsregeln",ja:"年齢と委員会の規則",pa:"عمر تے بورڈ دے اصول",mr:"वय आणि मंडळाचे नियम",te:"వయస్సు & బోర్డు నియమాలు",fa:"قوانین سن و هیئت",tr:"Yaş ve kurul kuralları",ta:"வயது & வாரிய விதிகள்",vi:"Quy tắc về tuổi & hội đồng",ko:"연령 및 위원회 규칙",tl:"Mga panuntunan sa edad at lupon",ha:"Dokokin shekaru da hukuma",it:"Regole di età e dell'ente",ps:"د عمر او بورډ قواعد",ms:"Peraturan umur & lembaga",yo:"Àwọn òfin ọjọ́-orí àti ìgbìmọ̀",ig:"Iwu afọ na bọọdụ"},
+set_sec_data:{en:"Backup & data",ur:"بیک اپ اور ڈیٹا",bn:"ব্যাকআপ ও ডেটা",hi:"बैकअप और डेटा",ne:"ब्याकअप र डाटा",sw:"Hifadhi rudufu na data",ar:"النسخ الاحتياطي والبيانات",zh:"备份与数据",es:"Copia de seguridad y datos",fr:"Sauvegarde et données",pt:"Cópia de segurança e dados",ru:"Резервная копия и данные",id:"Cadangan & data",de:"Sicherung und Daten",ja:"バックアップとデータ",pa:"بیک اپ تے ڈیٹا",mr:"बॅकअप आणि डेटा",te:"బ్యాకప్ & డేటా",fa:"پشتیبان و داده‌ها",tr:"Yedek ve veriler",ta:"காப்புப்பிரதி & தரவு",vi:"Sao lưu & dữ liệu",ko:"백업 및 데이터",tl:"Backup at data",ha:"Madadin & bayanai",it:"Backup e dati",ps:"بیک اپ او ډاټا",ms:"Sandaran & data",yo:"Àfipamọ́ àti dátà",ig:"Ndabere na data"},
+set_sec_acct:{en:"Account & audit",ur:"اکاؤنٹ اور آڈٹ",bn:"অ্যাকাউন্ট ও অডিট",hi:"खाता और ऑडिट",ne:"खाता र अडिट",sw:"Akaunti na ukaguzi",ar:"الحساب والتدقيق",zh:"帐户与审计",es:"Cuenta y auditoría",fr:"Compte et audit",pt:"Conta e auditoria",ru:"Учётная запись и журнал",id:"Akun & audit",de:"Konto und Protokoll",ja:"アカウントと監査",pa:"اکاؤنٹ تے آڈٹ",mr:"खाते आणि लेखापरीक्षण",te:"ఖాతా & ఆడిట్",fa:"حساب و بازرسی",tr:"Hesap ve denetim",ta:"கணக்கு & தணிக்கை",vi:"Tài khoản & kiểm tra",ko:"계정 및 감사",tl:"Account at audit",ha:"Asusu da bincike",it:"Account e controllo",ps:"حساب او پلټنه",ms:"Akaun & audit",yo:"Àkáǹtì àti àyẹ̀wò",ig:"Akaụntụ na nyocha"},
 publish_results:{en:"Publish results",ur:"نتائج شائع کریں",bn:"ফলাফল প্রকাশ করুন",hi:"परिणाम प्रकाशित करें",ne:"नतिजा प्रकाशित गर्नुहोस्",sw:"Chapisha matokeo",ar:"نشر النتائج",zh:"发布成绩",es:"Publicar resultados",fr:"Publier les résultats",pt:"Publicar resultados",ru:"Опубликовать результаты",id:"Terbitkan hasil",de:"Ergebnisse veröffentlichen",ja:"結果を公開",pa:"نتیجے شائع کرو",mr:"निकाल प्रकाशित करा",te:"ఫలితాలను ప్రచురించండి",fa:"انتشار نتایج",tr:"Sonuçları yayımla",ta:"முடிவுகளை வெளியிடவும்",vi:"Công bố kết quả",ko:"결과 게시",tl:"Ilathala ang mga resulta",ha:"Buga sakamako",it:"Pubblica risultati",ps:"پایلې خپرې کړئ",ms:"Terbitkan keputusan",yo:"Ṣe àtẹ̀jáde èsì",ig:"Bipụta nsonaazụ"},
 unpublish_results:{en:"Remove published results",ur:"شائع شدہ نتائج ہٹائیں",bn:"প্রকাশিত ফলাফল সরান",hi:"प्रकाशित परिणाम हटाएं",ne:"प्रकाशित नतिजा हटाउनुहोस्",sw:"Ondoa matokeo yaliyochapishwa",ar:"إزالة النتائج المنشورة",zh:"撤回已发布的成绩",es:"Quitar resultados publicados",fr:"Retirer les résultats publiés",pt:"Remover resultados publicados",ru:"Удалить опубликованные результаты",id:"Hapus hasil yang diterbitkan",de:"Veröffentlichte Ergebnisse entfernen",ja:"公開済みの結果を削除",pa:"شائع شدہ نتیجے ہٹاؤ",mr:"प्रकाशित निकाल काढा",te:"ప్రచురించిన ఫలితాలను తీసివేయండి",fa:"حذف نتایج منتشرشده",tr:"Yayımlanan sonuçları kaldır",ta:"வெளியிடப்பட்ட முடிவுகளை அகற்று",vi:"Gỡ các kết quả đã công bố",ko:"게시된 결과 제거",tl:"Alisin ang mga nailathalang resulta",ha:"Cire sakamakon da aka buga",it:"Rimuovi i risultati pubblicati",ps:"خپرې شوې پایلې لرې کړئ",ms:"Buang keputusan yang diterbitkan",yo:"Yọ àwọn èsì tí a ti ṣe àtẹ̀jáde kúrò",ig:"Wepụ nsonaazụ ebipụtara"},
 publish_locked_only:{en:"Results can only be published after the exam is locked (approved).",ur:"نتائج صرف امتحان بند (منظور) ہونے کے بعد شائع ہو سکتے ہیں۔",bn:"পরীক্ষা লক (অনুমোদিত) হওয়ার পরেই ফলাফল প্রকাশ করা যাবে।",hi:"परिणाम तभी प्रकाशित किए जा सकते हैं जब परीक्षा लॉक (स्वीकृत) हो।",ne:"नतिजा परीक्षा लक (स्वीकृत) भएपछि मात्र प्रकाशित गर्न सकिन्छ।",sw:"Matokeo yanaweza kuchapishwa tu baada ya mtihani kufungwa (kuidhinishwa).",ar:"لا يمكن نشر النتائج إلا بعد قفل الامتحان (الموافقة عليه).",zh:"只有在考试锁定（批准）后才能发布成绩。",es:"Los resultados solo se pueden publicar después de que el examen esté bloqueado (aprobado).",fr:"Les résultats ne peuvent être publiés qu'après le verrouillage (l'approbation) de l'examen.",pt:"Os resultados só podem ser publicados depois de o exame estar bloqueado (aprovado).",ru:"Результаты могут быть опубликованы только после того, как экзамен будет заблокирован (утвержден).",id:"Hasil hanya dapat diterbitkan setelah ujian dikunci (disetujui).",de:"Ergebnisse können erst veröffentlicht werden, nachdem die Prüfung gesperrt (genehmigt) wurde.",ja:"結果は試験がロック（承認）された後にのみ公開できます。",pa:"نتیجے صرف امتحان بند (منظور شدہ) ہون توں بعد شائع ہو سکدے نیں۔",mr:"परीक्षा लॉक (मंजूर) झाल्यानंतरच निकाल प्रकाशित करता येतात.",te:"పరీక్ష లాక్ చేయబడిన (ఆమోదించబడిన) తర్వాత మాత్రమే ఫలితాలు ప్రచురించబడతాయి.",fa:"نتایج فقط پس از قفل شدن (تأیید) امتحان قابل انتشارند.",tr:"Sonuçlar yalnızca sınav kilitlendikten (onaylandıktan) sonra yayımlanabilir.",ta:"தேர்வு பூட்டப்பட்ட பின்னரே (அங்கீகரிக்கப்பட்ட) முடிவுகளை வெளியிட முடியும்.",vi:"Kết quả chỉ được công bố sau khi kỳ thi bị khóa (đã phê duyệt).",ko:"결과는 시험이 잠긴(승인된) 후에만 게시할 수 있습니다.",tl:"Maaari lamang ilathala ang mga resulta pagkatapos ma-lock (maaprubahan) ang pagsusulit.",ha:"Za a iya buga sakamako kaɗai bayan an kulle jarrabawa (an amince).",it:"I risultati possono essere pubblicati solo dopo che l'esame è stato bloccato (approvato).",ps:"پایلې یوازې د ازموینې له تړل کېدو (منظورېدو) وروسته خپرېدای شي.",ms:"Keputusan hanya boleh diterbitkan selepas peperiksaan dikunci (diluluskan).",yo:"A lè ṣe àtẹ̀jáde èsì nìkan lẹ́yìn tí a bá ti tì ìdánwò (tí a bá ti fọwọ́ sí).",ig:"Enwere ike ibipụta nsonaazụ naanị mgbe akpọchiri ule (akwadoro)."},
@@ -19919,7 +19934,7 @@ function schoolCardHTML(){
   const statusTxt=s.status==="active"?t("sub_active"):t("sub_expired_short");
   const until=s.paidUntil||s.trialEndsAt||"";
   const billTxt=s.plan==="paid"?" • "+esc(s.billing==="annual"?t("sub_annual"):t("sub_monthly")):"";
-  let h='<div class="card"><h3>🏫 '+esc(t("school_sub"))+'</h3>'+
+  let h='<div class="card">'+
     '<p><b>'+esc(s.name||"—")+'</b> • '+esc(planTxt)+billTxt+' • '+esc(statusTxt)+
     (until?" • "+esc(t("sub_until"))+": "+esc(String(until).slice(0,10)):"")+'</p>';
   const pk=countryPack(schoolCountry());
@@ -20252,7 +20267,7 @@ function boardCardHTML(){
     '<div class="field"><label>'+esc(t("board_asof"))+'</label><input id="s-basof" type="date" value="'+esc(b.asOf||"")+'"></div>'+
     '<div class="field"><label>'+esc(t("board_p1"))+" ("+esc(t("years"))+" / "+esc(t("months"))+')</label><div class="toolbar"><input id="s-bp1y" inputmode="numeric" value="'+(b.part1Y||0)+'" style="width:80px"><input id="s-bp1m" inputmode="numeric" value="'+(b.part1M||0)+'" style="width:80px"></div></div>'+
     '<div class="field"><label>'+esc(t("board_p2"))+" ("+esc(t("years"))+" / "+esc(t("months"))+')</label><div class="toolbar"><input id="s-bp2y" inputmode="numeric" value="'+(b.part2Y||0)+'" style="width:80px"><input id="s-bp2m" inputmode="numeric" value="'+(b.part2M||0)+'" style="width:80px"></div></div>'+
-    '</div><button type="button" class="btn btn-primary" id="s-save4">'+esc(t("save"))+"</button></div>";
+    '</div></div>';
 }
 /* ---- Round 80: payment methods card (billing surface) ---- */
 function payCardHTML(){
@@ -20275,15 +20290,64 @@ function payCardHTML(){
   +'<div id="payrow-sadapay">'+fld("sadapay_no",'<input id="s-sadapay" value="'+esc(s.sadapayNo||"")+'" placeholder="03XX-XXXXXXX">')+'</div>'
   +'</div></div>';
 }
+/* ---- settings sections + one save (round 57) ---- */
+let setOpen={school:true};
+function setSecList(){return ["school","lang","fees","mod","grades","board","ai","team","sub","data","acct"];}
+function setSecIsOpen(id){return !!setOpen[id];}
+function setSecToggle(id){setOpen[id]=!setOpen[id];return setOpen[id];}
+function setSecHTML(id,title,inner){
+  const open=setSecIsOpen(id);
+  return '<div class="card set-sec"><button type="button" class="set-sec-h" data-setsec="'+id+'" aria-expanded="'+(open?"true":"false")+'"><span class="set-sec-chev">'+(open?"▾":"▸")+'</span> '+esc(title)+'</button><div class="set-sec-b" data-setsec-body="'+id+'"'+(open?'':' style="display:none"')+'>'+inner+'</div></div>';
+}
+function saveSettingsAll(){
+  const s=db().settings;
+  const gv=function(id){const e=$(id);return e?e.value:"";};
+  s.schoolName=gv("s-name").trim();s.deviceName=gv("s-device").trim();s.schoolPhone=gv("s-phone").trim();
+  s.country=gv("s-country")||s.country;
+  s.bankTitle=gv("s-banktitle").trim();s.bankAccount=gv("s-bankacct").trim();s.bankIBAN=gv("s-bankiban").trim();
+  s.jazzcashNo=gv("s-jazzcash").trim();s.easypaisaNo=gv("s-easypaisa").trim();
+  s.nayapayNo=gv("s-nayapay").trim();s.sadapayNo=gv("s-sadapay").trim();
+  const _pm=$("s-paymethods");if(_pm&&typeof payMethodsFromSelect==="function")s.payMethods=payMethodsFromSelect();
+  const tog=function(id,key){const e=$(id);if(e)s[key]=e.value==="1";};
+  tog("s-feeson","feesEnabled");tog("s-atton","attEnabled");tog("s-staffon","staffEnabled");
+  tog("s-bcon","bcEnabled");tog("s-hwon","hwEnabled");tog("s-tron","transportEnabled");
+  tog("s-libon","libEnabled");tog("s-appon","admAppEnabled");tog("s-cmpon","cmpEnabled");
+  tog("s-heon","heEnabled");tog("s-tton","ttEnabled");tog("s-labon","labEnabled");tog("s-certon","certEnabled");
+  s.lang=gv("s-lang")||s.lang;s.passPct=Number(gv("s-pass"))||33;
+  const gk=$("s-gemini");if(gk)s.geminiKey=gk.value.trim();
+  Array.prototype.forEach.call(document.querySelectorAll("[data-gs]"),function(inp){
+    s.gradeScale[+inp.getAttribute("data-gs")].min=Number(inp.value)||0;});
+  Array.prototype.forEach.call(document.querySelectorAll("[data-dv]"),function(inp){
+    s.divisions[+inp.getAttribute("data-dv")].min=Number(inp.value)||0;});
+  Array.prototype.forEach.call(document.querySelectorAll("[data-ab]"),function(inp){
+    s.ageBands[inp.getAttribute("data-ab")][inp.getAttribute("data-k")]=Number(inp.value)||0;});
+  if($("s-bname")){s.board={name:gv("s-bname").trim()||"BISE",
+    part1Y:Number(gv("s-bp1y"))||0,part1M:Number(gv("s-bp1m"))||0,
+    part2Y:Number(gv("s-bp2y"))||0,part2M:Number(gv("s-bp2m"))||0,
+    asOf:gv("s-basof")||todayISO()};}
+  if(typeof Cloud!=="undefined")Cloud.pushPublicInfo();
+  Store.save();
+  return true;
+}
 function viewSettings(){
   const s=db().settings;
-  let h='<div class="card"><h2>'+esc(t("set_title"))+"</h2>"+
+  let h='<h2>'+esc(t("set_title"))+'</h2>';
+  h+=setSecHTML("school",t("set_sec_school"),
     fld("school_name",'<input id="s-name" value="'+esc(s.schoolName)+'" placeholder="'+esc(t("school_ph"))+'">')+
     fld("device_name",'<input id="s-device" value="'+esc(s.deviceName||"")+'" placeholder="'+esc(t("device_ph"))+'">')+
     fld("school_phone",'<input id="s-phone" value="'+esc(s.schoolPhone||"")+'" placeholder="03XX-XXXXXXX">')+
-    fld("country",'<select id="s-country">'+COUNTRY_PACKS.map(function(p){return '<option value="'+p.code+'"'+((s.country||"PK")===p.code?" selected":"")+'>'+esc(p.name)+" ("+esc(p.cur)+")</option>";}).join("")+"</select>")+
+    '<div class="field"><label>'+esc(t("logo"))+'</label>'+
+    (s.logoDataUrl?'<img src="'+s.logoDataUrl+'" style="height:54px;display:block;margin-bottom:.4rem" alt="">':"")+
+    '<input id="s-logo" type="file" accept="image/*" style="margin-bottom:.4rem">'+
+    (s.logoDataUrl?'<button type="button" class="btn btn-sm btn-danger" id="s-logodel">'+esc(t("remove_logo"))+"</button> ":"")+
+    '<div class="hint">'+esc(t("logo")).split("(")[0]+'— 300 KB max</div></div>');
+  h+=setSecHTML("lang",t("set_sec_lang"),
+    fld("def_lang",'<input id="s-lang-search" autocomplete="off" placeholder="'+esc(t("lang_search"))+'" value="'+esc((LANGS[s.lang||"en"]||LANGS.en).native)+'"><input type="hidden" id="s-lang" value="'+esc(s.lang||"en")+'"><div id="s-lang-list"></div>')+
+    fld("country",'<select id="s-country">'+COUNTRY_PACKS.map(function(p){return '<option value="'+p.code+'"'+((s.country||"PK")===p.code?" selected":"")+'>'+esc(p.name)+" ("+esc(p.cur)+")</option>";}).join("")+"</select>"));
+  h+=setSecHTML("fees",t("set_sec_fees"),
     fld("fees_enabled",'<select id="s-feeson"><option value="1"'+(feesOn()?" selected":"")+'>'+esc(t("fees_yes"))+'</option><option value="0"'+(!feesOn()?" selected":"")+'>'+esc(t("fees_no"))+"</option></select>")+
-    '<h3 style="margin:.8rem 0 .3rem">'+esc(t("mod_title"))+'</h3>'+
+    payCardHTML());
+  h+=setSecHTML("mod",t("mod_title"),
     fld("nav_att",'<select id="s-atton"><option value="1"'+(attOn()?" selected":"")+'>'+esc(t("mod_on"))+'</option><option value="0"'+(!attOn()?" selected":"")+'>'+esc(t("mod_off"))+"</option></select>")+
     fld("nav_staff",'<select id="s-staffon"><option value="1"'+(staffOn()?" selected":"")+'>'+esc(t("mod_on"))+'</option><option value="0"'+(!staffOn()?" selected":"")+'>'+esc(t("mod_off"))+"</option></select>")+
     fld("nav_bc",'<select id="s-bcon"><option value="1"'+(bcOn()?" selected":"")+'>'+esc(t("mod_on"))+'</option><option value="0"'+(!bcOn()?" selected":"")+'>'+esc(t("mod_off"))+"</option></select>")+
@@ -20295,33 +20359,10 @@ function viewSettings(){
     fld("nav_highered",'<select id="s-heon"><option value="1"'+(heOn()?" selected":"")+'>'+esc(t("mod_on"))+'</option><option value="0"'+(!heOn()?" selected":"")+'>'+esc(t("mod_off"))+"</option></select>")+
     fld("nav_tt",'<select id="s-tton"><option value="1"'+(ttOn()?" selected":"")+'>'+esc(t("mod_on"))+'</option><option value="0"'+(!ttOn()?" selected":"")+'>'+esc(t("mod_off"))+"</option></select>")+
     fld("nav_lab",'<select id="s-labon"><option value="1"'+(labOn()?" selected":"")+'>'+esc(t("mod_on"))+'</option><option value="0"'+(!labOn()?" selected":"")+'>'+esc(t("mod_off"))+"</option></select>")+
-    fld("nav_cert",'<select id="s-certon"><option value="1"'+(certOn()?" selected":"")+'>'+esc(t("mod_on"))+'</option><option value="0"'+(!certOn()?" selected":"")+'>'+esc(t("mod_off"))+"</option></select>")+
-
-    '<div class="field"><label>'+esc(t("logo"))+'</label>'+
-    (s.logoDataUrl?'<img src="'+s.logoDataUrl+'" style="height:54px;display:block;margin-bottom:.4rem" alt="">':"")+
-    '<input id="s-logo" type="file" accept="image/*" style="margin-bottom:.4rem">'+
-    (s.logoDataUrl?'<button type="button" class="btn btn-sm btn-danger" id="s-logodel">'+esc(t("remove_logo"))+"</button> ":"")+
-    '<div class="hint">'+esc(t("logo")).split("(")[0]+'— 300 KB max</div></div>'+
-    fld("def_lang",'<input id="s-lang-search" autocomplete="off" placeholder="'+esc(t("lang_search"))+'" value="'+esc((LANGS[s.lang||"en"]||LANGS.en).native)+'"><input type="hidden" id="s-lang" value="'+esc(s.lang||"en")+'"><div id="s-lang-list"></div>')+
+    fld("nav_cert",'<select id="s-certon"><option value="1"'+(certOn()?" selected":"")+'>'+esc(t("mod_on"))+'</option><option value="0"'+(!certOn()?" selected":"")+'>'+esc(t("mod_off"))+"</option></select>"));
+  h+=setSecHTML("grades",t("set_sec_grades"),
     fld("pass_pct",'<input id="s-pass" inputmode="numeric" value="'+s.passPct+'">')+
-    '<button type="button" class="btn btn-primary" id="s-save">'+esc(t("save"))+"</button></div>";
-  h+=payCardHTML();
-  const platKey=(typeof Cloud!=="undefined"&&Cloud.enabled&&Cloud.platformKey)?Cloud.platformKey:"";
-  h+='<div class="card"><h3>✨ '+esc(t("ai_title"))+'</h3>'+
-    (platKey?'<p class="muted">✅ '+esc(t("ai_platform"))+'</p>'
-            :'<p class="muted">'+esc(t("ai_hint"))+'</p>'+
-             '<div class="field"><label>'+esc(t("ai_key_label"))+'</label>'+
-             '<input id="s-gemini" type="password" value="'+esc(s.geminiKey||"")+'" placeholder="AIza..." autocomplete="off"></div>'+
-             '<div class="toolbar"><button type="button" class="btn" id="s-gemini-test">'+esc(t("ai_test"))+'</button></div>'+
-             '<div id="s-gemini-msg"></div>')+'</div>';
-  if(isSchoolAdmin()){
-    h+='<div class="card"><h3>👥 '+esc(t("team_title"))+'</h3><p class="muted">'+esc(t("team_hint"))+'</p>'+
-      '<div class="field"><label>'+esc(t("team_name"))+'</label><input id="tm-name" autocomplete="off"></div>'+
-      '<div class="field"><label>'+esc(t("team_email"))+'</label><input id="tm-email" type="email" autocomplete="off" placeholder="name@example.com"></div>'+
-      '<button type="button" class="btn btn-primary" id="tm-invite">'+esc(t("team_invite"))+'</button> <span id="tm-msg" class="muted"></span>'+
-      '<div id="tm-list" style="margin-top:.6rem"></div></div>';
-  }
-  h+='<div class="card"><h3>'+esc(t("grade_scale"))+'</h3><div class="grid2">'+
+    '<div class="card"><h3>'+esc(t("grade_scale"))+'</h3><div class="grid2">'+
     s.gradeScale.filter(function(g){return g.g!=="F";}).map(function(g,i){
       return '<div class="field"><label>'+esc(t("grade"))+" "+g.g+" ≥ %</label>"+
         '<input data-gs="'+i+'" inputmode="numeric" value="'+g.min+'"></div>';
@@ -20330,34 +20371,53 @@ function viewSettings(){
     s.divisions.filter(function(x){return x.d!=="Fail";}).map(function(x,i){
       return '<div class="field"><label>'+esc(t("division"))+" "+x.d+" ≥ %</label>"+
         '<input data-dv="'+i+'" inputmode="numeric" value="'+x.min+'"></div>';
-    }).join("")+"</div>"+
-    '<button type="button" class="btn btn-primary" id="s-save2">'+esc(t("save"))+"</button></div>";
-  h+='<div class="card"><h3>'+esc(t("age_bands"))+'</h3><div class="twrap"><table class="grid"><tr><th>'+t("cls")+
-    "</th><th>"+t("band_min")+" ("+t("years")+")</th><th>"+t("band_min")+" ("+t("months")+")</th><th>"+
-    t("band_max")+" ("+t("years")+")</th><th>"+t("band_max")+" ("+t("months")+")</th></tr>"+
+    }).join("")+"</div></div>");
+  h+=setSecHTML("board",t("set_sec_board"),
+    '<div class="card"><h3>'+esc(t("age_bands"))+'</h3><div class="twrap"><table class="grid"><tr><th>'+t("cls")+
+    "</th><th>"+t("band_min")+" ("+t("years")+')</th><th>'+t("band_min")+" ("+t("months")+')</th><th>'+
+    t("band_max")+" ("+t("years")+')</th><th>'+t("band_max")+" ("+t("months")+')</th></tr>'+
     Object.keys(s.ageBands).sort(function(a,b){return Number(a)-Number(b);}).map(function(c){
       const b=s.ageBands[c];
       return "<tr><td class=\"num\">"+esc(c)+'</td><td class="num"><input class="cell" data-ab="'+c+'" data-k="minY" inputmode="numeric" value="'+b.minY+'"></td>'+
         '<td class="num"><input class="cell" data-ab="'+c+'" data-k="minM" inputmode="numeric" value="'+b.minM+'"></td>'+
         '<td class="num"><input class="cell" data-ab="'+c+'" data-k="maxY" inputmode="numeric" value="'+b.maxY+'"></td>'+
         '<td class="num"><input class="cell" data-ab="'+c+'" data-k="maxM" inputmode="numeric" value="'+b.maxM+'"></td></tr>';
-    }).join("")+"</table></div>"+
-    '<button type="button" class="btn btn-primary" id="s-save3" style="margin-top:.6rem">'+esc(t("save"))+"</button></div>";
-  h+=boardCardHTML();
-  h+='<div class="card"><h3>'+esc(t("backup"))+" / "+esc(t("restore"))+"</h3><div class=\"toolbar\">"+
+    }).join("")+"</table></div></div>"+
+    boardCardHTML());
+  const platKey=(typeof Cloud!=="undefined"&&Cloud.enabled&&Cloud.platformKey)?Cloud.platformKey:"";
+  h+=setSecHTML("ai",t("ai_title"),
+    '<div class="card">'+
+    (platKey?'<p class="muted">✅ '+esc(t("ai_platform"))+'</p>'
+            :'<p class="muted">'+esc(t("ai_hint"))+'</p>'+
+             '<div class="field"><label>'+esc(t("ai_key_label"))+'</label>'+
+             '<input id="s-gemini" type="password" value="'+esc(s.geminiKey||"")+'" placeholder="AIza..." autocomplete="off"></div>'+
+             '<div class="toolbar"><button type="button" class="btn" id="s-gemini-test">'+esc(t("ai_test"))+'</button></div>'+
+             '<div id="s-gemini-msg"></div>')+'</div>');
+  if(isSchoolAdmin()){
+    h+=setSecHTML("team",t("team_title"),
+      '<div class="card"><p class="muted">'+esc(t("team_hint"))+'</p>'+
+      '<div class="field"><label>'+esc(t("team_name"))+'</label><input id="tm-name" autocomplete="off"></div>'+
+      '<div class="field"><label>'+esc(t("team_email"))+'</label><input id="tm-email" type="email" autocomplete="off" placeholder="name@example.com"></div>'+
+      '<button type="button" class="btn btn-primary" id="tm-invite">'+esc(t("team_invite"))+'</button> <span id="tm-msg" class="muted"></span>'+
+      '<div id="tm-list" style="margin-top:.6rem"></div></div>');
+  }
+  const sub=schoolCardHTML();
+  if(sub)h+=setSecHTML("sub",t("school_sub"),sub);
+  h+=setSecHTML("data",t("set_sec_data"),
+    '<div class="card"><h3>'+esc(t("backup"))+" / "+esc(t("restore"))+"</h3><div class=\"toolbar\">"+
     '<button type="button" class="btn" id="s-backup">'+esc(t("backup"))+"</button>"+
     '<label class="btn">'+esc(t("restore"))+'<input id="s-restore" type="file" accept=".json,application/json" style="display:none"></label>'+
     '<label class="btn btn-primary">'+esc(t("merge"))+'<input id="s-merge" type="file" accept=".json,application/json" style="display:none"></label>'+
     '<button type="button" class="btn" id="s-demo">'+esc(t("seed_demo"))+"</button>"+
     '<button type="button" class="btn btn-danger" id="s-wipe">'+esc(t("wipe"))+"</button></div>"+
     '<p class="muted">📲 '+esc(t("merge_hint"))+"</p>"+
-    '<p class="muted">'+esc(t("seed_warn"))+"</p><div id=\"s-msg\"></div></div>";
-  h+=snapshotsCardHTML();
-  h+=schoolCardHTML();
-  h+=accountCardHTML();
-  h+=storageMeterHTML();
-  h+='<div class="card"><h3>'+esc(t("audit"))+"</h3><div class=\"hist\" style=\"max-height:300px;overflow:auto\">"+
-    (db().audit.map(function(a){return "<div>"+a.ts.slice(0,16).replace("T"," ")+" — <b>"+esc(a.action)+"</b>: "+esc(a.summary)+"</div>";}).join("")||'<span class="muted">—</span>')+"</div></div>";
+    '<p class="muted">'+esc(t("seed_warn"))+"</p><div id=\"s-msg\"></div></div>"+
+    snapshotsCardHTML()+storageMeterHTML());
+  h+=setSecHTML("acct",t("set_sec_acct"),
+    accountCardHTML()+
+    '<div class="card"><h3>'+esc(t("audit"))+"</h3><div class=\"hist\" style=\"max-height:300px;overflow:auto\">"+
+    (db().audit.map(function(a){return "<div>"+a.ts.slice(0,16).replace("T"," ")+" — <b>"+esc(a.action)+"</b>: "+esc(a.summary)+"</div>";}).join("")||'<span class="muted">—</span>')+"</div></div>");
+  h+='<div class="set-savebar"><button type="button" class="btn btn-primary" id="s-save">'+esc(t("save"))+'</button><span id="s-save-msg" class="muted"></span></div>';
   return h;
 }
 
@@ -20378,12 +20438,22 @@ function loadTeamList(){
 function afterSettings(){
   $("s-save").onclick=function(){
     const oldLang75=lang();
-    const s=db().settings;
-    s.schoolName=$("s-name").value.trim();s.deviceName=$("s-device").value.trim();s.schoolPhone=$("s-phone").value.trim();s.country=$("s-country").value;s.feesEnabled=$("s-feeson").value==="1";s.attEnabled=$("s-atton").value==="1";s.staffEnabled=$("s-staffon").value==="1";s.bcEnabled=$("s-bcon").value==="1";s.hwEnabled=$("s-hwon").value==="1";s.transportEnabled=$("s-tron").value==="1";s.libEnabled=$("s-libon").value==="1";s.admAppEnabled=$("s-appon").value==="1";s.cmpEnabled=$("s-cmpon").value==="1";s.heEnabled=$("s-heon").value==="1";s.ttEnabled=$("s-tton").value==="1";s.labEnabled=$("s-labon").value==="1";s.certEnabled=$("s-certon").value==="1";s.bankTitle=$("s-banktitle").value.trim();s.bankAccount=$("s-bankacct").value.trim();s.bankIBAN=$("s-bankiban").value.trim();s.jazzcashNo=$("s-jazzcash").value.trim();s.easypaisaNo=$("s-easypaisa").value.trim();s.nayapayNo=$("s-nayapay").value.trim();s.sadapayNo=$("s-sadapay").value.trim();s.payMethods=payMethodsFromSelect();s.lang=$("s-lang").value;s.passPct=Number($("s-pass").value)||33;const gk=$("s-gemini");if(gk)s.geminiKey=gk.value.trim();
-    if(typeof Cloud!=="undefined")Cloud.pushPublicInfo();
+    saveSettingsAll();
     if($("s-lang").value!==oldLang75&&typeof window!=="undefined"){var _v75b=$("view");keepScrollY={wy:window.scrollY||0,vt:_v75b?_v75b.scrollTop:0};}
-    Store.save();render();
+    render();
+    const mg=$("s-save-msg");if(mg)mg.textContent=t("saved_ok");
   };
+  Array.prototype.forEach.call(document.querySelectorAll("[data-setsec]"),function(btn){
+    btn.onclick=function(){
+      const id=btn.getAttribute("data-setsec");
+      const open=setSecToggle(id);
+      const body=document.querySelector('[data-setsec-body="'+id+'"]');
+      if(body)body.style.display=open?"":"none";
+      btn.setAttribute("aria-expanded",open?"true":"false");
+      const ch=btn.querySelector(".set-sec-chev");
+      if(ch)ch.textContent=open?"▾":"▸";
+    };
+  });
   const ti=$("tm-invite");
   if(ti)ti.onclick=function(){
     const mg=$("tm-msg");
@@ -20431,29 +20501,6 @@ function afterSettings(){
     rd.readAsDataURL(f);
   };
   const ld=$("s-logodel");if(ld)ld.onclick=function(){db().settings.logoDataUrl="";Store.save();render();};
-  $("s-save2").onclick=function(){
-    const s=db().settings;
-    Array.prototype.forEach.call(document.querySelectorAll("[data-gs]"),function(inp){
-      s.gradeScale[+inp.getAttribute("data-gs")].min=Number(inp.value)||0;});
-    Array.prototype.forEach.call(document.querySelectorAll("[data-dv]"),function(inp){
-      s.divisions[+inp.getAttribute("data-dv")].min=Number(inp.value)||0;});
-    Store.save();render();
-  };
-  $("s-save3").onclick=function(){
-    const s=db().settings;
-    Array.prototype.forEach.call(document.querySelectorAll("[data-ab]"),function(inp){
-      s.ageBands[inp.getAttribute("data-ab")][inp.getAttribute("data-k")]=Number(inp.value)||0;});
-    Store.save();render();
-  };
-  const sb4=$("s-save4");
-  if(sb4)sb4.onclick=function(){
-    const s=db().settings;
-    s.board={name:$("s-bname").value.trim()||"BISE",
-      part1Y:Number($("s-bp1y").value)||0,part1M:Number($("s-bp1m").value)||0,
-      part2Y:Number($("s-bp2y").value)||0,part2M:Number($("s-bp2m").value)||0,
-      asOf:$("s-basof").value||todayISO()};
-    Store.save();render();
-  };
   $("s-backup").onclick=function(){downloadFile("srs-backup-"+fileSafe(db().settings.deviceName)+"-"+todayISO()+".json",exportJSON(),"application/json");};
   $("s-restore").onchange=function(e){
     const f=e.target.files[0];if(!f)return;
@@ -21854,7 +21901,7 @@ const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,LAN
   normUrduDigits:normUrduDigits,parseRegisterLine:parseRegisterLine,parseRegisterLines:parseRegisterLines,
   validateScanRows:validateScanRows,commitScanRows:commitScanRows,ocrEngine:ocrEngine,
   speechLang:speechLang,speechSupported:speechSupported,micField:micField,
-  promoteClass:promoteClass,dashStatsHTML:dashStatsHTML,promoteCardHTML:promoteCardHTML,
+  promoteClass:promoteClass,dashStatsHTML:dashStatsHTML,promoteCardHTML:promoteCardHTML,setSecList:setSecList,setSecIsOpen:setSecIsOpen,setSecToggle:setSecToggle,setSecHTML:setSecHTML,saveSettingsAll:saveSettingsAll,viewSettings:viewSettings,
   issueCertificate:issueCertificate,voidCertificate:voidCertificate,unvoidCertificate:unvoidCertificate,getCertificate:getCertificate,
   certsOfStudent:certsOfStudent,certPrintHTML:certPrintHTML,certTypeName:certTypeName,
   resultPayload:resultPayload,rcardHTML:rcardHTML,reportCardHTML:reportCardHTML,
