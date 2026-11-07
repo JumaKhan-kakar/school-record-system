@@ -145,6 +145,21 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:1rem 0}
 .tools-steps{font-size:.95rem;margin:.4rem 0}
 .tools-steps li{margin:.2rem 0}
 
+/* .prt rules live OUTSIDE @media print (Round 70): the on-screen print
+   preview reuses them, so the preview shows exactly what will print. They
+   apply only to .prt markup, which exists solely inside #print-area
+   (hidden on screen) and inside the preview card. */
+.prt{font-family:inherit;color:#000}
+.prt h2{text-align:center;margin:.2rem 0}
+.prt .sub{text-align:center;margin:.1rem 0 .6rem}
+.prt table{border-collapse:collapse;width:100%;font-size:11px}
+.prt th,.prt td{border:1px solid #000;padding:4px 5px;text-align:left}
+.prt.rtl th,.prt.rtl td{text-align:right}
+.prt .sign{display:flex;justify-content:space-between;margin-top:2.2rem}
+.prt .sign div{width:30%;border-top:1px solid #000;padding-top:4px;text-align:center;font-size:11px}
+.prt .rc-head{text-align:center;border:2px solid #000;padding:.5rem;margin-bottom:.6rem}
+.prt .rc-info{display:flex;justify-content:space-between;font-size:12px;margin-bottom:.5rem;flex-wrap:wrap;gap:.3rem}
+
 /* ============ print ============ */
 @page{size:A4;margin:11mm}
 @media print{
@@ -152,16 +167,6 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:1rem 0}
   body{background:#fff}
   #print-area{display:block!important;direction:ltr}
   #print-area.rtl{direction:rtl}
-  .prt{font-family:inherit;color:#000}
-  .prt h2{text-align:center;margin:.2rem 0}
-  .prt .sub{text-align:center;margin:.1rem 0 .6rem}
-  .prt table{border-collapse:collapse;width:100%;font-size:11px}
-  .prt th,.prt td{border:1px solid #000;padding:4px 5px;text-align:left}
-  .prt.rtl th,.prt.rtl td{text-align:right}
-  .prt .sign{display:flex;justify-content:space-between;margin-top:2.2rem}
-  .prt .sign div{width:30%;border-top:1px solid #000;padding-top:4px;text-align:center;font-size:11px}
-  .prt .rc-head{text-align:center;border:2px solid #000;padding:.5rem;margin-bottom:.6rem}
-  .prt .rc-info{display:flex;justify-content:space-between;font-size:12px;margin-bottom:.5rem;flex-wrap:wrap;gap:.3rem}
   .rc-page{page-break-after:always}
   .rc-page:last-child{page-break-after:auto}
   .rcard{border:2px solid #000;border-radius:0;padding:8px;max-width:none;margin:0}
@@ -10965,6 +10970,7 @@ add:{en:"Add",ur:"شامل کریں",bn:"যোগ করুন",hi:"जोड�
 add_new:{en:"Add new",ur:"نیا شامل کریں",bn:"নতুন যোগ করুন",hi:"नया जोड़ें",ne:"नयाँ थप्नुहोस्",sw:"Ongeza mpya",ar:"إضافة جديد",zh:"新增",es:"Añadir nuevo",fr:"Ajouter",pt:"Adicionar novo",ru:"Добавить новый",id:"Tambah baru",de:"Neu hinzufügen",ja:"新規追加",pa:"نواں شامل کرو",mr:"नवीन जोडा",te:"కొత్తవి జోడించండి",fa:"افزودن جدید",tr:"Yeni ekle",ta:"புதியதைச் சேர்க்கவும்",vi:"Thêm mới",ko:"새로 추가",tl:"Magdagdag ng bago",ha:"Ƙara sabo",it:"Aggiungi nuovo",ps:"نوی اضافه کړئ",ms:"Tambah baharu",yo:"Fi tuntun kún",ig:"Tinye ọhụrụ"},
 search:{en:"Search…",ur:"تلاش کریں…",bn:"খুঁজুন…",hi:"खोजें…",ne:"खोज्नुहोस्…",sw:"Tafuta…",ar:"بحث…",zh:"搜索…",es:"Buscar…",fr:"Rechercher…",pt:"Pesquisar…",ru:"Поиск…",id:"Cari…",de:"Suchen…",ja:"検索…",pa:"تلاش کرو…",mr:"शोधा…",te:"వెతకండి...",fa:"جستجو…",tr:"Ara…",ta:"தேடு…",vi:"Tìm kiếm…",ko:"검색…",tl:"Maghanap…",ha:"Bincika…",it:"Cerca...",ps:"ولټوئ…",ms:"Cari…",yo:"Wá…",ig:"Chọọ…"},
 print:{en:"Print",ur:"پرنٹ کریں",bn:"মুদ্রণ",hi:"प्रिंट करें",ne:"छाप्नुहोस्",sw:"Chapisha",ar:"طباعة",zh:"打印",es:"Imprimir",fr:"Imprimer",pt:"Imprimir",ru:"Распечатать",id:"Cetak",de:"Drucken",ja:"印刷",pa:"چھاپو",mr:"छापा",te:"ముద్రించు",fa:"چاپ",tr:"Yazdır",ta:"அச்சிடுக",vi:"In",ko:"인쇄",tl:"I-print",ha:"Buga",it:"Stampa",ps:"چاپ کړئ",ms:"Cetak",yo:"Tẹ̀ jáde",ig:"Bipụta"},
+print_preview:{en:"Print preview",ur:"پرنٹ پیش نظارہ",bn:"মুদ্রণ প্রাকদর্শন",hi:"प्रिंट पूर्वावलोकन",ne:"छपाइ पूर्वावलोकन",sw:"Hakiki kabla ya kuchapisha",ar:"معاينة الطباعة",zh:"打印预览",es:"Vista previa de impresión",fr:"Aperçu avant impression",pt:"Pré-visualização de impressão",ru:"Предварительный просмотр",id:"Pratinjau cetak",de:"Druckvorschau",ja:"印刷プレビュー",pa:"پرنٹ پیش نظارہ",mr:"मुद्रण पूर्वावलोकन",te:"ముద్రణ పూర్వదర్శనం",fa:"پیش‌نمایش چاپ",tr:"Yazdırma önizlemesi",ta:"அச்சு முன்னோட்டம்",vi:"Xem trước khi in",ko:"인쇄 미리 보기",tl:"Preview sa pag-print",ha:"Duba kafin buga",it:"Anteprima di stampa",ps:"د چاپ مخکتنه",ms:"Pratonton cetakan",yo:"Àwòrán ìtẹ̀jáde",ig:"Nlele mbipụta"},
 export_csv:{en:"Download CSV",ur:"CSV ڈاؤن لوڈ کریں",bn:"CSV ডাউনলোড",hi:"CSV डाउनलोड करें",ne:"CSV डाउनलोड गर्नुहोस्",sw:"Pakua CSV",ar:"تنزيل CSV",zh:"下载 CSV",es:"Descargar CSV",fr:"Télécharger le CSV",pt:"Descarregar CSV",ru:"Скачать CSV-файл",id:"Unduh CSV",de:"CSV herunterladen",ja:"CSVをダウンロード",pa:"CSV ڈاؤن لوڈ کرو",mr:"CSV डाउनलोड करा",te:"CSVని డౌన్‌లోడ్ చేయండి",fa:"دانلود CSV",tr:"CSV indir",ta:"CSV ஐப் பதிவிறக்கவும்",vi:"Tải xuống CSV",ko:"CSV 다운로드",tl:"I-download ang CSV",ha:"Sauke CSV",it:"Scarica CSV",ps:"CSV ښکته کړئ",ms:"Muat turun CSV",yo:"Ṣe ìgbàsílẹ̀ CSV",ig:"Budata CSV"},
 backup:{en:"Backup (JSON)",ur:"بیک اپ (JSON)",bn:"ব্যাকআপ (JSON)",hi:"बैकअप (JSON)",ne:"ब्याकअप (JSON)",sw:"Hifadhi nakala (JSON)",ar:"نسخة احتياطية (JSON)",zh:"备份（JSON）",es:"Copia de seguridad (JSON)",fr:"Sauvegarde (JSON)",pt:"Cópia de segurança (JSON)",ru:"Резервное копирование (JSON)",id:"Cadangan (JSON)",de:"Sicherung (JSON)",ja:"バックアップ（JSON）",pa:"بیک اپ (JSON)",mr:"बॅकअप (JSON)",te:"బ్యాకప్ (JSON)",fa:"پشتیبان (JSON)",tr:"Yedek (JSON)",ta:"காப்புப்பிரதி (JSON)",vi:"Sao lưu (JSON)",ko:"백업(JSON)",tl:"Pag-backup (JSON)",ha:"Ajiya (JSON)",it:"Copia di sicurezza (JSON)",ps:"بیک اپ (JSON)",ms:"Sandaran (JSON)",yo:"Àfẹ́yìn (JSON)",ig:"Nkwado (JSON)"},
 restore:{en:"Restore (JSON)",ur:"بحال کریں (JSON)",bn:"পুনরুদ্ধার (JSON)",hi:"पुनर्स्थापित करें (JSON)",ne:"पुनर्स्थापना (JSON)",sw:"Rejesha (JSON)",ar:"استعادة (JSON)",zh:"恢复（JSON）",es:"Restaurar (JSON)",fr:"Restaurer (JSON)",pt:"Restaurar (JSON)",ru:"Восстановить (JSON)",id:"Pulihkan (JSON)",de:"Wiederherstellen (JSON)",ja:"復元（JSON）",pa:"بحال کرو (JSON)",mr:"पुनर्संचयित करा (JSON)",te:"పునరుద్ధరించు (JSON)",fa:"بازیابی (JSON)",tr:"Geri yükle (JSON)",ta:"மீட்டமை (JSON)",vi:"Khôi phục (JSON)",ko:"복원(JSON)",tl:"I-restore (JSON)",ha:"Maido (JSON)",it:"Ripristina (JSON)",ps:"بیا راګرځول (JSON)",ms:"Pulihkan (JSON)",yo:"Mú padà (JSON)",ig:"Weghachi (JSON)"},
@@ -12825,7 +12831,8 @@ function viewStaff(){
       const paid=salaryPaid(r), stKey=salaryStatus(r)==="paid"?"paid_full":salaryStatus(r);
       h+="<tr><td>"+esc(st?st.name:"?")+"</td><td>"+r.base+"</td><td>"+r.deduction+"</td><td>"+r.net+"</td><td>"+paid+"</td><td>"+Math.max(0,r.net-paid)+"</td><td>"+esc(t("sal_"+stKey))+"</td><td>"+
         '<button type="button" class="btn btn-sm sal-pay-btn" data-id="'+r.staffId+'">'+esc(t("sal_pay"))+"</button> "+
-        '<button type="button" class="btn btn-sm sal-slip-btn" data-id="'+r.staffId+'">'+esc(t("sal_slip"))+"</button></td></tr>";
+        '<button type="button" class="btn btn-sm sal-slip-btn" data-id="'+r.staffId+'">'+esc(t("sal_slip"))+"</button> "+
+        '<button type="button" class="btn btn-sm sal-slip-prev-btn" data-id="'+r.staffId+'">'+esc(t("print_preview"))+"</button></td></tr>";
     });
     h+="</table>";
   }
@@ -12868,6 +12875,9 @@ function afterStaff(){
   });
   Array.prototype.forEach.call(document.querySelectorAll("button.sal-slip-btn"),function(b){
     b.onclick=function(){const r=salaryRecord(b.getAttribute("data-id"),curStaffMonth);if(r)doPrint(salarySlipHTML(r));};
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("button.sal-slip-prev-btn"),function(b){
+    b.onclick=function(){const r=salaryRecord(b.getAttribute("data-id"),curStaffMonth);if(r)showPrintPreview(salarySlipHTML(r));};
   });
   const pp=$("sp-pay");
   if(pp)pp.onclick=function(){
@@ -13140,6 +13150,14 @@ function bcRecipients(cls,tplKey){
 function bcNoContact(cls){
   return bcClassStudents(cls).filter(function(st){return !attWaNumber(st);});
 }
+/* No-number students for a broadcast, by name (Round 70): the list stored
+   at creation, so it always agrees with the stored count; older broadcasts
+   without the stored list fall back to recomputing from the class. */
+function bcNoContactList(bc){
+  if(!bc)return [];
+  if(bc.noContactList)return bc.noContactList;
+  return bcNoContact(bc.cls).map(function(st){return {studentId:st.id,name:displayName(st)};});
+}
 function createBroadcast(cls,tplKey,customText){
   const list=bcClassStudents(cls);
   if(!list.length)return {ok:false,error:"bc_no_class"};
@@ -13148,8 +13166,9 @@ function createBroadcast(cls,tplKey,customText){
   else{const key=BC_TEMPLATES[tplKey]||BC_TEMPLATES.general;msg=t(key);}
   const recs=bcRecipients(cls,tplKey);
   if(!recs.length)return {ok:false,error:"ask_no_broadcast"};
-  const noC=bcNoContact(cls).length;
-  const bc={id:uid("bc"),at:tsNow(),cls:cls,tpl:tplKey,message:msg,noContact:noC,recipients:recs.map(function(st){return {studentId:st.id,name:displayName(st),phone:attWaNumber(st),status:"pending"};})};
+  const noCList=bcNoContact(cls).map(function(st){return {studentId:st.id,name:displayName(st)};});
+  const noC=noCList.length;
+  const bc={id:uid("bc"),at:tsNow(),cls:cls,tpl:tplKey,message:msg,noContact:noC,noContactList:noCList,recipients:recs.map(function(st){return {studentId:st.id,name:displayName(st),phone:attWaNumber(st),status:"pending"};})};
   if(!db().broadcasts)db().broadcasts=[];
   dbArr("broadcasts").push(bc);
   audit("broadcast_start","Broadcast "+cls+": "+recs.length+" recipients");
@@ -13188,7 +13207,7 @@ var curBcCls="",curBcTpl="absent",curBcId="",curBcCustom="";
 function bcDrawPreview(){
   const box=$("bc-preview");if(!box)return;
   const cls=curBcCls||(bcClasses()[0]||"");
-  const first=bcRecipients(cls)[0];
+  const first=bcRecipients(cls,curBcTpl)[0]||bcRecipients(cls)[0];
   let msg="";
   const custom=$("bc-custom");
   if(curBcTpl==="custom")msg=custom?custom.value:curBcCustom;
@@ -13541,6 +13560,9 @@ function viewBroadcast(){
     bc.recipients.forEach(function(r,i){
       h+="<tr><td>"+(i+1)+"</td><td>"+esc(r.name)+"</td><td>"+esc(r.status==="sent"?t("bc_sent"):r.status==="skipped"?t("bc_skipped"):t("bc_pending"))+"</td></tr>";
     });
+    bcNoContactList(bc).forEach(function(nc,i){
+      h+="<tr><td>"+(bc.recipients.length+i+1)+"</td><td>"+esc(nc.name)+"</td><td>"+esc(t("bc_no_contact"))+"</td></tr>";
+    });
     h+="</table></div>";
   }
   /* history */
@@ -13835,14 +13857,16 @@ function submitApplication(d,schoolId){
     contact=String(d.contact||"").trim(),address=String(d.address||"").trim();
   if(!name||!fatherName||!validISODate(dob)||!cls||!contact)return {ok:false,error:t("req")};
   const app={id:uid("ap"),name:name,fatherName:fatherName,dob:dob,gender:gender,cls:cls,section:section,contact:contact,address:address,status:"pending",note:"",at:tsNow()};
+  let sent;
   if(typeof Cloud!=="undefined"&&Cloud.fs&&schoolId){
-    Cloud.pushPublicDoc(schoolId,"applications",app.id,app);
+    sent=Cloud.pushPublicDoc(schoolId,"applications",app.id,app);
     if(Cloud.schoolId===schoolId){dbArr("applications").push(app);Store.save();}
   }else{
     dbArr("applications").push(app);
     Store.save();
+    sent=Promise.resolve(true);
   }
-  return {ok:true,id:app.id};
+  return {ok:true,id:app.id,sent:sent};
 }
 function reviewApplication(id,decision,note){
   const app=(db().applications||[]).find(function(a){return a.id===id;});
@@ -13887,14 +13911,16 @@ function submitComplaint(d,schoolId){
     message=String(d.message||"").trim();
   if(!admNo||!studentName||!message)return {ok:false,error:t("req")};
   const c={id:uid("cp"),admNo:admNo,studentName:studentName,cls:cls,category:category,message:message,status:"open",reply:"",at:tsNow(),resolvedAt:""};
+  let sent;
   if(typeof Cloud!=="undefined"&&Cloud.fs&&schoolId){
-    Cloud.pushPublicDoc(schoolId,"complaints",c.id,c);
+    sent=Cloud.pushPublicDoc(schoolId,"complaints",c.id,c);
     if(Cloud.schoolId===schoolId){dbArr("complaints").push(c);Store.save();}
   }else{
     dbArr("complaints").push(c);
     Store.save();
+    sent=Promise.resolve(true);
   }
-  return {ok:true,id:c.id};
+  return {ok:true,id:c.id,sent:sent};
 }
 function replyComplaint(id,reply){
   const c=(db().complaints||[]).find(function(x){return x.id===id;});
@@ -14456,7 +14482,8 @@ function viewFee(){
       h+="<tr><td>"+(i+1)+"</td><td>"+esc(displayName(b.student))+"</td>"+
         '<td class="num">'+b.total+'</td><td class="num">'+b.paid+'</td><td class="num"><b>'+b.balance+"</b></td><td>"+esc(feePayStatusText(b.student.id,curFeeMonth))+"</td><td>"+
         '<button type="button" class="btn btn-sm fee-pay" data-st="'+b.student.id+'">'+esc(t("fee_pay"))+"</button> "+
-        '<button type="button" class="btn btn-sm fee-chal" data-st="'+b.student.id+'">'+esc(t("fee_challan"))+"</button>"+
+        '<button type="button" class="btn btn-sm fee-chal" data-st="'+b.student.id+'">'+esc(t("fee_challan"))+"</button> "+
+        '<button type="button" class="btn btn-sm fee-chal-prev" data-st="'+b.student.id+'">'+esc(t("print_preview"))+"</button>"+
         (b.payments.length?' <button type="button" class="btn btn-sm fee-rcpt" data-st="'+b.student.id+'">'+esc(t("fee_receipt"))+"</button>":"")+"</td></tr>";
     });
     h+="</table>";
@@ -14501,6 +14528,9 @@ function afterFee(){
   });
   Array.prototype.forEach.call(document.querySelectorAll("button.fee-chal"),function(b){
     b.onclick=function(){doPrint(challanHTML(b.getAttribute("data-st"),curFeeMonth));};
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("button.fee-chal-prev"),function(b){
+    b.onclick=function(){showPrintPreview(challanHTML(b.getAttribute("data-st"),curFeeMonth));};
   });
   Array.prototype.forEach.call(document.querySelectorAll("button.fee-rcpt"),function(b){
     b.onclick=function(){
@@ -16228,7 +16258,11 @@ function renderParent(){
           const r=submitComplaint({admNo:payload.student.admNo,studentName:payload.student.display,cls:payload.student.cls,category:$("ppc-cat").value,message:$("ppc-msg").value},schoolId);
           const mg=$("ppc-m");
           if(!r.ok){if(mg)mg.innerHTML='<div class="msg err">'+esc(r.error)+"</div>";return;}
-          cmpBox.innerHTML='<div class="card" style="max-width:480px;margin:1rem auto"><p>✅ '+esc(t("cmp_sent"))+"</p></div>";
+          send.disabled=true;
+          Promise.resolve(r.sent).then(function(ok){
+            if(ok){cmpBox.innerHTML='<div class="card" style="max-width:480px;margin:1rem auto"><p>✅ '+esc(t("cmp_sent"))+"</p></div>";}
+            else{if(mg)mg.innerHTML='<div class="msg err">'+esc(t("portal_send_fail"))+"</div>";send.disabled=false;}
+          });
         };
       }
       const ttBox=$("pp-tt");
@@ -16281,7 +16315,11 @@ function loadParentApply(){
     const r=submitApplication({name:$("ppa-name").value,fatherName:$("ppa-father").value,dob:$("ppa-dob").value,gender:$("ppa-gender").value,cls:$("ppa-cls").value,section:$("ppa-sec").value,contact:$("ppa-contact").value,address:$("ppa-address").value},parentSchoolId);
     const msg=$("ppa-msg");
     if(!r.ok){if(msg)msg.innerHTML='<div class="msg err">'+esc(r.error)+"</div>";return;}
-    box.innerHTML='<div class="card" style="max-width:480px;margin:1rem auto"><p>✅ '+esc(t("app_submitted"))+"</p></div>";
+    go.disabled=true;
+    Promise.resolve(r.sent).then(function(ok){
+      if(ok){box.innerHTML='<div class="card" style="max-width:480px;margin:1rem auto"><p>✅ '+esc(t("app_submitted"))+"</p></div>";}
+      else{if(msg)msg.innerHTML='<div class="msg err">'+esc(t("portal_send_fail"))+"</div>";go.disabled=false;}
+    });
   };
 }
 
@@ -16490,6 +16528,21 @@ function doPrint(html){
   pa.className=langDir()==="rtl"?"rtl":"";
   pa.innerHTML='<div class="prt'+(langDir()==="rtl"?" rtl":"")+'">'+html+"</div>";
   if(typeof window!=="undefined")window.print();
+}
+/* ---- on-screen print preview (Round 70) ----
+   Shows the exact print markup on screen first — the same builder HTML
+   inside the same .prt wrapper doPrint uses (RTL-aware) — with a Print
+   button that then opens the dialog, and a Close button back to the tab.
+   The direct Print buttons stay untouched. */
+function showPrintPreview(html){
+  const v=$("view");if(!v)return;
+  v.innerHTML='<div class="card"><h3>'+esc(t("print_preview"))+'</h3><div class="prt'+(langDir()==="rtl"?" rtl":"")+'">'+html+'</div>'+
+    '<div class="toolbar"><button type="button" class="btn btn-primary" id="ppv-print">'+esc(t("print"))+'</button> '+
+    '<button type="button" class="btn" id="ppv-close">'+esc(t("close"))+"</button></div></div>";
+  const pr=$("ppv-print");
+  if(pr)pr.onclick=function(){doPrint(html);};
+  const cl=$("ppv-close");
+  if(cl)cl.onclick=function(){render();};
 }
 function schoolHead(title){
   return '<div class="rc-head"><h2>'+esc(db().settings.schoolName||"—")+"</h2><div><b>"+esc(title)+"</b></div></div>";
@@ -16804,7 +16857,7 @@ function dashStatsHTML(){
       return '<button type="button" class="chip" data-clsgo="'+esc(k)+'" style="cursor:pointer">'+esc(k)+": <b>"+groups[k]+"</b></button>";
     }).join("")+"</div>";
   h+='<span class="chip">'+esc(t("dash_exams"))+": <b>"+db().exams.length+"</b></span>"+
-    (certOn()?'<span class="chip">'+esc(t("dash_certs"))+": <b>"+db().certificates.length+"</b></span>":"")+
+    (certOn()?'<span class="chip">'+esc(t("dash_certs"))+": <b>"+db().certificates.filter(function(c){return c.status!=="void";}).length+"</b></span>":"")+
     (attOn()&&db().students.length?'<span class="chip">'+esc(t("dash_att"))+": <b>"+attSummary(todayISO(),"").P+"/"+db().students.length+" ("+attSummary(todayISO(),"").pct+"%)</b></span>":"")+"</div>";
   if(feesOn()&&(db().feeRecords||[]).length){
     const fs=feeSummary(todayISO().slice(0,7));
@@ -16995,7 +17048,8 @@ function askBuild(id,st,cls,q){
   }
   if(id==="certs"){if(!certOn())return null;
     const cs=db().certificates||[];
-    return "<b>"+esc(t("dash_certs"))+": "+cs.length+"</b>"+(cs.length?"<br>"+cs.slice(-5).map(function(c){const s=(db().students||[]).find(function(x){return x.id===c.studentId;});return "• "+(s?esc(displayName(s)):"?")+" — "+esc(c.type||"")+" "+esc(c.serial||"");}).join("<br>"):"");
+    const valid=cs.filter(function(c){return c.status!=="void";});
+    return "<b>"+esc(t("dash_certs"))+": "+valid.length+"</b>"+(cs.length?"<br>"+cs.slice(-5).map(function(c){const s=(db().students||[]).find(function(x){return x.id===c.studentId;});return "• "+(s?esc(displayName(s)):"?")+" — "+esc(c.type||"")+" "+esc(c.serial||"")+(c.status==="void"?" ("+esc(t("cert_voided"))+")":"");}).join("<br>"):"");
   }
   if(id==="staff_absent"){if(!staffOn())return null;
     const list=staffAbsentees(today);
@@ -17584,6 +17638,7 @@ function viewDossier(id){
   let h='<div class="card"><button type="button" class="btn btn-sm" id="dos-back">← '+esc(t("back"))+"</button> "+
     '<button type="button" class="btn btn-sm" id="dos-print">'+esc(t("print_dossier"))+"</button> "+
     '<button type="button" class="btn btn-sm" id="dos-idcard">'+esc(t("idcard_print"))+"</button> "+
+    '<button type="button" class="btn btn-sm" id="dos-idcard-prev">'+esc(t("print_preview"))+"</button> "+
     '<label class="btn btn-sm">'+esc(st.photo?t("photo_change"):t("capture_photo"))+
     '<input id="dos-photo" type="file" accept="image/*" style="display:none"></label>'+
     '<div class="idrow" style="margin:.5rem 0">'+studentPhotoHTML(st,56)+"<h2 style=\"margin:0\">"+esc(displayName(st))+"</h2></div>"+
@@ -17618,7 +17673,8 @@ function viewDossier(id){
       '<span class="chip">'+esc(t("grade"))+": "+r.grade+'</span><span class="chip">'+esc(t("division"))+": "+r.division+'</span>'+
       '<span class="chip">'+esc(t("position"))+": "+(r.position==null?"—":r.position)+'</span>'+
       '<span class="chip">'+esc(t("result"))+": "+(r.pass==null?"—":(r.pass?t("pass"):t("fail")))+"</span>"+
-      (r.complete?'<button type="button" class="btn btn-sm" data-cardprint="'+ex.id+'">'+esc(t("print_one_card"))+"</button>":"")+"</div>";
+      (r.complete?'<button type="button" class="btn btn-sm" data-cardprint="'+ex.id+'">'+esc(t("print_one_card"))+"</button> "+
+      '<button type="button" class="btn btn-sm" data-cardpreview="'+ex.id+'">'+esc(t("print_preview"))+"</button>":"")+"</div>";
   });
   h+="</div>";
   h+=certDossierHTML(st);
@@ -17631,6 +17687,8 @@ function afterDossier(){
   $("dos-print").onclick=function(){doPrint(dossierPrintHTML(dossierId));};
   const di=$("dos-idcard");
   if(di)di.onclick=function(){doPrint(idCardPrintHTML(dossierId));};
+  const dip=$("dos-idcard-prev");
+  if(dip)dip.onclick=function(){showPrintPreview(idCardPrintHTML(dossierId));};
   const dp=$("dos-photo");
   if(dp)dp.onchange=function(){
     const f=dp.files[0];if(!f||!dossierId)return;
@@ -17642,6 +17700,9 @@ function afterDossier(){
   };
   Array.prototype.forEach.call(document.querySelectorAll("[data-cardprint]"),function(b){
     b.onclick=function(){doPrint(rcardHTML(resultPayload(b.getAttribute("data-cardprint"),dossierId)));};
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-cardpreview]"),function(b){
+    b.onclick=function(){showPrintPreview(rcardHTML(resultPayload(b.getAttribute("data-cardpreview"),dossierId)));};
   });
   const cs=$("dos-concsave");
   if(cs)cs.onclick=function(){
@@ -17663,6 +17724,15 @@ function afterDossier(){
       if(certVoidArm!==id){certVoidArm=id;render();return;}
       certVoidArm=null;
       voidCertificate(id);render();
+    };});
+  Array.prototype.forEach.call(document.querySelectorAll("[data-dcunvoid]"),function(b){
+    b.onclick=function(){
+      const id=b.getAttribute("data-dcunvoid");
+      const c=getCertificate(id);
+      if(!c)return;
+      if(certUnvoidArm!==id){certUnvoidArm=id;render();return;}
+      certUnvoidArm=null;
+      unvoidCertificate(id);render();
     };});
 }
 function dossierPrintHTML(studentId){
@@ -19036,6 +19106,7 @@ method_cash:{en:"Cash",ur:"نقد",bn:"নগদ",hi:"नकद",ne:"नगद",
 method_bank:{en:"Bank",ur:"بینک",bn:"ব্যাংক",hi:"बैंक",ne:"बैंक",sw:"Benki",ar:"بنك",zh:"银行",es:"Banco",fr:"Banque",pt:"Banco",ru:"Банковский перевод",id:"Transfer Bank",de:"Banküberweisung",ja:"銀行",pa:"بینک",mr:"बँक",te:"బ్యాంకు",fa:"بانک",tr:"Banka",ta:"வங்கி",vi:"Ngân hàng",ko:"은행",tl:"Bangko",ha:"Banki",it:"Banca",ps:"بانک",ms:"Pindahan Bank",yo:"Báǹkì",ig:"Ụlọ akụ"},
 publish_failed:{en:"Could not publish the results — the school's online records could not be saved. Check the connection and try again.",ur:"نتائج شائع نہیں ہو سکے — اسکول کا آن لائن ریکارڈ محفوظ نہیں ہو سکا۔ کنکشن چیک کریں اور دوبارہ کوشش کریں۔",bn:"ফলাফল প্রকাশ করা যায়নি — স্কুলের অনলাইন রেকর্ড সংরক্ষণ করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।",hi:"परिणाम प्रकाशित नहीं हो सके — स्कूल का ऑनलाइन रिकॉर्ड सहेजा नहीं जा सका। कनेक्शन जाँचें औौर पुनः प्रयास करें।",ne:"नतिजा प्रकाशित गर्न सकिएन — विद्यालयको अनलाइन रेकर्ड सेभ गर्न सकिएन। जडान जाँचेर फेरि प्रयास गर्नुहोस्।",sw:"Matokeo hayakuchapishwa — rekodi ya mtandaoni ya shule haikuweza kuhifadhiwa. Angalia muunganisho na ujaribu tena.",ar:"تعذّر نشر النتائج — تعذّر حفظ سجلات المدرسة عبر الإنترنت. تحقّق من الاتصال وحاول مرة أخرى.",zh:"无法发布成绩——学校的在线记录无法保存。请检查连接并重试。",es:"No se pudieron publicar los resultados: no se pudo guardar el registro en línea de la escuela. Comprueba la conexión e inténtalo de nuevo.",fr:"Impossible de publier les résultats — le registre en ligne de l'école n'a pas pu être enregistré. Vérifiez la connexion et réessayez.",pt:"Não foi possível publicar os resultados — o registo online da escola não pôde ser guardado. Verifique a ligação e tente novamente.",ru:"Не удалось опубликовать результаты — не удалось сохранить онлайн-записи школы. Проверьте соединение и попробуйте ещё раз.",id:"Hasil tidak dapat diterbitkan — catatan online sekolah tidak dapat disimpan. Periksa koneksi dan coba lagi.",de:"Die Ergebnisse konnten nicht veröffentlicht werden — die Online-Daten der Schule konnten nicht gespeichert werden. Prüfen Sie die Verbindung und versuchen Sie es erneut.",ja:"結果を公開できませんでした — 学校のオンライン記録を保存できませんでした。接続を確認して、もう一度お試しください。",pa:"ਨਤੀਜੇ ਪ੍ਰਕਾਸ਼ਤ ਨਹੀਂ ਹੋ ਸਕੇ — ਸਕੂਲ ਦਾ ਔਨਲਾਈਨ ਰਿਕਾਰਡ ਸੰਭਾਲਿਆ ਨਹੀਂ ਜਾ ਸਕਿਆ। ਕੁਨੈਕਸ਼ਨ ਚੈੱਕ ਕਰੋ ਤੇ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",mr:"निकाल प्रकाशित करता आले नाहीत — शाळेची ऑनलाइन नोंद जतन करता आली नाही. कनेक्शन तपासा आणि पुन्हा प्रयत्न करा.",te:"ఫలితాలను ప్రచురించలేకపోయాము — పాఠశాల ఆన్‌లైన్ రికార్డు సేవ్ కాలేదు. కనెక్షన్‌ను తనిఖీ చేసి మళ్ళీ ప్రయత్నించండి.",fa:"نتایج منتشر نشد — رکورد آنلاین مدرسه ذخیره نشد. اتصال را بررسی کنید و دوباره تلاش کنید.",tr:"Sonuçlar yayımlanamadı — okulun çevrimiçi kaydı kaydedilemedi. Bağlantıyı kontrol edip tekrar deneyin.",ta:"முடிவுகளை வெளியிட முடியவில்லை — பள்ளியின் ஆன்லைன் பதிவைச் சேமிக்க முடியவில்லை. இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",vi:"Không thể công bố kết quả — không lưu được hồ sơ trực tuyến của trường. Hãy kiểm tra kết nối và thử lại.",ko:"결과를 게시할 수 없습니다 — 학교 온라인 기록을 저장할 수 없습니다. 연결을 확인하고 다시 시도하세요.",tl:"Hindi maipublish ang mga resulta — hindi ma-save ang online record ng paaralan. Suriin ang koneksyon at subukang muli.",ha:"Ba a iya buga sakamako ba — ba a iya adana bayanan makaranta na intanet ba. Duba haɗin intanet kuma a sake gwadawa.",it:"Impossibile pubblicare i risultati: il registro online della scuola non è stato salvato. Controlla la connessione e riprova.",ps:"پایلې خپرې نه شوې — د ښوونځي آنلاین ریکارډ خوندي نه شو. اړیکه وګورئ او بیا هڅه وکړئ.",ms:"Keputusan tidak dapat diterbitkan — rekod dalam talian sekolah tidak dapat disimpan. Semak sambungan dan cuba lagi.",yo:"A kò le è tẹ àwọn èsì jáde — a kò le fi ìwé ìforúkọạsílẹ̀ orí ayélujára ti ilé-ẹ̀kọ́ pamọ́. Ṣàyẹ̀wò ìsopọ̀ náà kí o sì tún gbìyànjú.",ig:"Enweghị ike ibipụta nsonaazụ — enweghị ike ịchekwa ndekọ n'ịntanetị nke ụlọ akwụkwọ. Lelee njikọ wee nwaa ọzo."},
 portal_unreachable:{en:"Could not reach the school's records. Check the connection and try again.",ur:"اسکول کا ریکارڈ نہیں مل سکا۔ کنکشن چیک کریں اور دوبارہ کوشش کریں۔",bn:"স্কুলের রেকর্ডে পোঁছানো যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।",hi:"स्कूल के रिकॉर्ड तक नहीं पहुँचा जा सका। कनेक्शन जाँचें औौर पुनः प्रयास करें।",ne:"विद्यालयको रेकर्डमा पुग्न सकिएन। जडान जाँचेर फेरि प्रयास गर्नुहोस्।",sw:"Haikuweza kufikia rekodi za shule. Angalia muunganisho na ujaribu tena.",ar:"تعذّر الوصول إلى سجلات المدرسة. تحقّق من الاتصال وحاول مرة أخرى.",zh:"无法访问学校的记录。请检查连接并重试。",es:"No se pudo acceder a los registros de la escuela. Comprueba la conexión e inténtalo de nuevo.",fr:"Impossible d'accéder aux registres de l'école. Vérifiez la connexion et réessayez.",pt:"Não foi possível aceder aos registos da escola. Verifique a ligação e tente novamente.",ru:"Не удалось получить доступ к записям школы. Проверьте соединение и попробуйте ещё раз.",id:"Tidak dapat mengakses catatan sekolah. Periksa koneksi dan coba lagi.",de:"Auf die Daten der Schule konnte nicht zugegriffen werden. Prüfen Sie die Verbindung und versuchen Sie es erneut.",ja:"学校の記録にアクセスできませんでした。接続を確認して、もう一度お試しください。",pa:"ਸਕੂਲ ਦੇ ਰਿਕਾਰਡ ਤੱਕ ਪਹੁੰਚ ਨਹੀਂ ਹੋ ਸਕੀ। ਕੁਨੈਕਸ਼ਨ ਚੈੱਕ ਕਰੋ ਤੇ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",mr:"शाळेच्या नोंदीपर्यंत पोहोचता आले नाही. कनेक्शन तपासा आणि पुन्हा प्रयत्न करा.",te:"పాఠశాల రికార్డులను చేరుకోలేకపోయాము. కనెక్షన్‌ను తనిఖీ చేసి మళ్ళీ ప్రయత్నించండి.",fa:"به رکوردهای مدرسه دسترسی پیدا نشد. اتصال را بررسی کنید و دوباره تلاش کنید.",tr:"Okul kayıtlarına ulaşılamadı. Bağlantıyı kontrol edip tekrar deneyin.",ta:"பள்ளியின் பதிவுகளை அணுக முடியவில்லை. இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",vi:"Không thể truy cập hồ sơ của trường. Hãy kiểm tra kết nối và thử lại.",ko:"학교 기록에 접근할 수 없습니다. 연결을 확인하고 다시 시도하세요.",tl:"Hindi ma-access ang mga record ng paaralan. Suriin ang koneksyon at subukang muli.",ha:"Ba a iya samun bayanan makaranta ba. Duba haɗin intanet kuma a sake gwadawa.",it:"Impossibile accedere ai registri della scuola. Controlla la connessione e riprova.",ps:"د ښوونځي ریکارډونو ته لاسرسی ونه شو. اړیکه وګورئ او بیا هڅه وکړئ.",ms:"Tidak dapat mengakses rekod sekolah. Semak sambungan dan cuba lagi.",yo:"A kò le è dé ìwé ìforúkọạsílẹ̀ ilé-ẹ̀kọ́. Ṣàyẹ̀wò ìsopọ̀ náà kí o sì tún gbìyànjú.",ig:"Enweghị ike ịnweta ndekọ ụlọ akwụkwọ. Lelee njikọ wee nwaa ọzo."},
+portal_send_fail:{en:"Could not send — check your connection and try again.",ur:"بھیجا نہیں جا سکا — کنکشن چیک کریں اور دوبارہ کوشش کریں۔",bn:"পাঠানো যায়নি — সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।",hi:"भेजा नहीं जा सका — कनेक्शन जाँचें और पुनः प्रयास करें।",ne:"पठाउन सकिएन — जडान जाँचेर फेरि प्रयास गर्नुहोस्।",sw:"Haikutumwa — angalia muunganisho wako na ujaribu tena.",ar:"تعذّر الإرسال — تحقّق من الاتصال وحاول مرة أخرى.",zh:"发送失败——请检查连接并重试。",es:"No se pudo enviar — comprueba la conexión e inténtalo de nuevo.",fr:"Impossible d'envoyer — vérifiez la connexion et réessayez.",pt:"Não foi possível enviar — verifique a ligação e tente novamente.",ru:"Не удалось отправить — проверьте соединение и попробуйте ещё раз.",id:"Tidak dapat mengirim — periksa koneksi dan coba lagi.",de:"Senden fehlgeschlagen — prüfen Sie die Verbindung und versuchen Sie es erneut.",ja:"送信できませんでした——接続を確認して、もう一度お試しください。",pa:"بھیجیا نہیں جا سکیا — کنکشن چیک کرو تے مڑ کوشش کرو۔",mr:"पाठवता आले नाही — कनेक्शन तपासा आणि पुन्हा प्रयत्न करा.",te:"పంపలేకపోయాము — కనెక్షన్‌ను తనిఖీ చేసి మళ్ళీ ప్రయత్నించండి.",fa:"ارسال نشد — اتصال را بررسی کنید و دوباره تلاش کنید.",tr:"Gönderilemedi — bağlantıyı kontrol edip tekrar deneyin.",ta:"அனுப்ப முடியவில்லை — இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",vi:"Không thể gửi — hãy kiểm tra kết nối và thử lại.",ko:"전송할 수 없습니다 — 연결을 확인하고 다시 시도하세요.",tl:"Hindi maipadala — suriin ang koneksyon at subukang muli.",ha:"Ba a iya aikawa ba — duba haɗin intanet kuma a sake gwadawa.",it:"Impossibile inviare — controlla la connessione e riprova.",ps:"و نه لېږل شو — اړیکه وګورئ او بیا هڅه وکړئ.",ms:"Tidak dapat dihantar — semak sambungan dan cuba lagi.",yo:"A kò le è ránṣẹ́ — ṣàyẹ̀wò ìsopọ̀ náà kí o sì tún gbìyànjú.",ig:"Enweghị ike izipu — lelee njikọ wee nwaa ọzo."},
 docimp_doc_old:{en:"This old .doc format can't be read — re-save it as .docx or PDF, or photograph the pages.",ur:"یہ پرانا .doc فارمیٹ پڑھا نہیں جا سکتا — اسے .docx یا PDF کے طور پر دوبارہ محفوظ کریں، یا صفحات کی تصویر لیں۔",bn:"এই পুরনো .doc ফরম্যাটটি পড়া যায় না — এটিকে .docx বা PDF হিসাবে আবার সংরক্ষণ করুন, অথবা পৃষ্ঠাগুলির ছবি তুলুন।",hi:"यह पुराना .doc प्रारूप पढ़ा नहीं जा सकता — इसे .docx या PDF के रूप में दोबारा सहेजें, या पृष्ठों की फ़ोटो लें।",ne:"यो पुरानो .doc ढाँचा पढ्न सकिँदैन — यसलाई .docx वा PDF रूपमा फेरि सेभ गर्नुहोस्, वा पृष्ठहरूको फोटो लिनुहोस्।",sw:"Umbizo hili la zamani la .doc haliwezi kusomwa — ihifadhi tena kama .docx au PDF, au piga picha za kurasa.",ar:"لا يمكن قراءة تنسيق .doc القديم هذا — أعد حفظه بصيغة .docx أو PDF، أو صوّر الصفحات.",zh:"无法读取旧的 .doc 格式——请将其另存为 .docx 或 PDF，或拍摄页面照片。",es:"No se puede leer este formato .doc antiguo: vuelve a guardarlo como .docx o PDF, o fotografía las páginas.",fr:"Cet ancien format .doc ne peut pas être lu : réenregistrez-le en .docx ou PDF, ou photographiez les pages.",pt:"Este formato .doc antigo não pode ser lido — volta a guardá-lo como .docx ou PDF, ou fotografa as páginas.",ru:"Старый формат .doc прочитать нельзя — сохраните файл как .docx или PDF либо сфотографируйте страницы.",id:"Format .doc lama ini tidak dapat dibaca — simpan ulang sebagai .docx atau PDF, atau foto halamannya.",de:"Dieses alte .doc-Format kann nicht gelesen werden — speichern Sie es erneut als .docx oder PDF, oder fotografieren Sie die Seiten.",ja:"古い.doc形式は読み取れません — .docxまたはPDFとして再保存するか、ページを写真に撮ってください。",pa:"ایہہ پرانا .doc فارمیٹ پڑھیا نئیں جا سکدا — ایہنوں .docx یا PDF وجوں دوبارہ محفوظ کرو، یا صفحات دی تصویر لو۔",mr:"हे जुने .doc स्वरूप वाचता येत नाही — ते .docx किंवा PDF म्हणून पुन्हा जतन करा, किंवा पृष्ठांचे फोटो घ्या.",te:"ఈ పాత .doc ఫార్మాట్ చదవడం సాధ్యం కాదు — దానిని .docx లేదా PDF గా మళ్లీ సేవ్ చేయండి, లేదా పేజీల ఫోటో తీయండి.",fa:"این قالب قدیمی .doc خوانده نمی‌شود — آن را به‌صورت .docx یا PDF دوباره ذخیره کنید، یا از صفحه‌ها عکس بگیرید.",tr:"Bu eski .doc biçimi okunamıyor — dosyayı .docx veya PDF olarak yeniden kaydedin ya da sayfaların fotoğrafını çekin.",ta:"இந்தப் பழைய .doc வடிவத்தைப் படிக்க முடியாது — அதை .docx அல்லது PDF ஆக மீண்டும் சேமிக்கவும், அல்லது பக்கங்களைப் புகைப்படம் எடுக்கவும்.",vi:"Không thể đọc định dạng .doc cũ này — hãy lưu lại dưới dạng .docx hoặc PDF, hoặc chụp ảnh các trang.",ko:"이 오래된 .doc 형식은 읽을 수 없습니다 — .docx 또는 PDF로 다시 저장하거나 페이지를 사진으로 찍으세요.",tl:"Hindi mabasa ang lumang format na .doc na ito — i-save itong muli bilang .docx o PDF, o kuhanan ng larawan ang mga pahina.",ha:"Ba a iya karanta wannan tsohon tsarin .doc ba — sake ajiye shi a matsayin .docx ko PDF, ko ɗauki hotunan shafuka.",it:"Questo vecchio formato .doc non può essere letto: salvalo di nuovo come .docx o PDF, oppure fotografa le pagine.",ps:"دا زوړ .doc بڼه نه لوستل کېږي — هغه بیا د .docx یا PDF په توګه وساتئ، یا د پاڼو عکس واخلئ.",ms:"Format .doc lama ini tidak dapat dibaca — simpan semula sebagai .docx atau PDF, atau ambil gambar halaman.",yo:"A kò lè ka ọ̀nà .doc àtijọ́ yìí — tún fi pamọ́ gẹ́gẹ́ bí .docx tàbí PDF, tàbí ya àwọn ojú-ìwé náà ní fọ́tò.",ig:"Enweghị ike ịgụ usoro .doc ochie a — chekwaa ya ọzọ dị ka .docx ma ọ bụ PDF, ma ọ bụ see foto nke ibe ndị ahụ."},
 docimp_xls_old:{en:"This old .xls format can't be read — re-save it as .xlsx or CSV, or photograph the pages.",ur:"یہ پرانا .xls فارمیٹ پڑھا نہیں جا سکتا — اسے .xlsx یا CSV کے طور پر دوبارہ محفوظ کریں، یا صفحات کی تصویر لیں۔",bn:"এই পুরনো .xls ফরম্যাটটি পড়া যায় না — এটিকে .xlsx বা CSV হিসাবে আবার সংরক্ষণ করুন, অথবা পৃষ্ঠাগুলির ছবি তুলুন।",hi:"यह पुराना .xls प्रारूप पढ़ा नहीं जा सकता — इसे .xlsx या CSV के रूप में दोबारा सहेजें, या पृष्ठों की फ़ोटो लें।",ne:"यो पुरानो .xls ढाँचा पढ्न सकिँदैन — यसलाई .xlsx वा CSV रूपमा फेरि सेभ गर्नुहोस्, वा पृष्ठहरूको फोटो लिनुहोस्।",sw:"Umbizo hili la zamani la .xls haliwezi kusomwa — ihifadhi tena kama .xlsx au CSV, au piga picha za kurasa.",ar:"لا يمكن قراءة تنسيق .xls القديم هذا — أعد حفظه بصيغة .xlsx أو CSV، أو صوّر الصفحات.",zh:"无法读取旧的 .xls 格式——请将其另存为 .xlsx 或 CSV，或拍摄页面照片。",es:"No se puede leer este formato .xls antiguo: vuelve a guardarlo como .xlsx o CSV, o fotografía las páginas.",fr:"Cet ancien format .xls ne peut pas être lu : réenregistrez-le en .xlsx ou CSV, ou photographiez les pages.",pt:"Este formato .xls antigo não pode ser lido — volta a guardá-lo como .xlsx ou CSV, ou fotografa as páginas.",ru:"Старый формат .xls прочитать нельзя — сохраните файл как .xlsx или CSV либо сфотографируйте страницы.",id:"Format .xls lama ini tidak dapat dibaca — simpan ulang sebagai .xlsx atau CSV, atau foto halamannya.",de:"Dieses alte .xls-Format kann nicht gelesen werden — speichern Sie es erneut als .xlsx oder CSV, oder fotografieren Sie die Seiten.",ja:"古い.xls形式は読み取れません — .xlsxまたはCSVとして再保存するか、ページを写真に撮ってください。",pa:"ایہہ پرانا .xls فارمیٹ پڑھیا نئیں جا سکدا — ایہنوں .xlsx یا CSV وجوں دوبارہ محفوظ کرو، یا صفحات دی تصویر لو۔",mr:"हे जुने .xls स्वरूप वाचता येत नाही — ते .xlsx किंवा CSV म्हणून पुन्हा जतन करा, किंवा पृष्ठांचे फोटो घ्या.",te:"ఈ పాత .xls ఫార్మాట్ చదవడం సాధ్యం కాదు — దానిని .xlsx లేదా CSV గా మళ్లీ సేవ్ చేయండి, లేదా పేజీల ఫోటో తీయండి.",fa:"این قالب قدیمی .xls خوانده نمی‌شود — آن را به‌صورت .xlsx یا CSV دوباره ذخیره کنید، یا از صفحه‌ها عکس بگیرید.",tr:"Bu eski .xls biçimi okunamıyor — dosyayı .xlsx veya CSV olarak yeniden kaydedin ya da sayfaların fotoğrafını çekin.",ta:"இந்தப் பழைய .xls வடிவத்தைப் படிக்க முடியாது — அதை .xlsx அல்லது CSV ஆக மீண்டும் சேமிக்கவும், அல்லது பக்கங்களைப் புகைப்படம் எடுக்கவும்.",vi:"Không thể đọc định dạng .xls cũ này — hãy lưu lại dưới dạng .xlsx hoặc CSV, hoặc chụp ảnh các trang.",ko:"이 오래된 .xls 형식은 읽을 수 없습니다 — .xlsx 또는 CSV로 다시 저장하거나 페이지를 사진으로 찍으세요.",tl:"Hindi mabasa ang lumang format na .xls na ito — i-save itong muli bilang .xlsx o CSV, o kuhanan ng larawan ang mga pahina.",ha:"Ba a iya karanta wannan tsohon tsarin .xls ba — sake ajiye shi a matsayin .xlsx ko CSV, ko ɗauki hotunan shafuka.",it:"Questo vecchio formato .xls non può essere letto: salvalo di nuovo come .xlsx o CSV, oppure fotografa le pagine.",ps:"دا زوړ .xls بڼه نه لوستل کېږي — هغه بیا د .xlsx یا CSV په توګه وساتئ، یا د پاڼو عکس واخلئ.",ms:"Format .xls lama ini tidak dapat dibaca — simpan semula sebagai .xlsx atau CSV, atau ambil gambar halaman.",yo:"A kò lè ka ọ̀nà .xls àtijọ́ yìí — tún fi pamọ́ gẹ́gẹ́ bí .xlsx tàbí CSV, tàbí ya àwọn ojú-ìwé náà ní fọ́tò.",ig:"Enweghị ike ịgụ usoro .xls ochie a — chekwaa ya ọzọ dị ka .xlsx ma ọ bụ CSV, ma ọ bụ see foto nke ibe ndị ahụ."},
 docimp_prev:{en:"Previous",ur:"پچھلا",bn:"আগের",hi:"पिछला",ne:"अघिल्लो",sw:"Iliyotangulia",ar:"السابق",zh:"上一页",es:"Anterior",fr:"Précédent",pt:"Anterior",ru:"Назад",id:"Sebelumnya",de:"Zurück",ja:"前へ",pa:"پچھلا",mr:"मागील",te:"మునుపటి",fa:"قبلی",tr:"Önceki",ta:"முந்தைய",vi:"Trước",ko:"이전",tl:"Nakaraan",ha:"Na baya",it:"Precedente",ps:"مخکینی",ms:"Sebelumnya",yo:"Tẹ́lẹ̀",ig:"Nke gara aga"},
@@ -19107,6 +19178,7 @@ cert_remarks:{en:"Conduct / character remarks",ur:"چال چلن کے بارے �
 cert_serial:{en:"Serial no",ur:"سیریل نمبر",bn:"ক্রমিক নং",hi:"क्रम संख्या",ne:"क्रम सङ्ख्या",sw:"Na. ya mfululizo",ar:"الرقم التسلسلي",zh:"序列号",es:"N.º de serie",fr:"N° de série",pt:"N.º de série",ru:"Серийный номер",id:"No. seri",de:"Seriennr",ja:"通し番号",pa:"سیریل نمبر",mr:"अनुक्रमांक",te:"సీరియల్ నెం",fa:"شمارهٔ سریال",tr:"Seri no",ta:"தொடர் எண்",vi:"Số sê-ri",ko:"일련번호",tl:"Blg. ng serye",ha:"Lambar jerin",it:"N. di serie",ps:"سریال شمېره",ms:"No. siri",yo:"Nọ́mbà ìtẹ̀lé",ig:"Nọmba usoro"},
 cert_void:{en:"Void",ur:"منسوخ کریں",bn:"বাতিল করুন",hi:"रद्द करें",ne:"रद्द गर्नुहोस्",sw:"Batilisha",ar:"إلغاء",zh:"作废",es:"Anulado",fr:"Annulé",pt:"Anulado",ru:"Аннулировать",id:"Batal",de:"Ungültig",ja:"無効",pa:"منسوخ",mr:"रद्द",te:"రద్దు చేయండి",fa:"باطل",tr:"Geçersiz",ta:"ரத்து செய்க",vi:"Hủy bỏ",ko:"무효",tl:"Walang bisa",ha:"Babu amfani",it:"Annullato",ps:"باطل",ms:"Batal",yo:"Kò wúlò",ig:"Abaghị uru"},
 cert_voided:{en:"Voided",ur:"منسوخ شدہ",bn:"বাতিল",hi:"रद्द",ne:"रद्द गरिएको",sw:"Imebatilishwa",ar:"ملغاة",zh:"已作废",es:"Anulado",fr:"Annulé",pt:"Anulado",ru:"Аннулировано",id:"Dibatalkan",de:"Storniert",ja:"無効化済み",pa:"منسوخ ہو گیا",mr:"रद्द केलेले",te:"రద్దు చేయబడింది",fa:"باطل شد",tr:"İptal edildi",ta:"ரத்து செய்யப்பட்டது",vi:"Đã hủy bỏ",ko:"무효화됨",tl:"Walang bisa na",ha:"An soke",it:"Annullato",ps:"باطل شو",ms:"Dibatalkan",yo:"A ti fagilé",ig:"Akagbuola"},
+cert_unvoid:{en:"Restore",ur:"بحال کریں",bn:"পুনরুদ্ধার করুন",hi:"पुनर्स्थापित करें",ne:"पुनर्स्थापना गर्नुहोस्",sw:"Rejesha",ar:"استعادة",zh:"恢复",es:"Restaurar",fr:"Restaurer",pt:"Restaurar",ru:"Восстановить",id:"Pulihkan",de:"Wiederherstellen",ja:"復元する",pa:"بحال کرو",mr:"पुनर्संचयित करा",te:"పునరుద్ధరించు",fa:"بازیابی",tr:"Geri yükle",ta:"மீட்டமை",vi:"Khôi phục",ko:"복원",tl:"Ibalik",ha:"Dawo da shi",it:"Ripristina",ps:"بیرته راوګرځوئ",ms:"Pulihkan",yo:"Mú padà",ig:"Weghachi"},
 cert_status:{en:"Status",ur:"حیثیت",bn:"অবস্থা",hi:"स्थिति",ne:"स्थिति",sw:"Hali",ar:"الحالة",zh:"状态",es:"Estado",fr:"Statut",pt:"Estado",ru:"Статус",id:"Keadaan",de:"Status",ja:"状況",pa:"حالت",mr:"स्थिती",te:"స్థితి",fa:"وضعیت",tr:"Durum",ta:"நிலை",vi:"Trạng thái",ko:"상태",tl:"Katayuan",ha:"Matsayi",it:"Stato",ps:"حالت",ms:"Keadaan",yo:"Ipò",ig:"Ọnọdụ"},
 cert_issued:{en:"Issued",ur:"جاری شدہ",bn:"জারি করা",hi:"जारी",ne:"जारी",sw:"Imetolewa",ar:"صادرة",zh:"已签发",es:"Emitido",fr:"Délivré",pt:"Emitido",ru:"Выдано",id:"Diterbitkan",de:"Ausgestellt",ja:"発行済み",pa:"جاری ہویا",mr:"दिलेले",te:"జారీ చేయబడింది",fa:"صادرشده",tr:"Verildi",ta:"வெளியிடப்பட்டது",vi:"Đã cấp",ko:"발급됨",tl:"Naibigay",ha:"An bayar",it:"Rilasciato",ps:"صادر شوی",ms:"Dikeluarkan",yo:"A ti fún",ig:"Enyela"},
 cert_reprint:{en:"Reprint",ur:"دوبارہ پرنٹ",bn:"আবার ছাপান",hi:"फिर से प्रिंट करें",ne:"फेरि छाप्नुहोस्",sw:"Chapisha tena",ar:"إعادة طباعة",zh:"重新打印",es:"Reimprimir",fr:"Réimprimer",pt:"Reimprimir",ru:"Перепечатать",id:"Cetak ulang",de:"Erneut drucken",ja:"再印刷",pa:"دوبارہ چھاپو",mr:"पुन्हा छापा",te:"పునర్ముద్రించు",fa:"چاپ مجدد",tr:"Yeniden yazdır",ta:"மறுபதிப்பு",vi:"In lại",ko:"재 인쇄",tl:"I-print muli",ha:"Sake buga",it:"Ristampa",ps:"بیا چاپ کړئ",ms:"Cetak semula",yo:"Tún tẹ̀ jáde",ig:"Bipụta ọzọ"},
@@ -19247,8 +19319,10 @@ function afterResult(){
   $("r-card").onclick=function(){
     const sid=$("r-stu").value;
     $("r-cardbox").innerHTML=reportCardHTML(curResExamId,sid)+
-      '<div class="toolbar"><button type="button" class="btn btn-sm" id="r-cardprint">'+esc(t("print"))+"</button></div>";
+      '<div class="toolbar"><button type="button" class="btn btn-sm" id="r-cardprint">'+esc(t("print"))+"</button> "+
+      '<button type="button" class="btn btn-sm" id="r-cardpreview">'+esc(t("print_preview"))+"</button></div>";
     $("r-cardprint").onclick=function(){doPrint(reportCardHTML(curResExamId,sid));};
+    $("r-cardpreview").onclick=function(){showPrintPreview(reportCardHTML(curResExamId,sid));};
   };
   drawSheet();
 }
@@ -19400,6 +19474,20 @@ function voidCertificate(id){
   Store.save();
   return {ok:true};
 }
+/* ---- unvoid (Round 70, item 6): restore a voided certificate ----
+   Status back to "issued" and the SAME verification code is re-published
+   to verifyDocs with the exact payload shape issueCertificate uses (the
+   code is kept on the cert record; only the public doc was deleted), so
+   QR verification passes again. logHist also writes the audit entry. */
+function unvoidCertificate(id){
+  const c=getCertificate(id);
+  if(!c||c.status!=="void")return {ok:false};
+  c.status="issued";
+  if(c.verifyCode&&typeof Cloud!=="undefined")Cloud.pushDoc("verifyDocs",c.verifyCode,{type:"cert",code:c.verifyCode,serial:c.serial,certType:c.type,student:{name:c.snapshot.name,fatherName:c.snapshot.fatherName,admNo:c.snapshot.admNo,cls:c.snapshot.cls},issuedAt:c.issuedAt,at:tsNow()});
+  logHist(c,"unvoid",c.serial+" ("+t("cert_issued")+")");
+  Store.save();
+  return {ok:true};
+}
 function getCertificate(id){return (db().certificates||[]).find(function(c){return c.id===id;})||null;}
 function certsOfStudent(studentId){
   return (db().certificates||[]).filter(function(c){return c.studentId===studentId;})
@@ -19416,6 +19504,7 @@ function certPrintHTML(certId){
   h+='<div class="cert-head">'+logo+"<h2>"+esc(headerSchoolName())+"</h2>"+
      "<div class=\"cert-type\"><b>"+esc(typeB)+"</b></div>"+
      "<div class=\"cert-serial\">"+esc(bl("bl_serial"))+": <b>"+esc(c.serial)+"</b></div></div>";
+  if(c.status==="void")h+='<div style="border:3px solid #000;text-align:center;padding:.5rem;margin:.6rem 0"><b style="font-size:20px">'+esc(t("cert_voided"))+"</b></div>";
   h+='<div class="rc-id">'+
     "<div><b>"+esc(bl("bl_name"))+":</b> "+esc(s.display)+"</div>"+
     "<div><b>"+esc(bl("bl_admno"))+":</b> "+esc(s.admNo)+"</div>"+
@@ -19447,13 +19536,13 @@ function certPrintHTML(certId){
   if(c.reason)h+="<p><b>"+esc(bl("bl_reason"))+":</b> "+esc(c.reason)+"</p>";
   if(c.remarks)h+="<p><b>"+esc(bl("bl_remarks"))+":</b> "+esc(c.remarks)+"</p>";
   if(c.status==="void")h+='<p><b>'+esc(t("cert_voided"))+":</b> "+esc(c.serial)+"</p>";
-  if(c.verifyCode&&c.verifySchool&&c.verifySchool!=="local")h+=verifyBlockHTML(c.verifyCode,verifyURL(c.verifyCode,c.verifySchool));
+  if(c.status!=="void"&&c.verifyCode&&c.verifySchool&&c.verifySchool!=="local")h+=verifyBlockHTML(c.verifyCode,verifyURL(c.verifyCode,c.verifySchool));
   h+='<div class="sign"><div>'+esc(bl("bl_sig_t"))+"</div><div></div><div>"+esc(bl("bl_sig_pr"))+"</div></div>";
   h+="</div></div>";
   return h;
 }
 /* ---- certificates register UI ---- */
-let certIssueFor=null,certQ="",certVoidArm=null;
+let certIssueFor=null,certQ="",certVoidArm=null,certUnvoidArm=null;
 function viewCert(){
   let h='<div class="card"><h2>'+esc(t("cert_issue"))+'</h2><div id="c-msg"></div><div class="grid2">'+
     '<div class="field"><label>'+esc(t("f_name"))+'</label><select id="c-stu">'+
@@ -19511,7 +19600,7 @@ function afterCert(){
         '<br><span class="muted">'+esc(c.snapshot.admNo)+"</span></td><td>"+fmtDate(c.issuedAt)+"</td><td>"+
         (c.status==="void"?'<span class="flag">'+esc(t("cert_voided"))+'</span>':'<span class="flag okf">'+esc(t("cert_issued"))+"</span>")+"</td>"+
         '<td><button type="button" class="btn btn-sm" data-cprint="'+c.id+'">'+esc(t("cert_reprint"))+"</button> "+
-        (c.status==="void"?"":'<button type="button" class="btn btn-sm btn-danger" data-cvoid="'+c.id+'">'+esc(certVoidArm===c.id?t("cert_void")+"?":t("cert_void"))+"</button>")+
+        (c.status==="void"?'<button type="button" class="btn btn-sm" data-cunvoid="'+c.id+'">'+esc(certUnvoidArm===c.id?t("cert_unvoid")+"?":t("cert_unvoid"))+"</button>":'<button type="button" class="btn btn-sm btn-danger" data-cvoid="'+c.id+'">'+esc(certVoidArm===c.id?t("cert_void")+"?":t("cert_void"))+"</button>")+
         ' <button type="button" class="btn btn-sm" data-chist="'+c.id+'">'+esc(t("history"))+"</button></td></tr>"+
         '<tr id="chist-'+c.id+'" style="display:none"><td colspan="6"><div class="hist">'+histHTML(c)+"</div></td></tr>";
     }).join("")||'<tr><td colspan="6">'+emptyStateHTML(t("es_cert_t"),t("es_cert_h"),t("es_cert_b"),"cert")+"</td></tr>";
@@ -19525,6 +19614,15 @@ function afterCert(){
         if(certVoidArm!==id){certVoidArm=id;drawRows();return;}
         certVoidArm=null;
         voidCertificate(id);render();
+      };});
+    Array.prototype.forEach.call(document.querySelectorAll("[data-cunvoid]"),function(b){
+      b.onclick=function(){
+        const id=b.getAttribute("data-cunvoid");
+        const c=getCertificate(id);
+        if(!c)return;
+        if(certUnvoidArm!==id){certUnvoidArm=id;drawRows();return;}
+        certUnvoidArm=null;
+        unvoidCertificate(id);render();
       };});
     Array.prototype.forEach.call(document.querySelectorAll("[data-chist]"),function(b){
       b.onclick=function(){const r=$("chist-"+b.getAttribute("data-chist"));r.style.display=r.style.display==="none"?"":"none";};});
@@ -19542,7 +19640,7 @@ function certDossierHTML(st){
       "</b> • "+esc(certTypeName(c.type))+" • "+fmtDate(c.issuedAt)+'<br><span class="muted">'+esc(t("verify_code"))+": "+esc(c.verifyCode||"—")+"</span></span>"+
       (c.status==="void"?' <span class="flag">'+esc(t("cert_voided"))+"</span>":"")+
       ' <button type="button" class="btn btn-sm" data-dcprint="'+c.id+'">'+esc(t("cert_reprint"))+"</button>"+
-      (c.status==="void"?"":' <button type="button" class="btn btn-sm btn-danger" data-dcvoid="'+c.id+'">'+esc(certVoidArm===c.id?t("cert_void")+"?":t("cert_void"))+"</button>")+"</div>";
+      (c.status==="void"?' <button type="button" class="btn btn-sm" data-dcunvoid="'+c.id+'">'+esc(certUnvoidArm===c.id?t("cert_unvoid")+"?":t("cert_unvoid"))+"</button>":' <button type="button" class="btn btn-sm btn-danger" data-dcvoid="'+c.id+'">'+esc(certVoidArm===c.id?t("cert_void")+"?":t("cert_void"))+"</button>")+"</div>";
   });
   h+='<button type="button" class="btn btn-sm btn-primary" id="dos-issuecert" style="margin-top:.5rem">'+esc(t("cert_issue"))+"</button></div>";
   return h;
@@ -21414,7 +21512,7 @@ const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,LAN
   setTTCell:setTTCell,ttConflicts:ttConflicts,ttClasses:ttClasses,ttCell:ttCell,
   attGet:attGet,setAtt:setAtt,attMarkAll:attMarkAll,attSummary:attSummary,attAbsentees:attAbsentees,
   addStaff:addStaff,setStaffActive:setStaffActive,staffActive:staffActive,staffName:staffName,staffGet:staffGet,setStaffAtt:setStaffAtt,staffMarkAll:staffMarkAll,staffAttSummary:staffAttSummary,staffAbsentees:staffAbsentees,workingDaysInMonth:workingDaysInMonth,staffMonthStats:staffMonthStats,salaryRecord:salaryRecord,salaryPaid:salaryPaid,salaryStatus:salaryStatus,generateSalary:generateSalary,generateAllSalaries:generateAllSalaries,salarySetAdjust:salarySetAdjust,recordSalaryPayment:recordSalaryPayment,salarySummary:salarySummary,salarySlipHTML:salarySlipHTML,askFindStaff:askFindStaff,
-  dateSheetFor:dateSheetFor,dateSheetEntries:dateSheetEntries,setDateSheet:setDateSheet,admitCodeFor:admitCodeFor,admitCardHTML:admitCardHTML,admitCardsBatchHTML:admitCardsBatchHTML,dateSheetHTML:dateSheetHTML,issueAdmitCards:issueAdmitCards,withdrawAdmitCards:withdrawAdmitCards,bcOn:bcOn,bcClasses:bcClasses,bcResolve:bcResolve,bcRecipients:bcRecipients,bcNoContact:bcNoContact,createBroadcast:createBroadcast,bcGet:bcGet,bcNext:bcNext,bcWaLink:bcWaLink,broadcastMark:broadcastMark,bcSummary:bcSummary,schoolSummary:schoolSummary,hoAggregate:hoAggregate,hoSummaryHTML:hoSummaryHTML,adminSchoolHTML:adminSchoolHTML,hwOn:hwOn,hwList:hwList,hwDueCount:hwDueCount,addHomework:addHomework,hwSetDone:hwSetDone,deleteHomework:deleteHomework,hwItemHTML:hwItemHTML,hwParentHTML:hwParentHTML,transportOn:transportOn,routeById:routeById,transportFeeFor:transportFeeFor,addRoute:addRoute,setRouteFee:setRouteFee,deleteRoute:deleteRoute,routeStudents:routeStudents,setStudentTransport:setStudentTransport,transportChipHTML:transportChipHTML,libOn:libOn,todayISO:todayISO,addDaysISO:addDaysISO,libBookById:libBookById,libOutstanding:libOutstanding,libAvailable:libAvailable,addBook:addBook,deleteBook:deleteBook,issueBook:issueBook,returnBook:returnBook,libOverdue:libOverdue,libStudentLoans:libStudentLoans,libDossierHTML:libDossierHTML,admAppOn:admAppOn,pendingApplications:pendingApplications,submitApplication:submitApplication,reviewApplication:reviewApplication,appCardHTML:appCardHTML,cmpOn:cmpOn,cmpCatName:cmpCatName,openComplaints:openComplaints,submitComplaint:submitComplaint,replyComplaint:replyComplaint,resolveComplaint:resolveComplaint,cmpCardHTML:cmpCardHTML,ttPublish:ttPublish,ttParentHTML:ttParentHTML,publishAllTimetables:publishAllTimetables,slugifySchool:slugifySchool,pendingSignups:pendingSignups,submitSignup:submitSignup,signupReqCardHTML:signupReqCardHTML,validEmail:validEmail,inviteTempPassword:inviteTempPassword,isSchoolAdmin:isSchoolAdmin,heOn:heOn,heGradeFor:heGradeFor,hePctFor:hePctFor,heAttGate:heAttGate,heProgramById:heProgramById,heCourseById:heCourseById,heProgramCourses:heProgramCourses,heEnrollmentOf:heEnrollmentOf,addHeProgram:addHeProgram,deleteHeProgram:deleteHeProgram,addHeCourse:addHeCourse,deleteHeCourse:deleteHeCourse,enrollHe:enrollHe,recordHeResult:recordHeResult,heBestResults:heBestResults,heGPA:heGPA,heCGPA:heCGPA,heStanding:heStanding,
+  dateSheetFor:dateSheetFor,dateSheetEntries:dateSheetEntries,setDateSheet:setDateSheet,admitCodeFor:admitCodeFor,admitCardHTML:admitCardHTML,admitCardsBatchHTML:admitCardsBatchHTML,dateSheetHTML:dateSheetHTML,issueAdmitCards:issueAdmitCards,withdrawAdmitCards:withdrawAdmitCards,bcOn:bcOn,bcClasses:bcClasses,bcResolve:bcResolve,bcRecipients:bcRecipients,bcNoContact:bcNoContact,bcNoContactList:bcNoContactList,createBroadcast:createBroadcast,bcGet:bcGet,bcNext:bcNext,bcWaLink:bcWaLink,broadcastMark:broadcastMark,bcSummary:bcSummary,schoolSummary:schoolSummary,hoAggregate:hoAggregate,hoSummaryHTML:hoSummaryHTML,adminSchoolHTML:adminSchoolHTML,hwOn:hwOn,hwList:hwList,hwDueCount:hwDueCount,addHomework:addHomework,hwSetDone:hwSetDone,deleteHomework:deleteHomework,hwItemHTML:hwItemHTML,hwParentHTML:hwParentHTML,transportOn:transportOn,routeById:routeById,transportFeeFor:transportFeeFor,addRoute:addRoute,setRouteFee:setRouteFee,deleteRoute:deleteRoute,routeStudents:routeStudents,setStudentTransport:setStudentTransport,transportChipHTML:transportChipHTML,libOn:libOn,todayISO:todayISO,addDaysISO:addDaysISO,libBookById:libBookById,libOutstanding:libOutstanding,libAvailable:libAvailable,addBook:addBook,deleteBook:deleteBook,issueBook:issueBook,returnBook:returnBook,libOverdue:libOverdue,libStudentLoans:libStudentLoans,libDossierHTML:libDossierHTML,admAppOn:admAppOn,pendingApplications:pendingApplications,submitApplication:submitApplication,reviewApplication:reviewApplication,appCardHTML:appCardHTML,cmpOn:cmpOn,cmpCatName:cmpCatName,openComplaints:openComplaints,submitComplaint:submitComplaint,replyComplaint:replyComplaint,resolveComplaint:resolveComplaint,cmpCardHTML:cmpCardHTML,ttPublish:ttPublish,ttParentHTML:ttParentHTML,publishAllTimetables:publishAllTimetables,slugifySchool:slugifySchool,pendingSignups:pendingSignups,submitSignup:submitSignup,signupReqCardHTML:signupReqCardHTML,validEmail:validEmail,inviteTempPassword:inviteTempPassword,isSchoolAdmin:isSchoolAdmin,heOn:heOn,heGradeFor:heGradeFor,hePctFor:hePctFor,heAttGate:heAttGate,heProgramById:heProgramById,heCourseById:heCourseById,heProgramCourses:heProgramCourses,heEnrollmentOf:heEnrollmentOf,addHeProgram:addHeProgram,deleteHeProgram:deleteHeProgram,addHeCourse:addHeCourse,deleteHeCourse:deleteHeCourse,enrollHe:enrollHe,recordHeResult:recordHeResult,heBestResults:heBestResults,heGPA:heGPA,heCGPA:heCGPA,heStanding:heStanding,
   addFeeHead:addFeeHead,deleteFeeHead:deleteFeeHead,feeBill:feeBill,feeGenerate:feeGenerate,feeHeadsFor:feeHeadsFor,
   recordFeePayment:recordFeePayment,feeSetAdjust:feeSetAdjust,feeDefaulters:feeDefaulters,feeSummary:feeSummary,feePaid:feePaid,
   feeClearance:feeClearance,challanHTML:challanHTML,receiptHTML:receiptHTML,nextFeeReceipt:nextFeeReceipt,
@@ -21430,10 +21528,10 @@ const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,LAN
   validateScanRows:validateScanRows,commitScanRows:commitScanRows,ocrEngine:ocrEngine,
   speechLang:speechLang,speechSupported:speechSupported,micField:micField,
   promoteClass:promoteClass,dashStatsHTML:dashStatsHTML,promoteCardHTML:promoteCardHTML,
-  issueCertificate:issueCertificate,voidCertificate:voidCertificate,getCertificate:getCertificate,
+  issueCertificate:issueCertificate,voidCertificate:voidCertificate,unvoidCertificate:unvoidCertificate,getCertificate:getCertificate,
   certsOfStudent:certsOfStudent,certPrintHTML:certPrintHTML,certTypeName:certTypeName,
   resultPayload:resultPayload,rcardHTML:rcardHTML,reportCardHTML:reportCardHTML,
-  reportCardsBatchHTML:reportCardsBatchHTML,dossierPrintHTML:dossierPrintHTML,
+  reportCardsBatchHTML:reportCardsBatchHTML,dossierPrintHTML:dossierPrintHTML,showPrintPreview:showPrintPreview,
   broadsheetPrintHTML:broadsheetPrintHTML,admissionsPrintHTML:admissionsPrintHTML,
   dobPrintHTML:dobPrintHTML,labPrintHTML:labPrintHTML,
   awardListData:awardListData,awardRemark:awardRemark,awardSubjectPass:awardSubjectPass,methodName:methodName,
