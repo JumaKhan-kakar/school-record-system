@@ -159,6 +159,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:1rem 0}
 .prt .sign div{width:30%;border-top:1px solid #000;padding-top:4px;text-align:center;font-size:11px}
 .prt .rc-head{text-align:center;border:2px solid #000;padding:.5rem;margin-bottom:.6rem}
 .prt .rc-info{display:flex;justify-content:space-between;font-size:12px;margin-bottom:.5rem;flex-wrap:wrap;gap:.3rem}
+.prt .idcard svg{display:block;max-width:100%;max-height:100%}
 
 /* ============ print ============ */
 @page{size:A4;margin:11mm}
@@ -14607,7 +14608,7 @@ function idCardHTML(st){
     '<div>'+esc(t("cls"))+' '+esc(clsLabel(st.cls,st.section))+'</div>'+
     '<div>'+esc(t("adm_no"))+': <b>'+esc(st.admNo)+'</b></div>'+
     '<div style="font-size:.85rem;color:#555">'+esc(db().settings.schoolName||"")+'</div></div>'+
-    '<div style="flex:none">'+qr+'</div></div>';
+    '<div style="flex:none;width:96px;height:96px;overflow:hidden">'+qr+'</div></div>';
 }
 function idCardPrintHTML(id){
   const st=(db().students||[]).find(function(s){return s.id===id;});
@@ -17637,6 +17638,7 @@ function viewDossier(id){
   const st=d.student;
   let h='<div class="card"><button type="button" class="btn btn-sm" id="dos-back">← '+esc(t("back"))+"</button> "+
     '<button type="button" class="btn btn-sm" id="dos-print">'+esc(t("print_dossier"))+"</button> "+
+    '<button type="button" class="btn btn-sm" id="dos-print-prev">'+esc(t("print_preview"))+"</button> "+
     '<button type="button" class="btn btn-sm" id="dos-idcard">'+esc(t("idcard_print"))+"</button> "+
     '<button type="button" class="btn btn-sm" id="dos-idcard-prev">'+esc(t("print_preview"))+"</button> "+
     '<label class="btn btn-sm">'+esc(st.photo?t("photo_change"):t("capture_photo"))+
@@ -17685,6 +17687,8 @@ function hasAnyMarks(examId,studentId){const m=db().marks[examId];return !!(m&&m
 function afterDossier(){
   $("dos-back").onclick=function(){dossierId=null;render();};
   $("dos-print").onclick=function(){doPrint(dossierPrintHTML(dossierId));};
+  const dpp=$("dos-print-prev");
+  if(dpp)dpp.onclick=function(){showPrintPreview(dossierPrintHTML(dossierId));};
   const di=$("dos-idcard");
   if(di)di.onclick=function(){doPrint(idCardPrintHTML(dossierId));};
   const dip=$("dos-idcard-prev");
