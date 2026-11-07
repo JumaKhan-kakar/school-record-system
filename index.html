@@ -16669,9 +16669,9 @@ function ensurePin(st){
    a denied write still reported "Published" while parents found nothing. */
 function publishResults(examId){
   const ex=db().exams.find(function(e){return e.id===examId;});
-  if(!ex)return Promise.resolve({ok:false,error:t("no_records")});
-  if(!ex.locked)return Promise.resolve({ok:false,error:t("publish_locked_only")});
-  if(typeof Cloud==="undefined"||!Cloud.enabled||!Cloud.ready||!Cloud.user||!Cloud.schoolId)return Promise.resolve({ok:false,error:t("publish_cloud_only")});
+  if(!ex)return Promise.resolve({ok:false,error:t("no_records"),errKey:"no_records"});
+  if(!ex.locked)return Promise.resolve({ok:false,error:t("publish_locked_only"),errKey:"publish_locked_only"});
+  if(typeof Cloud==="undefined"||!Cloud.enabled||!Cloud.ready||!Cloud.user||!Cloud.schoolId)return Promise.resolve({ok:false,error:t("publish_cloud_only"),errKey:"publish_cloud_only"});
   const rows=computeResult(examId);
   const done=rows.filter(function(r){return r.complete;});
   const schoolId=Cloud.schoolId;
@@ -16700,14 +16700,14 @@ function publishResults(examId){
       audit("sync-error","publish-results "+ex.name+" ("+ex.year+"): "+bad.length+" failed — "+(typeof Cloud!=="undefined"&&Cloud.lastSyncError?Cloud.lastSyncError.code:"unknown"));
     }
     Store.save();
-    if(bad.length)return {ok:false,count:n,failed:bad.length,error:t("publish_failed")};
+    if(bad.length)return {ok:false,count:n,failed:bad.length,error:t("publish_failed"),errKey:"publish_failed"};
     return {ok:true,count:n};
   });
 }
 function unpublishResults(examId){
   const ex=db().exams.find(function(e){return e.id===examId;});
-  if(!ex)return Promise.resolve({ok:false});
-  if(typeof Cloud==="undefined"||!Cloud.enabled||!Cloud.ready||!Cloud.user||!Cloud.schoolId)return Promise.resolve({ok:false,error:t("publish_cloud_only")});
+  if(!ex)return Promise.resolve({ok:false,error:t("no_records"),errKey:"no_records"});
+  if(typeof Cloud==="undefined"||!Cloud.enabled||!Cloud.ready||!Cloud.user||!Cloud.schoolId)return Promise.resolve({ok:false,error:t("publish_cloud_only"),errKey:"publish_cloud_only"});
   const rows=computeResult(examId);
   const schoolId=Cloud.schoolId;
   const jobs=[];
@@ -16725,7 +16725,7 @@ function unpublishResults(examId){
     if(db().settings.published)delete db().settings.published[examId];
     audit("unpublish-results",ex.name+" ("+ex.year+")");
     Store.save();
-    if(bad.length)return {ok:false,count:n,failed:bad.length,error:t("publish_failed")};
+    if(bad.length)return {ok:false,count:n,failed:bad.length,error:t("publish_failed"),errKey:"publish_failed"};
     return {ok:true,count:n};
   });
 }
@@ -19250,6 +19250,28 @@ function viewResult(){
     '<div id="r-cardbox"></div></div>';
   return h;
 }
+/* Round 66 — the last publish/unpublish message, kept so it survives
+   the re-render that the publish itself triggers: publishResults()
+   saves settings (published[examId]) -> Store.save() -> Cloud sync-out
+   -> the settings listener fires -> applyChanges -> render() rebuilds
+   the Results view with an empty r-pubmsg. Stored per exam and rebuilt
+   from its record on every render, so it stays in the current language. */
+let lastPubMsg=null;
+function pubMsgHTML(m){
+  if(!m)return "";
+  if(m.kind==="ok"){
+    const link=parentLink();
+    return '<div class="msg okm">'+esc(t("publish_done"))+" — "+m.count+" "+esc(t("dash_marks_done"))+".</div>"+
+      (link?'<div class="card" style="margin-top:.5rem"><b>'+esc(t("publish_link"))+'</b><br><span style="word-break:break-all">'+esc(link)+"</span></div>":"");
+  }
+  if(m.kind==="unpub")return '<div class="msg okm">'+esc(t("unpublish_done"))+"</div>";
+  return '<div class="msg err">'+esc(t(m.errKey||"login_fail"))+"</div>";
+}
+function showPubMsg(m){
+  lastPubMsg=m;
+  const pm=$("r-pubmsg");
+  if(pm)pm.innerHTML=pubMsgHTML(m);
+}
 function afterResult(){
   if(!curResExamId&&db().exams.length)curResExamId=db().exams[0].id;
   const pk=$("r-pick");
@@ -19289,24 +19311,23 @@ function afterResult(){
     const st=$("r-stu");
     st.innerHTML=rows.map(function(r){return '<option value="'+r.student.id+'">'+esc(displayName(r.student)+" ("+r.student.admNo+")")+"</option>";}).join("");
   };
-  pk.onchange=function(){curResExamId=pk.value;drawSheet();};
+  pk.onchange=function(){lastPubMsg=null;curResExamId=pk.value;drawSheet();};
   const pub=$("r-publish"),unp=$("r-unpublish"),pubmsg=$("r-pubmsg");
+  if(lastPubMsg&&lastPubMsg.examId===curResExamId)pubmsg.innerHTML=pubMsgHTML(lastPubMsg);
   if(pub)pub.onclick=function(){
     if(!curResExamId)return;
     const ex=db().exams.find(function(e){return e.id===curResExamId;});
-    if(!ex||!ex.locked){pubmsg.innerHTML='<div class="msg err">'+esc(t("publish_locked_only"))+"</div>";return;}
+    if(!ex||!ex.locked){showPubMsg({examId:curResExamId,kind:"err",errKey:"publish_locked_only"});return;}
     pubmsg.innerHTML='<div class="msg">'+esc(t("connecting"))+"</div>";
     publishResults(curResExamId).then(function(r){
-      if(!r.ok){pubmsg.innerHTML='<div class="msg err">'+esc(r.error||t("login_fail"))+"</div>";return;}
-      const link=parentLink();
-      pubmsg.innerHTML='<div class="msg okm">'+esc(t("publish_done"))+" — "+r.count+" "+esc(t("dash_marks_done"))+".</div>"+
-        (link?'<div class="card" style="margin-top:.5rem"><b>'+esc(t("publish_link"))+'</b><br><span style="word-break:break-all">'+esc(link)+"</span></div>":"");
+      if(!r.ok){showPubMsg({examId:curResExamId,kind:"err",errKey:r.errKey||"login_fail"});return;}
+      showPubMsg({examId:curResExamId,kind:"ok",count:r.count});
     });
   };
   if(unp)unp.onclick=function(){
     if(!curResExamId)return;
     unpublishResults(curResExamId).then(function(r){
-      pubmsg.innerHTML=r.ok?'<div class="msg okm">'+esc(t("unpublish_done"))+"</div>":'<div class="msg err">'+esc(r.error||t("login_fail"))+"</div>";
+      showPubMsg(r.ok?{examId:curResExamId,kind:"unpub"}:{examId:curResExamId,kind:"err",errKey:r.errKey||"login_fail"});
     });
   };
   $("r-csv").onclick=function(){if(curResExamId)downloadFile("results.csv",exportCSV("results",curResExamId),"text/csv;charset=utf-8");};
@@ -19749,21 +19770,42 @@ function loadAdminSignups(){
     box.innerHTML=h+"</div>";
   }).catch(function(){box.innerHTML="";});
 }
+/* Round 66 — the Admin schools list is cached per signed-in admin.
+   Every live snapshot calls applyChanges -> render(), and render()
+   rebuilds the Admin view with a fresh "Connecting…" placeholder, so
+   without a cache every render restarts the listSchools() fetch and
+   the list only lands when renders pause (~60-70 s live, re-test #2).
+   With the cache, re-renders paint the saved rows instantly; a fresh
+   fetch happens only on a cache miss, after 5 minutes, for a different
+   admin, or after an admin mutation cleared it (clearAdmListCache,
+   called from every admin mutation below and from the Test-connection
+   button). renderAdminListRows re-queries the box each time, so a
+   fetch that resolves after a re-render still paints the live node. */
+let admListCache=null;
+function clearAdmListCache(){admListCache=null;}
+function renderAdminListRows(rows){
+  const agg=hoAggregate(rows);
+  const sumBox=$("adm-summary");
+  if(sumBox)sumBox.innerHTML=hoSummaryHTML(agg);
+  const box=$("adm-list");
+  if(!box)return;
+  box.innerHTML=rows.length?rows.map(adminSchoolHTML).join(""):'<p class="muted">'+esc(t("no_records"))+'</p>';
+}
 function loadAdminList(){
   const box=$("adm-list");if(!box)return;
   if(typeof Cloud==="undefined"||!Cloud.isSuperAdmin){box.innerHTML='<p class="muted">'+esc(t("login_notallowed"))+'</p>';return;}
+  const uid=Cloud.user?Cloud.user.uid:"";
+  if(admListCache&&admListCache.uid===uid&&Date.now()-admListCache.at<300000){renderAdminListRows(admListCache.rows);loadAdminSignups();return;}
   Cloud.listSchools().then(function(schools){
-    if(!schools.length){box.innerHTML='<p class="muted">'+esc(t("no_records"))+'</p>';return;}
+    if(!schools.length){admListCache={uid:uid,rows:[],at:Date.now()};renderAdminListRows([]);return;}
     const jobs=schools.map(function(s){
       return Promise.all([Cloud.getSubPayments(s.id),Cloud.getPublicInfo(s.id)]).then(function(r){
         return {school:s,pays:r[0]||[],info:r[1]||null};
       });
     });
     return Promise.all(jobs).then(function(rows){
-      const agg=hoAggregate(rows);
-      const sumBox=$("adm-summary");
-      if(sumBox)sumBox.innerHTML=hoSummaryHTML(agg);
-      box.innerHTML=rows.map(adminSchoolHTML).join("");
+      admListCache={uid:uid,rows:rows,at:Date.now()};
+      renderAdminListRows(rows);
     });
   loadAdminSignups();
   }).catch(function(){box.innerHTML='<p class="muted">'+esc(t("login_notallowed"))+'</p>';});
@@ -19819,13 +19861,13 @@ function afterAdmin(){
     el.disabled=true;el.textContent="⏳";
     if(el.hasAttribute("data-sgapprove")){
       Cloud.approveSignup(el.getAttribute("data-sgapprove")).then(function(r){
-        if(r&&r.ok){sgBox.innerHTML='<div class="msg ok">✅ '+esc(t("signup_approved"))+": "+esc(r.schoolId)+"<br>"+esc(t("signup_next"))+"</div>";loadAdminList();}
+        if(r&&r.ok){sgBox.innerHTML='<div class="msg ok">✅ '+esc(t("signup_approved"))+": "+esc(r.schoolId)+"<br>"+esc(t("signup_next"))+"</div>";clearAdmListCache();loadAdminList();}
         else{el.disabled=false;el.textContent=t("signup_approve");}
       });
       return;
     }
     Cloud.rejectSignup(el.getAttribute("data-sgreject"),note).then(function(r){
-      if(r&&r.ok)loadAdminSignups();
+      if(r&&r.ok){clearAdmListCache();loadAdminSignups();}
       else{el.disabled=false;el.textContent=t("signup_reject");}
     });
   };
@@ -19838,7 +19880,7 @@ function afterAdmin(){
       if(parts.length!==2)return;
       el.disabled=true;el.textContent="⏳";
       Cloud.confirmSubPayment(parts[0],parts[1]).then(function(r){
-        if(r&&r.ok)loadAdminList();
+        if(r&&r.ok){clearAdmListCache();loadAdminList();}
         else{el.disabled=false;el.textContent=t("sub_confirm");}
       });
       return;
@@ -19846,7 +19888,7 @@ function afterAdmin(){
     if(el.hasAttribute("data-block")){
       const sid=el.getAttribute("data-block"),cur=el.getAttribute("data-cur")==="1";
       el.disabled=true;el.textContent="⏳";
-      Cloud.setSchoolBlocked(sid,!cur).then(function(){loadAdminList();});
+      Cloud.setSchoolBlocked(sid,!cur).then(function(){clearAdmListCache();loadAdminList();});
       return;
     }
     if(el.hasAttribute("data-teachers")){
@@ -19858,7 +19900,7 @@ function afterAdmin(){
       if(parts.length!==2)return;
       const cur=el.getAttribute("data-cur")==="1";
       el.disabled=true;el.textContent="⏳";
-      Cloud.setTeacherDisabled(parts[0],!cur).then(function(){renderAdminTeachers(parts[1]);});
+      Cloud.setTeacherDisabled(parts[0],!cur).then(function(){clearAdmListCache();renderAdminTeachers(parts[1]);});
       return;
     }
   };
@@ -19923,6 +19965,10 @@ function bindSyncTest(){
       if(card){card.outerHTML=syncStatusHTML();bindSyncTest();}
       const m2=$("sync-test-msg");
       if(m2)m2.innerHTML=r.ok?'<div class="msg ok">'+esc(t("sync_test_ok").replace("{ms}",String(r.ms)))+'</div>':'<div class="msg err">'+esc(t("sync_test_bad").replace("{code}",String(r.code)).replace("{message}",String(r.message||"")))+'</div>';
+      /* Round 66: on the Admin tab the Test-connection button also
+         refreshes the schools list — it clears the cache above so the
+         next loadAdminList() fetches fresh rows. */
+      if($("adm-list")){clearAdmListCache();loadAdminList();}
     });
   };
 }
