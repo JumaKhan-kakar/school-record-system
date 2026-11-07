@@ -15654,10 +15654,13 @@ function renderTabs(){
    admissions removes the created students (and their marks/attendance
    cells); marks/attendance restore the previous cell value. */
 let docImpState=null;
-function docImpPrompt(type){
-  if(type==="marks")return "Read this marks sheet photo or PDF. Return ONLY a JSON object {\"rows\":[{\"studentName\":\"...\",\"fatherName\":\"...\",\"subject\":\"...\",\"marks\":0}]} — one row per student per subject. Use the names exactly as written. marks is a number. No other text, no markdown.";
-  if(type==="att")return "Read this attendance register photo or PDF. Return ONLY a JSON object {\"rows\":[{\"studentName\":\"...\",\"fatherName\":\"...\",\"date\":\"YYYY-MM-DD\",\"status\":\"P\"}]} — one row per student. status is one of P (present), A (absent), L (late), V (leave). Dates as YYYY-MM-DD; convert dd/mm/yyyy dates. No other text, no markdown.";
-  return "Read this admission register photo or PDF. Return ONLY a JSON object {\"rows\":[{\"name\":\"...\",\"fatherName\":\"...\",\"dob\":\"YYYY-MM-DD\",\"gender\":\"male\"|\"female\",\"cls\":\"...\",\"section\":\"...\",\"contact\":\"...\",\"address\":\"...\"}]} — one row per student. Dates as YYYY-MM-DD; convert dd/mm/yyyy dates. gender is male for a boy, female for a girl. Leave a field as \"\" when it is not on the page. No other text, no markdown.";
+function docImpPrompt(type,kind){
+  const med=kind==="docx"?"Word file":kind==="xlsx"?"spreadsheet":kind==="pdf"?"PDF":kind==="image"?"photo":"document";
+  const sheet=kind==="xlsx"?" Read every sheet in the file; each row is one student.":"";
+  const clsLine=" If the register groups students under a class heading (for example 'Class 6'), put that class in every row's cls field; otherwise leave cls as \"\".";
+  if(type==="marks")return "Read this marks sheet ("+med+")."+sheet+" Return ONLY a JSON object {\"rows\":[{\"studentName\":\"...\",\"fatherName\":\"...\",\"subject\":\"...\",\"marks\":0,\"cls\":\"...\"}]} — one row per student per subject. Use the names exactly as written. marks is a number."+clsLine+" No other text, no markdown.";
+  if(type==="att")return "Read this attendance register ("+med+")."+sheet+" Return ONLY a JSON object {\"rows\":[{\"studentName\":\"...\",\"fatherName\":\"...\",\"date\":\"YYYY-MM-DD\",\"status\":\"P\",\"cls\":\"...\"}]} — one row per student. status is one of P (present), A (absent), L (late), V (leave). Dates as YYYY-MM-DD; convert dd/mm/yyyy dates."+clsLine+" No other text, no markdown.";
+  return "Read this admission register ("+med+")."+sheet+" Return ONLY a JSON object {\"rows\":[{\"name\":\"...\",\"fatherName\":\"...\",\"dob\":\"YYYY-MM-DD\",\"gender\":\"male\"|\"female\",\"cls\":\"...\",\"section\":\"...\",\"contact\":\"...\",\"address\":\"...\"}]} — one row per student. The register may have one table per class, each preceded by a heading like 'CLASS 10TH' or 'CLASS KACHI': read the heading above each table and put that class in every row's cls field — normalise '10TH' to '10', '9TH' to '9', '8TH' to '8', '7th' to '7', '3rd' to '3', '2ND' to '2', and keep 'Kachi' and 'Pakki' as written (capitalised). Skip rows where the NAME is empty — a row with only a serial number is not a student. Include EVERY row from EVERY table — do not stop early. The tables may have only S.No., NAME and FATHER NAME columns: leave dob, gender, contact, address and section as \"\" when they are not shown. Dates as YYYY-MM-DD; convert dd/mm/yyyy dates. gender is male for a boy, female for a girl. Leave a field as \"\" when it is not on the page. No other text, no markdown.";
 }
 function docImpParseResponse(text){
   const s=String(text||"").trim();
@@ -15678,26 +15681,49 @@ function docImpNormDate(v){
   if(m){const yy=m[3].length===2?"20"+m[3]:m[3];const iso=yy+"-"+String(m[2]).padStart(2,"0")+"-"+String(m[1]).padStart(2,"0");if(validISODate(iso))return iso;}
   return s;
 }
+function docImpNormCls(v){
+  let s=String(v==null?"":v).trim();
+  s=s.replace(/^(?:class|cls|جماعت|darasa)[\s\-:.]+/i,"").trim();
+  const m=s.match(/^(\d{1,2})(st|nd|rd|th)$/i);
+  if(m)s=m[1];
+  if(/^kachi$/i.test(s))s="Kachi";
+  if(/^pakki$/i.test(s))s="Pakki";
+  return s;
+}
 function docImpNormAdm(r){
   r=r||{};
   const g=normGender(r.gender);
+  let c=docImpNormCls(r.cls);
+  let sec=String(r.section||"").trim();
+  const hm=c.match(/^(\d{1,2})-([A-Za-z])$/);
+  if(hm&&!sec){c=hm[1];sec=hm[2];}
   return {name:String(r.name||"").trim(),fatherName:String(r.fatherName||"").trim(),
     dob:docImpNormDate(r.dob),gender:g||String(r.gender||"").trim().toLowerCase(),
-    cls:String(r.cls||"").trim(),section:String(r.section||"").trim(),
+    cls:c,section:sec,
     contact:String(r.contact||"").trim(),address:String(r.address||"").trim(),
     admDate:todayISO()};
 }
 function docImpNormMarks(r){
   r=r||{};
   return {studentName:String(r.studentName||r.name||"").trim(),fatherName:String(r.fatherName||"").trim(),
-    subject:String(r.subject||"").trim(),marks:(r.marks==null||r.marks==="")?"":Number(r.marks)};
+    subject:String(r.subject||"").trim(),marks:(r.marks==null||r.marks==="")?"":Number(r.marks),
+    cls:docImpNormCls(r.cls)};
 }
 function docImpNormAtt(r){
   r=r||{};
   const st=String(r.status||"").trim().toUpperCase();
   const map={P:"P",A:"A",L:"L",V:"V",PRESENT:"P",ABSENT:"A",LATE:"L",LEAVE:"V"};
   return {studentName:String(r.studentName||r.name||"").trim(),fatherName:String(r.fatherName||"").trim(),
-    date:docImpNormDate(r.date),status:map[st]||st};
+    date:docImpNormDate(r.date),status:map[st]||st,cls:docImpNormCls(r.cls)};
+}
+function docImpResolveStudent(name,fatherName,cls){
+  const matches=db().students.filter(function(s){return norm(s.name)===norm(name)&&norm(s.fatherName)===norm(fatherName);});
+  if(!matches.length)return {student:null,flag:"docimp_f_nostudent"};
+  if(!cls)return matches.length===1?{student:matches[0],flag:""}:{student:null,flag:"docimp_f_ambig"};
+  const inCls=matches.filter(function(s){return norm(s.cls)===norm(cls)||norm(clsLabel(s.cls,s.section))===norm(cls);});
+  if(inCls.length===1)return {student:inCls[0],flag:""};
+  if(inCls.length>1)return {student:null,flag:"docimp_f_ambig"};
+  return {student:null,flag:"docimp_f_clsmatch"};
 }
 function findStudentByName(name,fatherName){
   const n=norm(name),f=norm(fatherName);
@@ -15730,17 +15756,22 @@ function docImpFlagRows(type,rows,ctx){
         if(sub)d.subject=sub.name;
         if(!d.subject||!sub)flags.push("docimp_f_subject");
         else if(d.marks===""||!isFinite(d.marks)||d.marks<0||d.marks>sub.max)flags.push("docimp_f_marks");
+        if(d.cls&&norm(ex.cls)!==norm(d.cls)&&norm(clsLabel(ex.cls,ex.section))!==norm(d.cls))flags.push("docimp_f_clsmatch");
       }
-      const matches=db().students.filter(function(s){return norm(s.name)===norm(d.studentName)&&norm(s.fatherName)===norm(d.fatherName);});
-      if(!d.studentName||!d.fatherName||!matches.length)flags.push("docimp_f_nostudent");
-      else if(matches.length>1)flags.push("docimp_f_ambig");
+      if(!d.studentName||!d.fatherName)flags.push("docimp_f_nostudent");
+      else{
+        const rs=docImpResolveStudent(d.studentName,d.fatherName,d.cls);
+        if(rs.flag)flags.push(rs.flag);
+      }
     }else{
       d=docImpNormAtt(raw);
       if(!d.date||!validISODate(d.date))flags.push("docimp_f_date");
       if(["P","A","L","V"].indexOf(d.status)<0)flags.push("docimp_f_status");
-      const matches=db().students.filter(function(s){return norm(s.name)===norm(d.studentName)&&norm(s.fatherName)===norm(d.fatherName);});
-      if(!d.studentName||!d.fatherName||!matches.length)flags.push("docimp_f_nostudent");
-      else if(matches.length>1)flags.push("docimp_f_ambig");
+      if(!d.studentName||!d.fatherName)flags.push("docimp_f_nostudent");
+      else{
+        const rs=docImpResolveStudent(d.studentName,d.fatherName,d.cls);
+        if(rs.flag)flags.push(rs.flag);
+      }
     }
     return {data:d,flags:flags,accepted:flags.length===0};
   });
@@ -15768,7 +15799,7 @@ function docImpCommit(type,rows,ctx){
       if(!rw||!rw.accepted){skipped++;return;}
       const d=rw.data||{};
       const sub=ex.subjects.find(function(s){return norm(s.name)===norm(d.subject);});
-      const st=findStudentByName(d.studentName,d.fatherName);
+      const st=docImpResolveStudent(d.studentName,d.fatherName,d.cls).student;
       if(!sub||!st||ex.locked){skipped++;return;}
       if(d.marks===""||!isFinite(d.marks)||d.marks<0||d.marks>sub.max){skipped++;return;}
       const prev=((db().marks[ex.id]||{})[st.id]||{})[sub.name];
@@ -15781,7 +15812,7 @@ function docImpCommit(type,rows,ctx){
     rows.forEach(function(rw){
       if(!rw||!rw.accepted){skipped++;return;}
       const d=rw.data||{};
-      const st=findStudentByName(d.studentName,d.fatherName);
+      const st=docImpResolveStudent(d.studentName,d.fatherName,d.cls).student;
       if(!st||!validISODate(d.date)||["P","A","L","V"].indexOf(d.status)<0){skipped++;return;}
       const prev=attGet(d.date,st.id);
       const r=setAtt(d.date,st.id,d.status);
@@ -15832,26 +15863,51 @@ function docImpUndo(batchId){
   audit("import-undo",b.type+" "+removed+" "+t("docimp_undone_short"));
   return {ok:true,removed:removed};
 }
+function docImpFileKind(file){
+  if(!file)return "none";
+  const mt=String(file.type||"").toLowerCase();
+  const nm=String(file.name||"").toLowerCase();
+  if(mt==="application/vnd.openxmlformats-officedocument.wordprocessingml.document"||/\.docx$/i.test(nm))return "docx";
+  if(mt==="application/msword"||/\.doc$/i.test(nm))return "doc";
+  if(mt==="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"||/\.xlsx$/i.test(nm))return "xlsx";
+  if(mt==="application/vnd.ms-excel"||/\.xls$/i.test(nm))return "xls";
+  if(mt==="application/pdf"||/\.pdf$/i.test(nm))return "pdf";
+  if(mt.indexOf("image/")===0||/\.(jpe?g|png|webp|gif|bmp)$/i.test(nm))return "image";
+  return "none";
+}
+function docImpReadAsDataURL(file){
+  return new Promise(function(res){
+    const rd=new FileReader();
+    rd.onload=function(){res(String(rd.result||""));};
+    rd.onerror=function(){res("");};
+    rd.readAsDataURL(file);
+  });
+}
 function docImpFileParts(file){
   if(!file)return Promise.resolve({ok:false,error:"docimp_badfile"});
-  if(file.type==="application/pdf"||/\.pdf$/i.test(file.name||"")){
-    return new Promise(function(res){
-      const rd=new FileReader();
-      rd.onload=function(){const du=String(rd.result||"");const b64=du.split(",")[1]||"";res(b64?{ok:true,part:{inlineData:{mimeType:"application/pdf",data:b64}}}:{ok:false,error:"docimp_badfile"});};
-      rd.onerror=function(){res({ok:false,error:"docimp_badfile"});};
-      rd.readAsDataURL(file);
+  const kind=docImpFileKind(file);
+  if(kind==="doc")return Promise.resolve({ok:false,error:"docimp_doc_old"});
+  if(kind==="xls")return Promise.resolve({ok:false,error:"docimp_xls_old"});
+  if(kind==="pdf"||kind==="docx"||kind==="xlsx"){
+    const mt=kind==="pdf"?"application/pdf":kind==="docx"?"application/vnd.openxmlformats-officedocument.wordprocessingml.document":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    return docImpReadAsDataURL(file).then(function(du){
+      const b64=String(du||"").split(",")[1]||"";
+      return b64?{ok:true,kind:kind,part:{inlineData:{mimeType:mt,data:b64}}}:{ok:false,error:"docimp_badfile"};
     });
   }
-  return fileToDataURLScan(file).then(function(du){
-    const b64=String(du||"").split(",")[1]||"";
-    return b64?{ok:true,part:{inlineData:{mimeType:"image/jpeg",data:b64}}}:{ok:false,error:"docimp_badfile"};
-  }).catch(function(){return {ok:false,error:"docimp_badfile"};});
+  if(kind==="image"){
+    return fileToDataURLScan(file).then(function(du){
+      const b64=String(du||"").split(",")[1]||"";
+      return b64?{ok:true,kind:"image",part:{inlineData:{mimeType:"image/jpeg",data:b64}}}:{ok:false,error:"docimp_badfile"};
+    }).catch(function(){return {ok:false,error:"docimp_badfile"};});
+  }
+  return Promise.resolve({ok:false,error:"docimp_badfile"});
 }
-function docImpExtractFromParts(type,part){
+function docImpExtractFromParts(type,part,kind){
   const key=geminiKey();
   if(!key)return Promise.resolve({ok:false,error:"gemini_no_key"});
   return geminiCall(key,{
-    contents:[{parts:[{text:docImpPrompt(type)},part]}],
+    contents:[{parts:[{text:docImpPrompt(type,kind)},part]}],
     generationConfig:{temperature:0.1}
   }).then(function(r){
     if(r.status!==200){
@@ -15868,20 +15924,37 @@ function docImpExtractFromParts(type,part){
 function docImpExtract(type,file){
   return docImpFileParts(file).then(function(p){
     if(!p.ok)return p;
-    return docImpExtractFromParts(type,p.part);
+    return docImpExtractFromParts(type,p.part,p.kind);
   });
 }
 function docImpCardHTML(type){
   const last=docImpLastBatch();
+  const fmts=[["photo","docimp_fmt_photo","📷"],["pdf","docimp_fmt_pdf","📄"],["docx","docimp_fmt_word","📝"],["doc","docimp_fmt_doc","📝"],["xlsx","docimp_fmt_excel","📊"],["xls","docimp_fmt_xls","📊"]];
+  if(type==="adm")fmts.push(["csv","docimp_fmt_csv","📋"]);
   return '<div class="card"><h3>📄 '+esc(t("docimp_title"))+'</h3><p class="muted">'+esc(t("docimp_hint"))+'</p>'+
-    '<div class="toolbar"><label class="btn btn-primary">'+esc(t("docimp_choose"))+'<input id="docimp-file-'+type+'" type="file" accept="image/*,application/pdf" style="display:none"></label>'+
-    '<span class="muted" id="docimp-fname-'+type+'"></span></div>'+
+    '<p class="muted">'+esc(t("docimp_choose"))+'</p><div class="toolbar">'+
+    fmts.map(function(f){return '<button type="button" class="btn btn-sm docimp-fmt" data-fmt="'+f[0]+'">'+f[2]+" "+esc(t(f[1]))+"</button>";}).join("")+'<button type="button" class="btn btn-sm" id="docimp-cam-btn-'+type+'">📷 '+esc(t("docimp_camera"))+'</button></div>'+
+    '<input id="docimp-file-'+type+'" type="file" accept="image/*,application/pdf,.docx,.doc,.xlsx,.xls" style="display:none">'+
+    '<input id="docimp-cam-'+type+'" type="file" accept="image/*" capture="environment" style="display:none">'+
+    '<span class="muted" id="docimp-fname-'+type+'"></span>'+
     (last?'<div class="toolbar"><button type="button" class="btn btn-sm" id="docimp-undo-'+type+'">↩ '+esc(t("docimp_undo"))+'</button><span class="muted">'+esc(t("docimp_last"))+': '+esc(last.type)+' — '+esc(String(last.created.length))+'</span></div>':"")+
     '<div id="docimp-body-'+type+'"></div></div>';
 }
+function docImpPickFormat(type,fmt){
+  if(fmt==="csv"){
+    const ci=$("a-import");
+    if(ci)ci.click();
+    return;
+  }
+  const fi=$("docimp-file-"+type);
+  if(!fi)return;
+  const acc={photo:"image/*",pdf:"application/pdf",docx:".docx,.doc",doc:".doc",xlsx:".xlsx,.xls",xls:".xls"}[fmt]||"image/*,application/pdf,.docx,.doc,.xlsx,.xls";
+  fi.accept=acc;
+  fi.click();
+}
 function docImpRowVal(d,field){
-  if(field==="gender")return '<select data-di="gender"><option value="male"'+(d.gender==="male"?" selected":"")+'>'+esc(t("male"))+'</option><option value="female"'+(d.gender==="female"?" selected":"")+'>'+esc(t("female"))+'</option></select>';
-  if(field==="status")return '<select data-di="status">'+["P","A","L","V"].map(function(s){return '<option value="'+s+'"'+(d.status===s?" selected":"")+'>'+esc(t("att_"+s.toLowerCase()))+'</option>';}).join("")+'</select>';
+  if(field==="gender")return '<select data-di="gender"><option value="">—</option><option value="male"'+(d.gender==="male"?" selected":"")+'>'+esc(t("male"))+'</option><option value="female"'+(d.gender==="female"?" selected":"")+'>'+esc(t("female"))+'</option></select>';
+  if(field==="status")return '<select data-di="status"><option value="">—</option>'+["P","A","L","V"].map(function(s){return '<option value="'+s+'"'+(d.status===s?" selected":"")+'>'+esc(t("att_"+s.toLowerCase()))+'</option>';}).join("")+'</select>';
   if(field==="dob"||field==="date")return '<input data-di="'+field+'" type="date" value="'+esc(d[field]||"")+'">';
   if(field==="marks")return '<input data-di="marks" inputmode="numeric" value="'+esc(String(d.marks==null?"":d.marks))+'">';
   return '<input data-di="'+field+'" value="'+esc(String(d[field]==null?"":d[field]))+'">';
@@ -15891,43 +15964,101 @@ function docImpFields(type){
   if(type==="att")return [["studentName","f_name"],["fatherName","father_name"],["date","att_date"],["status","att_status"]];
   return [["name","f_name"],["fatherName","father_name"],["dob","dob"],["gender","gender"],["cls","cls"],["section","section"],["contact","contact"],["address","address"]];
 }
+const DOCIMP_PAGE_SIZE=25;
+function docImpPaginate(rows,page){
+  const total=(rows||[]).length;
+  const pages=Math.max(1,Math.ceil(total/DOCIMP_PAGE_SIZE));
+  const p=Math.min(Math.max(0,page||0),pages-1);
+  return {rows:(rows||[]).slice(p*DOCIMP_PAGE_SIZE,(p+1)*DOCIMP_PAGE_SIZE),page:p,pages:pages,total:total};
+}
+function docImpReadRowsFromDOM(){
+  const S=docImpState;if(!S)return [];
+  return S.rows.map(function(rw,i){
+    const tr=document.querySelector('[data-dirow="'+i+'"]');
+    if(!tr)return rw;
+    const checked=tr.querySelector('[data-dichk]')&&tr.querySelector('[data-dichk]').checked;
+    const d=Object.assign({},rw.data);
+    tr.querySelectorAll("[data-di]").forEach(function(inp){
+      const k=inp.getAttribute("data-di");
+      d[k]=(k==="marks"?(inp.value===""?"":Number(inp.value)):inp.value);
+    });
+    const flagged=docImpFlagRows(S.type,[d],{examId:S.examId})[0];
+    flagged.accepted=!!checked&&flagged.flags.length===0;
+    flagged.manualSkip=!!rw.manualSkip;
+    return flagged;
+  });
+}
+function docImpSetPage(n){
+  const S=docImpState;if(!S)return;
+  S.rows=docImpReadRowsFromDOM();
+  const pg=docImpPaginate(S.rows,n);
+  S.page=pg.page;
+  paintDocImpReview();
+}
+function docImpRowChanged(i){
+  const S=docImpState;if(!S)return;
+  const tr=document.querySelector('[data-dirow="'+i+'"]');
+  if(!tr)return;
+  const d=Object.assign({},(S.rows[i]||{}).data);
+  tr.querySelectorAll("[data-di]").forEach(function(inp){
+    const k=inp.getAttribute("data-di");
+    d[k]=(k==="marks"?(inp.value===""?"":Number(inp.value)):inp.value);
+  });
+  const flagged=docImpFlagRows(S.type,[d],{examId:S.examId})[0];
+  const rw=S.rows[i];
+  rw.data=flagged.data;rw.flags=flagged.flags;
+  const chk=tr.querySelector('[data-dichk]');
+  if(chk&&!rw.manualSkip)chk.checked=flagged.flags.length===0;
+  rw.accepted=!!(chk&&chk.checked)&&flagged.flags.length===0;
+  const fc=tr.querySelector('[data-diflag]');
+  if(fc)fc.innerHTML=flagged.flags.length?'<span class="bad">⚠ '+flagged.flags.map(function(f){return esc(t(f));}).join(", ")+"</span>":'<span style="color:var(--ok)">✓</span>';
+}
+function docImpSetAllGender(g){
+  const S=docImpState;if(!S||S.type!=="adm")return;
+  S.rows=docImpReadRowsFromDOM();
+  S.rows.forEach(function(rw){
+    rw.data.gender=g;
+    const f=docImpFlagRows("adm",[rw.data],{examId:S.examId})[0];
+    rw.flags=f.flags;
+    if(!rw.manualSkip)rw.accepted=f.flags.length===0;
+  });
+  paintDocImpReview();
+}
 function paintDocImpReview(){
   const S=docImpState;if(!S)return;
   const box=$("docimp-body-"+S.type);if(!box)return;
   const fields=docImpFields(S.type);
+  const pg=docImpPaginate(S.rows,S.page||0);
+  S.page=pg.page;
+  const start=pg.page*DOCIMP_PAGE_SIZE;
   let h='<div class="msg okm">'+esc(String(S.rows.length))+" "+esc(t("docimp_rows_found"))+"</div>";
-  h+='<p class="muted">'+esc(t("docimp_review"))+'</p><div class="twrap"><table class="grid"><tr><th></th>';
+  h+='<p class="muted">'+esc(t("docimp_review"))+'</p>';
+  if(S.type==="adm"){
+    h+='<div class="toolbar"><button type="button" class="btn btn-sm" id="docimp-all-boys">'+esc(t("docimp_all_boys"))+'</button><button type="button" class="btn btn-sm" id="docimp-all-girls">'+esc(t("docimp_all_girls"))+"</button></div>";
+  }
+  h+='<div class="twrap"><table class="grid"><tr><th></th>';
   h+=fields.map(function(f){return "<th>"+esc(t(f[1]))+"</th>";}).join("");
   h+='<th></th></tr>';
-  h+=S.rows.map(function(rw,i){
+  h+=pg.rows.map(function(rw,pi){
+    const i=start+pi;
     const fl=(rw.flags||[]).map(function(f){return esc(t(f));}).join(", ");
     return '<tr data-dirow="'+i+'"><td><input type="checkbox" data-dichk="'+i+'"'+(rw.accepted?" checked":"")+' style="width:22px;height:22px"></td>'+
       fields.map(function(f){return "<td>"+docImpRowVal(rw.data,f[0])+"</td>";}).join("")+
-      '<td>'+(fl?'<span class="bad">⚠ '+fl+"</span>":'<span style="color:var(--ok)">✓</span>')+"</td></tr>";
+      '<td data-diflag="'+i+'">'+(fl?'<span class="bad">⚠ '+fl+"</span>":'<span style="color:var(--ok)">✓</span>')+"</td></tr>";
   }).join("");
-  h+="</table></div>"+
-    '<div class="toolbar"><button type="button" class="btn btn-primary" id="docimp-import-'+S.type+'">'+esc(t("docimp_import"))+"</button></div>";
+  h+="</table></div>";
+  if(pg.pages>1){
+    h+='<div class="toolbar"><button type="button" class="btn btn-sm" id="docimp-prev"'+(pg.page===0?" disabled":"")+">← "+esc(t("docimp_prev"))+'</button><span class="muted">'+esc(t("docimp_page"))+" "+(pg.page+1)+" / "+pg.pages+'</span><button type="button" class="btn btn-sm" id="docimp-next"'+(pg.page>=pg.pages-1?" disabled":"")+">"+esc(t("docimp_next"))+" →</button></div>";
+  }
+  h+='<div class="toolbar"><button type="button" class="btn btn-primary" id="docimp-import-'+S.type+'">'+esc(t("docimp_import"))+"</button></div>";
   box.innerHTML=h;
   bindDocImpReview();
 }
 function bindDocImpReview(){
   const S=docImpState;if(!S)return;
   const btn=$("docimp-import-"+S.type);
-  if(!btn)return;
-  btn.onclick=function(){
-    const rows=S.rows.map(function(rw,i){
-      const tr=document.querySelector('[data-dirow="'+i+'"]');
-      if(!tr)return rw;
-      const checked=tr.querySelector('[data-dichk]')&&tr.querySelector('[data-dichk]').checked;
-      const d=Object.assign({},rw.data);
-      tr.querySelectorAll("[data-di]").forEach(function(inp){
-        const k=inp.getAttribute("data-di");
-        d[k]=(k==="marks"?(inp.value===""?"":Number(inp.value)):inp.value);
-      });
-      const flagged=docImpFlagRows(S.type,[d],{examId:S.examId})[0];
-      flagged.accepted=!!checked&&flagged.flags.length===0;
-      return flagged;
-    });
+  if(btn)btn.onclick=function(){
+    const rows=docImpReadRowsFromDOM();
     const r=docImpCommit(S.type,rows,{examId:S.examId});
     if(r&&r.ok){
       docImpState={type:S.type,phase:"done",msg:r.imported+" "+t("docimp_imported_short")+" • "+r.skipped+" "+t("docimp_skipped_short")+" • "+r.dups+" "+t("docimp_dup_short"),rows:[],edits:{}};
@@ -15936,6 +16067,17 @@ function bindDocImpReview(){
     }
     render();
   };
+  const pv=$("docimp-prev");if(pv)pv.onclick=function(){docImpSetPage(S.page-1);};
+  const nx=$("docimp-next");if(nx)nx.onclick=function(){docImpSetPage(S.page+1);};
+  const ab=$("docimp-all-boys");if(ab)ab.onclick=function(){docImpSetAllGender("male");};
+  const ag=$("docimp-all-girls");if(ag)ag.onclick=function(){docImpSetAllGender("female");};
+  S.rows.forEach(function(rw,i){
+    const tr=document.querySelector('[data-dirow="'+i+'"]');
+    if(!tr)return;
+    const chk=tr.querySelector('[data-dichk]');
+    if(chk)chk.onchange=function(){rw.manualSkip=!chk.checked;rw.accepted=chk.checked&&rw.flags.length===0;};
+    tr.querySelectorAll("[data-di]").forEach(function(inp){inp.onchange=function(){docImpRowChanged(i);};});
+  });
 }
 function docImpPaint(){
   const S=docImpState;if(!S)return;
@@ -15945,7 +16087,7 @@ function docImpPaint(){
     return;
   }
   if(S.phase==="error"){
-    const extra=(S.error==="gemini_no_key"||S.error==="gemini_offline")?'<p class="muted">'+esc(t("docimp_fallback"))+"</p>":"";
+    const extra=(S.error==="gemini_no_key"||S.error==="gemini_offline"||S.error==="docimp_doc_old"||S.error==="docimp_xls_old")?'<p class="muted">'+esc(t("docimp_fallback"))+"</p>":"";
     box.innerHTML='<div class="msg badm">'+esc(t(S.error))+"</div>"+extra;
     return;
   }
@@ -15970,34 +16112,40 @@ function docImpUndoClick(type){
     render();
   }
 }
+function docImpOnFile(type,file){
+  const fn=$("docimp-fname-"+type);
+  if(fn)fn.textContent=file?file.name:"";
+  if(!file){docImpState={type:type,phase:"error",error:"docimp_nofile",rows:[],edits:{}};docImpPaint();return;}
+  if(type==="marks"&&!curExamId){docImpState={type:type,phase:"error",error:"docimp_noexam",rows:[],edits:{}};docImpPaint();return;}
+  docImpState={type:type,phase:"reading",examId:(type==="marks"?curExamId:null),rows:[],edits:{},fileName:file.name};
+  docImpPaint();
+  docImpExtract(type,file).then(function(r){
+    if(!r||!r.ok){
+      docImpState={type:type,phase:"error",error:(r&&r.error)||"docimp_badjson",rows:[],edits:{}};
+      docImpPaint();
+      return;
+    }
+    const rows=docImpFlagRows(type,r.rows||[],{examId:(type==="marks"?curExamId:null)});
+    if(!rows.length){
+      docImpState={type:type,phase:"error",error:"docimp_empty",rows:[],edits:{}};
+      docImpPaint();
+      return;
+    }
+    docImpState={type:type,phase:"review",examId:(type==="marks"?curExamId:null),rows:rows,edits:{},fileName:file.name,page:0};
+    docImpPaint();
+  });
+}
 function bindDocImp(type){
   const fi=$("docimp-file-"+type);if(!fi)return;
+  const cardEl=fi.parentElement;
+  if(cardEl)Array.prototype.forEach.call(cardEl.querySelectorAll(".docimp-fmt"),function(b){b.onclick=function(){docImpPickFormat(type,b.getAttribute("data-fmt"));};});
   const un=$("docimp-undo-"+type);
   if(un)un.onclick=function(){docImpUndoClick(type);};
-  fi.onchange=function(){
-    const file=fi.files&&fi.files[0];
-    const fn=$("docimp-fname-"+type);
-    if(fn)fn.textContent=file?file.name:"";
-    if(!file){docImpState={type:type,phase:"error",error:"docimp_nofile",rows:[],edits:{}};docImpPaint();return;}
-    if(type==="marks"&&!curExamId){docImpState={type:type,phase:"error",error:"docimp_noexam",rows:[],edits:{}};docImpPaint();return;}
-    docImpState={type:type,phase:"reading",examId:(type==="marks"?curExamId:null),rows:[],edits:{},fileName:file.name};
-    docImpPaint();
-    docImpExtract(type,file).then(function(r){
-      if(!r||!r.ok){
-        docImpState={type:type,phase:"error",error:(r&&r.error)||"docimp_badjson",rows:[],edits:{}};
-        docImpPaint();
-        return;
-      }
-      const rows=docImpFlagRows(type,r.rows||[],{examId:(type==="marks"?curExamId:null)});
-      if(!rows.length){
-        docImpState={type:type,phase:"error",error:"docimp_empty",rows:[],edits:{}};
-        docImpPaint();
-        return;
-      }
-      docImpState={type:type,phase:"review",examId:(type==="marks"?curExamId:null),rows:rows,edits:{},fileName:file.name};
-      docImpPaint();
-    });
-  };
+  fi.onchange=function(){docImpOnFile(type,fi.files&&fi.files[0]);};
+  const camIn=$("docimp-cam-"+type);
+  const camBtn=$("docimp-cam-btn-"+type);
+  if(camBtn&&camIn)camBtn.onclick=function(){camIn.click();};
+  if(camIn)camIn.onchange=function(){docImpOnFile(type,camIn.files&&camIn.files[0]);};
   if(docImpState&&docImpState.type===type&&docImpState.phase!=="reading")docImpPaint();
 }
 
@@ -18836,10 +18984,10 @@ es_cert_t:{en:"No certificates yet",ur:"ابھی کوئی سرٹیفکیٹ نہ�
 es_cert_h:{en:"Certificates — leaving, provisional, bonafide, character and transfer — are issued here with their own serial numbers and QR verification.",ur:"سرٹیفکیٹ — اسکول چھوڑنے، عارضی، بونافائیڈ، کردار اور ٹرانسفر — یہیں جاری ہوتے ہیں، اپنے سیریل نمبر اور کیو آر تصدیق کے ساتھ۔",bn:"সার্টিফিকেট — লিভিং, প্রভিশনাল, বোনাফাইড, ক্যারেক্টার ও ট্রান্সফার — এখানেই নিজস্ব সিরিয়াল নম্বর ও QR যাচাইসহ দেওয়া হয়।",hi:"प्रमाणपत्र — छोड़ने का, अस्थायी, बोनाफाइड, चरित्र और स्थानांतरण — यहीं अपने क्रमांक और QR सत्यापन के साथ जारी होते हैं।",ne:"प्रमाणपत्रहरू — छोड्ने, अस्थायी, बोनाफाइड, चरित्र र स्थानान्तरण — यहाँ आफ्नै क्रम सङ्ख्या र QR प्रमाणीकरणसहित जारी गरिन्छन्।",sw:"Vyeti — vya kuondoka, vya muda, vya uthibitisho, vya tabia na vya uhamisho — hutolewa hapa kwa nambari zake za mfululizo na uthibitisho wa QR.",ar:"تُصدر الشهادات — المغادرة والمؤقتة والإثبات وحسن السيرة والتحويل — هنا بأرقامها التسلسلية والتحقق عبر QR.",zh:"离校证明、临时证明、在读证明、品行证明和转学证明均在此签发，各有独立编号和二维码验证。",es:"Los certificados — de egreso, provisionales, de alumno regular, de conducta y de transferencia — se emiten aquí con sus propios números de serie y verificación por QR.",fr:"Les certificats — de fin de scolarité, provisoires, de scolarité, de bonne conduite et de transfert — sont délivrés ici avec leurs propres numéros de série et une vérification par QR.",pt:"Os certificados — de conclusão, provisórios, de matrícula, de conduta e de transferência — são emitidos aqui com os seus próprios números de série e verificação por QR.",ru:"Здесь выдаются справки — об уходе из школы, временная, подтверждающая, характеристика и о переводе — с собственными серийными номерами и QR-проверкой.",id:"Sertifikat — keluar, sementara, bonafide, karakter, dan pindah — diterbitkan di sini dengan nomor seri dan verifikasi QR masing-masing.",de:"Hier werden Austritts-, vorläufige, Bonafide-, Charakter- und Transferzertifikate mit eigenen Seriennummern und QR-Verifizierung ausgestellt.",ja:"離校証明書、仮証明書、在学証明書、品行証明書、転学証明書はここで発行され、それぞれ独自の通し番号とQR認証があります。",pa:"سرٹیفکیٹ — سکول چھڈن، عارضی، بونا فائیڈ، کردار تے منتقلی — اتھے اپنے سیریل نمبر تے QR تصدیق نال جاری ہوندے نیں۔",mr:"प्रमाणपत्रे — शाळा सोडल्याचे, तात्पुरते, बोनाफाइड, चारित्र्य आणि हस्तांतरण — येथे स्वतःच्या अनुक्रमांकासह आणि QR पडताळणीसह दिली जातात.",te:"సర్టిఫికేట్‌లు — విడిచిపెట్టడం, తాత్కాలికం, బోనఫైడ్, అక్షరం మరియు బదిలీ — వాటి స్వంత క్రమ సంఖ్యలు మరియు QR ధృవీకరణతో ఇక్కడ జారీ చేయబడతాయి.",fa:"گواهی‌ها — ترک تحصیل، موقت، بونافاید، اخلاق و انتقال — اینجا با شمارهٔ سریال خود و تأیید QR صادر می‌شوند.",tr:"Sertifikalar — ayrılma, geçici, öğrenci, karakter ve nakil — burada kendi seri numaraları ve QR doğrulamasıyla verilir.",ta:"சான்றிதழ்கள் — வெளியேறுதல், தற்காலிகமானவை, உறுதியானவை, தன்மை மற்றும் பரிமாற்றம் — அவற்றின் சொந்த வரிசை எண்கள் மற்றும் QR சரிபார்ப்புடன் இங்கே வழங்கப்படுகின்றன.",vi:"Giấy chứng nhận — thôi học, tạm thời, bonafide, hạnh kiểm và chuyển trường — được cấp tại đây với số sê-ri riêng và xác minh QR.",ko:"자퇴 증명서, 임시 증명서, 재학 증명서, 품행 증명서, 전학 증명서는 이곳에서 발급되며 각각 고유한 일련번호와 QR 인증이 있습니다.",tl:"Ang mga sertipiko — pag-alis, pansamantala, bonafide, karakter at paglipat — ay ibinibigay dito na may kani-kanilang serial number at pag-verify gamit ang QR.",ha:"Takardun shaida — na barin makaranta, na wucin gadi, na ɗalibi, na hali da na canja wurin — ana bayar da su a nan da lambobinsu na musamman da tabbatarwa ta QR.",it:"I certificati (di uscita, provvisori, in buona fede, di carattere e di trasferimento) vengono emessi qui con i propri numeri di serie e verifica QR.",ps:"سرټیفکیټونه — د وتلو، لنډمهاله، بونافایډ، اخلاقو او لېږد — دلته د خپل سریال نمبر او QR تایید سره صادرېږي.",ms:"Sijil — berhenti, sementara, bonafide, sahsiah dan pindah — dikeluarkan di sini dengan nombor siri dan pengesahan QR masing-masing.",yo:"Àwọn ìwé-ẹ̀rí — ìlọ, ìgbà díẹ̀, akẹ́kọ̀ọ́, ìwà àti gbé lọ — a ń fún níbí pẹ̀lú nọ́mbà ìtẹ̀lé tirẹ̀ àti ìjẹ́rìí QR.",ig:"Asambodo — nke ọpụpụ, nke nwa oge, nke nwa akwụkwọ, nke agwa na nke mbufe — a na-enye ha ebe a na nọmba usoro nke ha na nkwenye QR."},
 es_cert_b:{en:"Issue your first certificate",ur:"اپنا پہلا سرٹیفکیٹ جاری کریں",bn:"আপনার প্রথম সার্টিফিকেট দিন",hi:"अपना पहला प्रमाणपत्र जारी करें",ne:"आफ्नो पहिलो प्रमाणपत्र जारी गर्नुहोस्",sw:"Toa cheti chako cha kwanza",ar:"أصدر أول شهادة",zh:"签发第一份证书",es:"Emite tu primer certificado",fr:"Délivrez votre premier certificat",pt:"Emite o teu primeiro certificado",ru:"Выдайте свой первый сертификат",id:"Terbitkan sertifikat pertama Anda",de:"Stellen Sie Ihr erstes Zertifikat aus",ja:"最初の証明書を発行",pa:"اپنا پہلا سرٹیفکیٹ جاری کرو",mr:"तुमचे पहिले प्रमाणपत्र द्या",te:"మీ మొదటి ప్రమాణపత్రాన్ని జారీ చేయండి",fa:"اولین گواهی خود را صادر کنید",tr:"İlk sertifikanızı verin",ta:"உங்கள் முதல் சான்றிதழை வழங்கவும்",vi:"Cấp giấy chứng nhận đầu tiên của bạn",ko:"첫 증명서 발급",tl:"Mag-isyu ng iyong unang sertipiko",ha:"Bayar da takardar shaidarka ta farko",it:"Rilascia il tuo primo certificato",ps:"خپل لومړی سرټیفکیټ صادر کړئ",ms:"Keluarkan sijil pertama anda",yo:"Fún ní ìwé-ẹ̀rí àkọ́kọ́ rẹ",ig:"Nye asambodo mbụ gị"},
 
-docimp_title:{en:"Import from photo / PDF",ur:"تصویر / پی ڈی ایف سے درآمد کریں",bn:"ছবি / পিডিএফ থেকে আমদানি করুন",hi:"फ़ोटो / पीडीएफ़ से आयात करें",ne:"फोटो / PDF बाट आयात गर्नुहोस्",sw:"Ingiza kutoka picha / PDF",ar:"استيراد من صورة / PDF",zh:"从照片 / PDF 导入",es:"Importar desde foto / PDF",fr:"Importer depuis une photo / un PDF",pt:"Importar a partir de foto / PDF",ru:"Импорт из фото/PDF",id:"Impor dari foto / PDF",de:"Import aus Foto/PDF",ja:"写真 / PDFからインポート",pa:"تصویر / PDF توں درآمد کرو",mr:"फोटो / PDF मधून आयात करा",te:"ఫోటో / PDF నుండి దిగుమతి చేయండి",fa:"واردات از عکس / PDF",tr:"Fotoğraftan / PDF'den içe aktar",ta:"புகைப்படம் / PDF இலிருந்து இறக்குமதி செய்யவும்",vi:"Nhập từ ảnh / PDF",ko:"사진 / PDF에서 가져오기",tl:"Mag-import mula sa larawan / PDF",ha:"Shigo daga hoto / PDF",it:"Importa da foto/PDF",ps:"له انځور / PDF څخه وارد کړئ",ms:"Import dari foto / PDF",yo:"Gbé wọlé láti fọ́tò / PDF",ig:"Bubata site na foto / PDF"},
+docimp_title:{en:"Import from a file",ur:"فائل سے درآمد کریں",bn:"ফাইল থেকে আমদানি করুন",hi:"फ़ाइल से आयात करें",ne:"फाइलबाट आयात गर्नुहोस्",sw:"Ingiza kutoka faili",ar:"استيراد من ملف",zh:"从文件导入",es:"Importar desde un archivo",fr:"Importer depuis un fichier",pt:"Importar a partir de um ficheiro",ru:"Импорт из файла",id:"Impor dari file",de:"Aus Datei importieren",ja:"ファイルからインポート",pa:"فائل توں درآمد کرو",mr:"फाइलमधून आयात करा",te:"ఫైల్ నుండి దిగుమతి చేయండి",fa:"واردات از فایل",tr:"Dosyadan içe aktar",ta:"கோப்பிலிருந்து இறக்குமதி செய்யவும்",vi:"Nhập từ tệp",ko:"파일에서 가져오기",tl:"Mag-import mula sa file",ha:"Shigo daga fayil",it:"Importa da un file",ps:"له فایل څخه وارد کړئ",ms:"Import dari fail",yo:"Gbé wọlé láti fáìlì",ig:"Bubata site na faịlụ"},
 docimp_hint:{en:"Only this document is sent to the AI — never your whole record book.",ur:"صرف یہ دستاویز اے آئی کو بھیجی جاتی ہے — آپ کا پورا ریکارڈ کبھی نہیں۔",bn:"শুধু এই নথিটিই এআই-কে পাঠানো হয় — আপনার পুরো রেকর্ড বই কখনো নয়।",hi:"केवल यह दस्तावेज़ AI को भेजा जाता है — आपका पूरा रिकॉर्ड कभी नहीं।",ne:"केवल यो कागजात AI लाई पठाइन्छ — तपाईंको पूरा रेकर्ड कहिल्यै होइन।",sw:"Ni hati hii tu hutumwa kwa AI — kamwe kitabu chako chote cha rekodi.",ar:"يُرسَل هذا المستند فقط إلى الذكاء الاصطناعي — وليس سجلك كاملًا أبدًا۔",zh:"只会将这份文件发送给 AI——绝不会发送整本记录册。",es:"Solo este documento se envía a la IA, nunca todo tu libro de registros.",fr:"Seul ce document est envoyé à l'IA, jamais tout votre registre.",pt:"Só este documento é enviado para a IA, nunca todo o teu livro de registos.",ru:"В ИИ отправляется только этот документ — никогда не весь журнал.",id:"Hanya dokumen ini yang dikirim ke AI — bukan seluruh buku catatan Anda.",de:"Nur dieses Dokument wird an die KI gesendet – niemals Ihr gesamtes Registerbuch.",ja:"AIに送られるのはこの書類だけです — 記録簿全体が送られることはありません。",pa:"صرف ایہہ دستاویز AI نوں بھیجی جاندی اے — کدے تہاڈا پورا ریکارڈ بک نئیں۔",mr:"फक्त हेच दस्तऐवज AI कडे पाठवले जाते — तुमची संपूर्ण नोंदवही कधीही नाही.",te:"ఈ పత్రం మాత్రమే AIకి పంపబడుతుంది — మీ మొత్తం రికార్డు పుస్తకం ఎప్పుడూ ఉండదు.",fa:"فقط همین سند به هوش مصنوعی فرستاده می‌شود — هرگز کل دفتر سوابق شما.",tr:"AI'ya yalnızca bu belge gönderilir — tüm defteriniz asla gönderilmez.",ta:"இந்த ஆவணம் மட்டுமே AI க்கு அனுப்பப்படும் - உங்கள் முழு பதிவு புத்தகமும் இல்லை.",vi:"Chỉ tài liệu này được gửi tới AI — không bao giờ là toàn bộ sổ hồ sơ của bạn.",ko:"AI에는 이 문서만 전송됩니다 — 전체 기록부가 전송되는 일은 없습니다.",tl:"Ang dokumentong ito lamang ang ipinapadala sa AI — hindi ang buong record book mo.",ha:"Wannan takardar kaɗai ake aika wa AI — ba dukan littafin rikodinka ba.",it:"Solo questo documento viene inviato all'IA, mai l'intero registro.",ps:"یوازې دا سند AI ته لېږل کېږي — هېڅکله ستاسو ټول ریکارډ کتاب نه.",ms:"Hanya dokumen ini dihantar ke AI — bukan seluruh buku rekod anda.",yo:"Ìwé yìí nìkan ni a ń rán sí AI — kò sí ìwé ìforúkọsílẹ̀ rẹ gbogbo.",ig:"Naanị akwụkwọ a ka a na-eziga na AI — ọ dịghị mgbe akwụkwọ ndekọ gị niile."},
-docimp_choose:{en:"Choose photo / PDF",ur:"تصویر / پی ڈی ایف منتخب کریں",bn:"ছবি / পিডিএফ বেছে নিন",hi:"फ़ोटो / पीडीएफ़ चुनें",ne:"फोटो / PDF छान्नुहोस्",sw:"Chagua picha / PDF",ar:"اختر صورة / PDF",zh:"选择照片 / PDF",es:"Elegir foto / PDF",fr:"Choisir une photo / un PDF",pt:"Escolher foto / PDF",ru:"Выбрать фото / PDF",id:"Pilih foto / PDF",de:"Wählen Sie Foto / PDF",ja:"写真 / PDFを選択",pa:"تصویر / PDF چنو",mr:"फोटो / PDF निवडा",te:"ఫోటో / PDF ఎంచుకోండి",fa:"انتخاب عکس / PDF",tr:"Fotoğraf / PDF seç",ta:"புகைப்படம் / PDF ஐத் தேர்ந்தெடுக்கவும்",vi:"Chọn ảnh / PDF",ko:"사진 / PDF 선택",tl:"Pumili ng larawan / PDF",ha:"Zaɓi hoto / PDF",it:"Scegli foto/PDF",ps:"انځور / PDF وټاکئ",ms:"Pilih foto / PDF",yo:"Yàn fọ́tò / PDF",ig:"Họrọ foto / PDF"},
-docimp_nofile:{en:"Choose a photo or PDF first.",ur:"پہلے تصویر یا پی ڈی ایف منتخب کریں۔",bn:"প্রথমে একটি ছবি বা পিডিএফ বেছে নিন।",hi:"पहले एक फ़ोटो या पीडीएफ़ चुनें।",ne:"पहिले फोटो वा PDF छान्नुहोस्।",sw:"Chagua picha au PDF kwanza.",ar:"اختر صورة أو ملف PDF أولًا۔",zh:"请先选择照片或 PDF。",es:"Elige primero una foto o un PDF.",fr:"Choisissez d'abord une photo ou un PDF.",pt:"Escolhe primeiro uma foto ou um PDF.",ru:"Сначала выберите фотографию или PDF-файл.",id:"Pilih foto atau PDF terlebih dahulu.",de:"Wählen Sie zunächst ein Foto oder PDF aus.",ja:"まず写真またはPDFを選択してください。",pa:"پہلے تصویر یا PDF چنو۔",mr:"आधी फोटो किंवा PDF निवडा.",te:"ముందుగా ఫోటో లేదా PDFని ఎంచుకోండి.",fa:"اول یک عکس یا PDF انتخاب کنید.",tr:"Önce bir fotoğraf veya PDF seçin.",ta:"முதலில் ஒரு புகைப்படம் அல்லது PDF ஐ தேர்வு செய்யவும்.",vi:"Chọn ảnh hoặc PDF trước.",ko:"먼저 사진 또는 PDF를 선택하세요.",tl:"Pumili muna ng larawan o PDF.",ha:"Zaɓi hoto ko PDF da farko.",it:"Scegli prima una foto o un PDF.",ps:"لومړی یو انځور یا PDF وټاکئ.",ms:"Pilih foto atau PDF dahulu.",yo:"Yàn fọ́tò tàbí PDF ní àkọ́kọ́.",ig:"Họrọ foto maọbụ PDF mbụ."},
+docimp_choose:{en:"Choose a format:",ur:"فارمیٹ منتخب کریں:",bn:"একটি ফরম্যাট বেছে নিন:",hi:"एक प्रारूप चुनें:",ne:"ढाँचा छान्नुहोस्:",sw:"Chagua umbizo:",ar:"اختر تنسيقًا:",zh:"选择格式：",es:"Elige un formato:",fr:"Choisissez un format :",pt:"Escolhe um formato:",ru:"Выберите формат:",id:"Pilih format:",de:"Format wählen:",ja:"形式を選択：",pa:"فارمیٹ چنو:",mr:"स्वरूप निवडा:",te:"ఫార్మాట్ ఎంచుకోండి:",fa:"قالب را انتخاب کنید:",tr:"Bir biçim seçin:",ta:"வடிவத்தைத் தேர்ந்தெடுக்கவும்:",vi:"Chọn một định dạng:",ko:"형식을 선택하세요:",tl:"Pumili ng format:",ha:"Zaɓi tsari:",it:"Scegli un formato:",ps:"بڼه وټاکئ:",ms:"Pilih format:",yo:"Yan ọ̀nà kan:",ig:"Họrọ usoro:"},
+docimp_nofile:{en:"Choose a file first.",ur:"پہلے فائل منتخب کریں۔",bn:"প্রথমে একটি ফাইল বেছে নিন।",hi:"पहले एक फ़ाइल चुनें।",ne:"पहिले फाइल छान्नुहोस्।",sw:"Chagua faili kwanza.",ar:"اختر ملفًا أولًا.",zh:"请先选择文件。",es:"Elige primero un archivo.",fr:"Choisissez d'abord un fichier.",pt:"Escolhe primeiro um ficheiro.",ru:"Сначала выберите файл.",id:"Pilih file terlebih dahulu.",de:"Wählen Sie zuerst eine Datei.",ja:"まずファイルを選択してください。",pa:"پہلاں فائل چنو۔",mr:"प्रथम फाइल निवडा.",te:"ముందుగా ఫైల్ ఎంచుకోండి.",fa:"اول یک فایل انتخاب کنید.",tr:"Önce bir dosya seçin.",ta:"முதலில் ஒரு கோப்பைத் தேர்ந்தெடுக்கவும்.",vi:"Hãy chọn một tệp trước.",ko:"먼저 파일을 선택하세요.",tl:"Pumili muna ng file.",ha:"Zaɓi fayil da farko.",it:"Scegli prima un file.",ps:"لومړی فایل وټاکئ.",ms:"Pilih fail dahulu.",yo:"Yan fáìlì kan ní àkọ́kọ́.",ig:"Họrọ faịlụ mbụ."},
 docimp_reading:{en:"Reading the document…",ur:"دستاویز پڑھی جا رہی ہے…",bn:"নথিটি পড়া হচ্ছে…",hi:"दस्तावेज़ पढ़ा जा रहा है…",ne:"कागजात पढिँदै छ…",sw:"Inasoma hati…",ar:"جارٍ قراءة المستند…",zh:"正在读取文件…",es:"Leyendo el documento…",fr:"Lecture du document…",pt:"A ler o documento…",ru:"Чтение документа…",id:"Membaca dokumen…",de:"Dokument wird gelesen…",ja:"書類を読み取り中…",pa:"دستاویز پڑھی جا رہی اے…",mr:"दस्तऐवज वाचत आहे…",te:"పత్రాన్ని చదువుతోంది...",fa:"در حال خواندن سند…",tr:"Belge okunuyor…",ta:"ஆவணத்தைப் படிக்கிறது…",vi:"Đang đọc tài liệu…",ko:"문서 읽는 중…",tl:"Binabasa ang dokumento…",ha:"Ana karanta takardar…",it:"Leggendo il documento…",ps:"سند لوستل کېږي…",ms:"Membaca dokumen…",yo:"A ń ka ìwé…",ig:"Na-agụ akwụkwọ…"},
 docimp_fallback:{en:"No AI here? Use the paste-text box below instead — it works offline.",ur:"اے آئی دستیاب نہیں؟ نیچے والا پیسٹ باکس استعمال کریں — یہ آف لائن کام کرتا ہے۔",bn:"এআই নেই? নিচের পেস্ট-টেক্সট বাক্সটি ব্যবহার করুন — এটি অফলাইনে কাজ করে।",hi:"AI नहीं है? नीचे वाला पेस्ट-टेक्स्ट बॉक्स इस्तेमाल करें — यह ऑफ़लाइन काम करता है।",ne:"AI छैन? तलको पेस्ट-टेक्स्ट बाकस प्रयोग गर्नुहोस् — यो अफलाइन काम गर्छ।",sw:"Hakuna AI hapa? Tumia kisanduku cha kubandika maandishi hapa chini — kinafanya kazi bila mtandao.",ar:"لا يوجد ذكاء اصطناعي؟ استخدم مربع لصق النص أدناه — يعمل دون اتصال۔",zh:"这里没有 AI？请改用下方的粘贴文本框——它可以离线使用。",es:"¿No hay IA aquí? Usa el cuadro de pegar texto de abajo: funciona sin conexión.",fr:"Pas d'IA ici ? Utilisez plutôt la zone de collage de texte ci-dessous : elle fonctionne hors ligne.",pt:"Não há IA aqui? Usa a caixa de colar texto abaixo: funciona offline.",ru:"Нет ИИ? Воспользуйтесь полем для вставки текста ниже — оно работает офлайн.",id:"Tidak ada AI di sini? Gunakan kotak tempel teks di bawah — berfungsi offline.",de:"Keine KI hier? Verwenden Sie stattdessen das Feld zum Einfügen von Text unten – es funktioniert offline.",ja:"ここにAIがありませんか？代わりに下のテキスト貼り付けボックスを使ってください — オフラインで使えます。",pa:"اتھے کوئی AI نئیں؟ تھلے والا پیسٹ ٹیکسٹ ڈبہ ورتو — اوہ آف لائن کم کردا اے۔",mr:"येथे AI नाही? त्याऐवजी खालील पेस्ट-मजकूर बॉक्स वापरा — तो ऑफलाइन कार्य करतो.",te:"ఇక్కడ AI లేదా? బదులుగా దిగువ పేస్ట్-టెక్స్ట్ బాక్స్‌ని ఉపయోగించండి - ఇది ఆఫ్‌లైన్‌లో పని చేస్తుంది.",fa:"اینجا هوش مصنوعی نیست؟ به‌جای آن از جعبهٔ چسباندن متن زیر استفاده کنید — آفلاین کار می‌کند.",tr:"Burada AI yok mu? Bunun yerine aşağıdaki metin yapıştırma kutusunu kullanın — çevrimdışı çalışır.",ta:"இங்கு AI இல்லையா? அதற்குப் பதிலாக கீழே உள்ள பேஸ்ட்-டெக்ஸ்ட் பாக்ஸைப் பயன்படுத்தவும் - இது ஆஃப்லைனில் வேலை செய்கிறது.",vi:"Không có AI ở đây? Hãy dùng hộp dán văn bản bên dưới — nó hoạt động ngoại tuyến.",ko:"여기에 AI가 없나요? 대신 아래의 텍스트 붙여넣기 상자를 사용하세요 — 오프라인으로 작동합니다.",tl:"Walang AI dito? Gamitin na lang ang kahon ng pag-paste ng teksto sa ibaba — gumagana ito offline.",ha:"Babu AI a nan? Yi amfani da akwatin liƙa rubutu da ke ƙasa a maimakon haka — yana aiki ba tare da intanet ba.",it:"Nessuna intelligenza artificiale qui? Utilizza invece la casella di testo incolla qui sotto: funziona offline.",ps:"دلته AI نشته؟ پر ځای یې لاندې د متن لګولو بکس وکاروئ — دا آف لائن کار کوي.",ms:"Tiada AI di sini? Gunakan kotak tampal teks di bawah — ia berfungsi luar talian.",yo:"Kò sí AI níbí? Lo àpótí lẹ́ẹ̀mọ́ ọ̀rọ̀ tí ó wà ní ìsàlẹ̀ dípò — ó ń ṣiṣẹ́ láìsí ìntánẹ́ẹ̀tì.",ig:"Enweghị AI ebe a? Jiri igbe mado ederede dị n'okpuru kama — ọ na-arụ ọrụ na-anọghị n'ịntanetị."},
 docimp_rows_found:{en:"rows found",ur:"قطاریں ملیں",bn:"সারি পাওয়া গেছে",hi:"पंक्तियाँ मिलीं",ne:"पङ्क्तिहरू भेटिए",sw:"mistari iliyopatikana",ar:"صفوف تم العثور عليها",zh:"找到的行",es:"filas encontradas",fr:"lignes trouvées",pt:"linhas encontradas",ru:"строк найдено",id:"baris ditemukan",de:"Zeilen gefunden",ja:"見つかった行",pa:"قطاراں ملیاں",mr:"ओळी सापडल्या",te:"వరుసలు కనుగొనబడ్డాయి",fa:"ردیف‌ها پیدا شد",tr:"satır bulundu",ta:"வரிசைகள் காணப்பட்டன",vi:"hàng đã tìm thấy",ko:"찾은 행",tl:"mga hilerang natagpuan",ha:"an sami layuka",it:"righe trovate",ps:"قطارونه وموندل شول",ms:"baris ditemui",yo:"a ti rí àwọn ìlà",ig:"ahụla ahịrị"},
@@ -18853,7 +19001,7 @@ docimp_last:{en:"Last import",ur:"آخری درآمد",bn:"শেষ আমদ�
 docimp_undone_short:{en:"rows removed",ur:"قطاریں ہٹا دی گئیں",bn:"সারি সরানো হয়েছে",hi:"पंक्तियाँ हटा दी गईं",ne:"पङ्क्तिहरू हटाइयो",sw:"mistari iliyoondolewa",ar:"تمت إزالة الصفوف",zh:"已删除的行",es:"filas eliminadas",fr:"lignes supprimées",pt:"linhas removidas",ru:"строк удалено",id:"baris dihapus",de:"Zeilen entfernt",ja:"削除した行",pa:"قطاراں ہٹا دتیاں گئیاں",mr:"ओळी काढल्या",te:"అడ్డు వరుసలు తీసివేయబడ్డాయి",fa:"ردیف‌ها حذف شد",tr:"satır kaldırıldı",ta:"வரிசைகள் அகற்றப்பட்டன",vi:"hàng đã xóa",ko:"삭제한 행",tl:"mga hilerang tinanggal",ha:"an cire layuka",it:"righe rimosse",ps:"قطارونه لرې شول",ms:"baris dibuang",yo:"a ti yọ àwọn ìlà kúrò",ig:"ewepụla ahịrị"},
 docimp_no_batch:{en:"There is no import to undo.",ur:"واپس لینے کے لیے کوئی درآمد نہیں ہے۔",bn:"পূর্বাবস্থায় ফেরানোর মতো কোনো আমদানি নেই।",hi:"वापस लेने के लिए कोई आयात नहीं है।",ne:"फिर्ता लिन कुनै आयात छैन।",sw:"Hakuna ingizo la kutendua.",ar:"لا يوجد استيراد للتراجع عنه۔",zh:"没有可撤销的导入。",es:"No hay importación para deshacer.",fr:"Il n'y a aucun import à annuler.",pt:"Não há nenhuma importação para desfazer.",ru:"Отменять нечего — импорта не было.",id:"Tidak ada impor yang dapat dibatalkan.",de:"Es gibt keinen Import, der rückgängig gemacht werden kann.",ja:"元に戻すインポートはありません。",pa:"واپس کرن لئی کوئی درآمد نئیں۔",mr:"पूर्ववत करण्यासाठी आयात नाही.",te:"చర్యరద్దు చేయడానికి దిగుమతి లేదు.",fa:"وارداتی برای برگرداندن نیست.",tr:"Geri alınacak içe aktarma yok.",ta:"செயல்தவிர்க்க எந்த இறக்குமதியும் இல்லை.",vi:"Không có lần nhập nào để hoàn tác.",ko:"되돌릴 가져오기가 없습니다.",tl:"Walang import na maaaring i-undo.",ha:"Babu shigowar da za a janye.",it:"Non c'è alcuna importazione da annullare.",ps:"د بېرته کولو لپاره هېڅ واردول نشته.",ms:"Tiada import untuk dibatalkan.",yo:"Kò sí ìgbéwọlé láti yí padà.",ig:"Enweghị mbubata imegharị."},
 docimp_badjson:{en:"The AI answer could not be read. Try a clearer photo.",ur:"اے آئی کا جواب پڑھا نہیں جا سکا۔ واضح تصویر دوبارہ آزمائیں۔",bn:"এআই-এর উত্তর পড়া যায়নি। আরও পরিষ্কার ছবি দিয়ে আবার চেষ্টা করুন।",hi:"AI का जवाब पढ़ा नहीं जा सका। साफ़ फ़ोटो से फिर कोशिश करें।",ne:"AI को उत्तर पढ्न सकिएन। स्पष्ट फोटोले फेरि प्रयास गर्नुहोस्।",sw:"Jibu la AI halikuweza kusomwa. Jaribu picha iliyo wazi zaidi.",ar:"تعذّرت قراءة إجابة الذكاء الاصطناعي. جرّب صورة أوضح۔",zh:"无法读取 AI 的回答。请拍摄更清晰的照片。",es:"No se pudo leer la respuesta de la IA. Prueba con una foto más clara.",fr:"La réponse de l'IA n'a pas pu être lue. Essayez une photo plus nette.",pt:"Não foi possível ler a resposta da IA. Tenta uma foto mais nítida.",ru:"Ответ ИИ не удалось прочитать. Попробуйте сделать более четкое фото.",id:"Jawaban AI tidak dapat dibaca. Coba foto yang lebih jelas.",de:"Die KI-Antwort konnte nicht gelesen werden. Versuchen Sie es mit einem klareren Foto.",ja:"AIの回答が読み取れませんでした。もっとはっきりした写真をお試しください。",pa:"AI دا جواب پڑھیا نئیں جا سکیا۔ صاف تصویر کوشش کرو۔",mr:"AI उत्तर वाचता आले नाही. स्पष्ट फोटो वापरून पाहा.",te:"AI సమాధానాన్ని చదవడం సాధ్యం కాలేదు. స్పష్టమైన ఫోటోను ప్రయత్నించండి.",fa:"پاسخ هوش مصنوعی خوانده نشد. عکس واضح‌تری را امتحان کنید.",tr:"AI yanıtı okunamadı. Daha net bir fotoğraf deneyin.",ta:"AI பதிலைப் படிக்க முடியவில்லை. தெளிவான புகைப்படத்தை முயற்சிக்கவும்.",vi:"Không đọc được câu trả lời của AI. Hãy thử ảnh rõ hơn.",ko:"AI 답변을 읽을 수 없습니다. 더 선명한 사진을 시도하세요.",tl:"Hindi mabasa ang sagot ng AI. Subukan ang mas malinaw na larawan.",ha:"Ba a iya karanta amsar AI ba. Gwada hoto mai bayyana.",it:"Impossibile leggere la risposta dell'IA. Prova una foto più chiara.",ps:"د AI ځواب ونه لوستل شو. روښانه انځور هڅه وکړئ.",ms:"Jawapan AI tidak dapat dibaca. Cuba foto yang lebih jelas.",yo:"A kò lè ka ìdáhùn AI náà. Gbìyànjú fọ́tò tí ó ṣe kedere jù.",ig:"Enweghị ike ịgụ azịza AI. Nwaa foto doro anya."},
-docimp_badfile:{en:"That file could not be read. Try a JPEG, PNG or PDF.",ur:"یہ فائل پڑھی نہیں جا سکی۔ جے پی ای جی، پی این جی یا پی ڈی ایف آزمائیں۔",bn:"এই ফাইলটি পড়া যায়নি। JPEG, PNG বা PDF দিয়ে চেষ্টা করুন।",hi:"यह फ़ाइल पढ़ी नहीं जा सकी। JPEG, PNG या PDF आज़माएँ।",ne:"यो फाइल पढ्न सकिएन। JPEG, PNG वा PDF प्रयास गर्नुहोस्।",sw:"Faili hilo halikuweza kusomwa. Jaribu JPEG, PNG au PDF.",ar:"تعذّرت قراءة هذا الملف. جرّب JPEG أو PNG أو PDF۔",zh:"无法读取该文件。请尝试 JPEG、PNG 或 PDF。",es:"No se pudo leer ese archivo. Prueba con un JPEG, PNG o PDF.",fr:"Ce fichier n'a pas pu être lu. Essayez un JPEG, un PNG ou un PDF.",pt:"Não foi possível ler esse ficheiro. Tenta um JPEG, PNG ou PDF.",ru:"Этот файл не удалось прочитать. Попробуйте JPEG, PNG или PDF.",id:"File itu tidak dapat dibaca. Coba JPEG, PNG, atau PDF.",de:"Diese Datei konnte nicht gelesen werden. Versuchen Sie es mit JPEG, PNG oder PDF.",ja:"そのファイルは読み取れませんでした。JPEG、PNG、PDFをお試しください。",pa:"اوہ فائل پڑھی نئیں جا سکی۔ JPEG، PNG یا PDF کوشش کرو۔",mr:"ती फाइल वाचता आली नाही. JPEG, PNG किंवा PDF वापरून पाहा.",te:"ఆ ఫైల్ చదవడం సాధ్యం కాలేదు. JPEG, PNG లేదా PDFని ప్రయత్నించండి.",fa:"آن فایل خوانده نشد. یک JPEG، PNG یا PDF را امتحان کنید.",tr:"Bu dosya okunamadı. JPEG, PNG veya PDF deneyin.",ta:"அந்த கோப்பை படிக்க முடியவில்லை. JPEG, PNG அல்லது PDF ஐ முயற்சிக்கவும்.",vi:"Không đọc được tệp đó. Hãy thử JPEG, PNG hoặc PDF.",ko:"그 파일을 읽을 수 없습니다. JPEG, PNG 또는 PDF를 시도하세요.",tl:"Hindi mabasa ang file na iyon. Subukan ang JPEG, PNG o PDF.",ha:"Ba a iya karanta wannan fayil ba. Gwada JPEG, PNG ko PDF.",it:"Impossibile leggere il file. Prova un JPEG, PNG o PDF.",ps:"هغه فایل ونه لوستل شو. یو JPEG، PNG یا PDF هڅه وکړئ.",ms:"Fail itu tidak dapat dibaca. Cuba JPEG, PNG atau PDF.",yo:"A kò lè ka fáìlì náà. Gbìyànjú JPEG, PNG tàbí PDF.",ig:"Enweghị ike ịgụ faịlụ ahụ. Nwaa JPEG, PNG maọbụ PDF."},
+docimp_badfile:{en:"That file could not be read. Try a photo, PDF, Word (.docx) or Excel (.xlsx) file.",ur:"یہ فائل پڑھی نہیں جا سکی۔ تصویر، PDF، Word (.docx) یا Excel (.xlsx) فائل آزمائیں۔",bn:"এই ফাইলটি পড়া যায়নি। একটি ছবি, PDF, Word (.docx) বা Excel (.xlsx) ফাইল চেষ্টা করুন।",hi:"यह फ़ाइल पढ़ी नहीं जा सकी। फ़ोटो, PDF, Word (.docx) या Excel (.xlsx) फ़ाइल आज़माएँ।",ne:"यो फाइल पढ्न सकिएन। फोटो, PDF, Word (.docx) वा Excel (.xlsx) फाइल प्रयास गर्नुहोस्।",sw:"Faili hilo halikusomeka. Jaribu picha, PDF, faili la Word (.docx) au Excel (.xlsx).",ar:"تعذّرت قراءة هذا الملف. جرّب صورة أو PDF أو ملف Word (.docx) أو Excel (.xlsx).",zh:"无法读取该文件。请尝试照片、PDF、Word（.docx）或 Excel（.xlsx）文件。",es:"No se pudo leer ese archivo. Prueba con una foto, un PDF, un archivo de Word (.docx) o de Excel (.xlsx).",fr:"Ce fichier n'a pas pu être lu. Essayez une photo, un PDF, un fichier Word (.docx) ou Excel (.xlsx).",pt:"Não foi possível ler esse ficheiro. Tenta uma foto, um PDF, um ficheiro Word (.docx) ou Excel (.xlsx).",ru:"Этот файл не удалось прочитать. Попробуйте фото, PDF, файл Word (.docx) или Excel (.xlsx).",id:"File itu tidak dapat dibaca. Coba foto, PDF, file Word (.docx) atau Excel (.xlsx).",de:"Diese Datei konnte nicht gelesen werden. Versuchen Sie es mit einem Foto, PDF, einer Word- (.docx) oder Excel-Datei (.xlsx).",ja:"そのファイルは読み取れませんでした。写真、PDF、Word（.docx）またはExcel（.xlsx）ファイルをお試しください。",pa:"ایہہ فائل پڑھی نئیں جا سکی۔ تصویر، PDF، Word (.docx) یا Excel (.xlsx) فائل آزماؤ۔",mr:"ही फाइल वाचता आली नाही. फोटो, PDF, Word (.docx) किंवा Excel (.xlsx) फाइल वापरून पहा.",te:"ఆ ఫైల్ చదవడం సాధ్యం కాలేదు. ఫోటో, PDF, Word (.docx) లేదా Excel (.xlsx) ఫైల్ ప్రయత్నించండి.",fa:"این فایل خوانده نشد. عکس، PDF، فایل Word (.docx) یا Excel (.xlsx) را امتحان کنید.",tr:"Bu dosya okunamadı. Fotoğraf, PDF, Word (.docx) veya Excel (.xlsx) dosyası deneyin.",ta:"அந்தக் கோப்பைப் படிக்க முடியவில்லை. புகைப்படம், PDF, Word (.docx) அல்லது Excel (.xlsx) கோப்பை முயற்சிக்கவும்.",vi:"Không thể đọc tệp đó. Hãy thử ảnh, PDF, tệp Word (.docx) hoặc Excel (.xlsx).",ko:"해당 파일을 읽을 수 없습니다. 사진, PDF, Word(.docx) 또는 Excel(.xlsx) 파일을 시도하세요.",tl:"Hindi mabasa ang file na iyon. Subukan ang larawan, PDF, Word (.docx) o Excel (.xlsx) file.",ha:"Ba a iya karanta wannan fayil ba. Gwada hoto, PDF, fayil ɗin Word (.docx) ko Excel (.xlsx).",it:"Impossibile leggere il file. Prova una foto, un PDF, un file Word (.docx) o Excel (.xlsx).",ps:"دا فایل ونه لوستل شو. عکس، PDF، Word (.docx) یا Excel (.xlsx) فایل وازمایئ.",ms:"Fail itu tidak dapat dibaca. Cuba foto, PDF, fail Word (.docx) atau Excel (.xlsx).",yo:"A kò lè ka fáìlì yẹn. Gbìyànjú fọ́tò, PDF, fáìlì Word (.docx) tàbí Excel (.xlsx).",ig:"Enweghị ike ịgụ faịlụ ahụ. Nwaa foto, PDF, faịlụ Word (.docx) ma ọ bụ Excel (.xlsx)."},
 docimp_empty:{en:"No rows were found in this document.",ur:"اس دستاویز میں کوئی قطار نہیں ملی۔",bn:"এই নথিতে কোনো সারি পাওয়া যায়নি।",hi:"इस दस्तावेज़ में कोई पंक्ति नहीं मिली।",ne:"यो कागजातमा कुनै पङ्क्ति भेटिएन।",sw:"Hakuna mistari iliyopatikana kwenye hati hii.",ar:"لم يتم العثور على أي صفوف في هذا المستند۔",zh:"此文件中未找到任何行。",es:"No se encontraron filas en este documento.",fr:"Aucune ligne trouvée dans ce document.",pt:"Não foram encontradas linhas neste documento.",ru:"В этом документе не найдено ни одной строки.",id:"Tidak ada baris yang ditemukan dalam dokumen ini.",de:"In diesem Dokument wurden keine Zeilen gefunden.",ja:"この書類に行が見つかりませんでした。",pa:"ایس دستاویز وچ کوئی قطار نئیں ملی۔",mr:"या दस्तऐवजात ओळी सापडल्या नाहीत.",te:"ఈ పత్రంలో అడ్డు వరుసలు ఏవీ కనుగొనబడలేదు.",fa:"هیچ ردیفی در این سند پیدا نشد.",tr:"Bu belgede satır bulunamadı.",ta:"இந்த ஆவணத்தில் வரிசைகள் எதுவும் இல்லை.",vi:"Không tìm thấy hàng nào trong tài liệu này.",ko:"이 문서에서 행을 찾을 수 없습니다.",tl:"Walang hilera na natagpuan sa dokumentong ito.",ha:"Ba a sami layuka a wannan takardar ba.",it:"Nessuna riga trovata in questo documento.",ps:"په دې سند کې هېڅ قطار ونه موندل شو.",ms:"Tiada baris ditemui dalam dokumen ini.",yo:"A kò rí ìlà kan nínú ìwé yìí.",ig:"Ahụghị ahịrị na akwụkwọ a."},
 docimp_noexam:{en:"Open an exam first, then import its marks sheet.",ur:"پہلے کوئی امتحان کھولیں، پھر اس کی نمبر شیٹ درآمد کریں۔",bn:"প্রথমে একটি পরীক্ষা খুলুন, তারপর তার নম্বরপত্র আমদানি করুন।",hi:"पहले कोई परीक्षा खोलें, फिर उसकी अंक-पत्रिका आयात करें।",ne:"पहिले परीक्षा खोल्नुहोस्, त्यसपछि त्यसको अङ्क पाना आयात गर्नुहोस्।",sw:"Fungua mtihani kwanza, kisha ingiza karatasi yake ya alama.",ar:"افتح امتحانًا أولًا، ثم استورد ورقة درجاته۔",zh:"请先打开一场考试，然后导入其分数表。",es:"Abre primero un examen y luego importa su hoja de notas.",fr:"Ouvrez d'abord un examen, puis importez sa feuille de notes.",pt:"Abre primeiro um exame e depois importa a sua folha de notas.",ru:"Сначала откройте экзамен, а затем импортируйте его таблицу оценок.",id:"Buka ujian terlebih dahulu, lalu impor lembar nilainya.",de:"Öffnen Sie zunächst eine Prüfung und importieren Sie dann deren Notenblatt.",ja:"まず試験を開いてから、その点数表をインポートしてください。",pa:"پہلے امتحان کھولو، فیر ایس دی نمبر شیٹ درآمد کرو۔",mr:"आधी परीक्षा उघडा, मग त्याचे गुण पत्रक आयात करा.",te:"ముందుగా పరీక్షను తెరవండి, ఆపై దాని మార్కుల షీట్‌ను దిగుమతి చేయండి.",fa:"اول یک امتحان را باز کنید، سپس برگهٔ نمرات آن را وارد کنید.",tr:"Önce bir sınav açın, sonra not tablosunu içe aktarın.",ta:"முதலில் தேர்வைத் திறந்து, அதன் மதிப்பெண் தாளை இறக்குமதி செய்யவும்.",vi:"Mở một kỳ thi trước, rồi nhập bảng điểm của kỳ thi đó.",ko:"먼저 시험을 연 뒤 점수표를 가져오세요.",tl:"Buksan muna ang isang pagsusulit, pagkatapos ay i-import ang marka sheet nito.",ha:"Buɗe jarrabawa da farko, sannan ka shigo da teburin makinta.",it:"Apri prima un esame, quindi importa il relativo foglio dei voti.",ps:"لومړی یوه ازموینه خلاصه کړئ، بیا د هغې د نمرو پاڼه وارد کړئ.",ms:"Buka peperiksaan dahulu, kemudian import helaian markahnya.",yo:"Ṣí ìdánwò kan ní àkọ́kọ́, lẹ́yìn náà gbé tábìlì àmì rẹ̀ wọlé.",ig:"Mepee ule mbụ, wee bubata mpempe akara ya."},
 docimp_f_name:{en:"Name missing",ur:"نام غائب ہے",bn:"নাম নেই",hi:"नाम नहीं है",ne:"नाम छैन",sw:"Jina halipo",ar:"الاسم مفقود",zh:"缺少姓名",es:"Falta el nombre",fr:"Nom manquant",pt:"Falta o nome",ru:"Имя отсутствует",id:"Nama tidak ada",de:"Name fehlt",ja:"名前がありません",pa:"ناں گم اے",mr:"नाव नाही",te:"పేరు లేదు",fa:"نام نیست",tr:"Ad eksik",ta:"பெயர் இல்லை",vi:"Thiếu tên",ko:"이름이 없습니다",tl:"Nawawala ang pangalan",ha:"Suna ya ɓace",it:"Nome mancante",ps:"نوم نشته",ms:"Nama tiada",yo:"Orúkọ kò sí",ig:"Aha adịghị"},
@@ -18886,6 +19034,22 @@ method_cash:{en:"Cash",ur:"نقد",bn:"নগদ",hi:"नकद",ne:"नगद",
 method_bank:{en:"Bank",ur:"بینک",bn:"ব্যাংক",hi:"बैंक",ne:"बैंक",sw:"Benki",ar:"بنك",zh:"银行",es:"Banco",fr:"Banque",pt:"Banco",ru:"Банковский перевод",id:"Transfer Bank",de:"Banküberweisung",ja:"銀行",pa:"بینک",mr:"बँक",te:"బ్యాంకు",fa:"بانک",tr:"Banka",ta:"வங்கி",vi:"Ngân hàng",ko:"은행",tl:"Bangko",ha:"Banki",it:"Banca",ps:"بانک",ms:"Pindahan Bank",yo:"Báǹkì",ig:"Ụlọ akụ"},
 publish_failed:{en:"Could not publish the results — the school's online records could not be saved. Check the connection and try again.",ur:"نتائج شائع نہیں ہو سکے — اسکول کا آن لائن ریکارڈ محفوظ نہیں ہو سکا۔ کنکشن چیک کریں اور دوبارہ کوشش کریں۔",bn:"ফলাফল প্রকাশ করা যায়নি — স্কুলের অনলাইন রেকর্ড সংরক্ষণ করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।",hi:"परिणाम प्रकाशित नहीं हो सके — स्कूल का ऑनलाइन रिकॉर्ड सहेजा नहीं जा सका। कनेक्शन जाँचें औौर पुनः प्रयास करें।",ne:"नतिजा प्रकाशित गर्न सकिएन — विद्यालयको अनलाइन रेकर्ड सेभ गर्न सकिएन। जडान जाँचेर फेरि प्रयास गर्नुहोस्।",sw:"Matokeo hayakuchapishwa — rekodi ya mtandaoni ya shule haikuweza kuhifadhiwa. Angalia muunganisho na ujaribu tena.",ar:"تعذّر نشر النتائج — تعذّر حفظ سجلات المدرسة عبر الإنترنت. تحقّق من الاتصال وحاول مرة أخرى.",zh:"无法发布成绩——学校的在线记录无法保存。请检查连接并重试。",es:"No se pudieron publicar los resultados: no se pudo guardar el registro en línea de la escuela. Comprueba la conexión e inténtalo de nuevo.",fr:"Impossible de publier les résultats — le registre en ligne de l'école n'a pas pu être enregistré. Vérifiez la connexion et réessayez.",pt:"Não foi possível publicar os resultados — o registo online da escola não pôde ser guardado. Verifique a ligação e tente novamente.",ru:"Не удалось опубликовать результаты — не удалось сохранить онлайн-записи школы. Проверьте соединение и попробуйте ещё раз.",id:"Hasil tidak dapat diterbitkan — catatan online sekolah tidak dapat disimpan. Periksa koneksi dan coba lagi.",de:"Die Ergebnisse konnten nicht veröffentlicht werden — die Online-Daten der Schule konnten nicht gespeichert werden. Prüfen Sie die Verbindung und versuchen Sie es erneut.",ja:"結果を公開できませんでした — 学校のオンライン記録を保存できませんでした。接続を確認して、もう一度お試しください。",pa:"ਨਤੀਜੇ ਪ੍ਰਕਾਸ਼ਤ ਨਹੀਂ ਹੋ ਸਕੇ — ਸਕੂਲ ਦਾ ਔਨਲਾਈਨ ਰਿਕਾਰਡ ਸੰਭਾਲਿਆ ਨਹੀਂ ਜਾ ਸਕਿਆ। ਕੁਨੈਕਸ਼ਨ ਚੈੱਕ ਕਰੋ ਤੇ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",mr:"निकाल प्रकाशित करता आले नाहीत — शाळेची ऑनलाइन नोंद जतन करता आली नाही. कनेक्शन तपासा आणि पुन्हा प्रयत्न करा.",te:"ఫలితాలను ప్రచురించలేకపోయాము — పాఠశాల ఆన్‌లైన్ రికార్డు సేవ్ కాలేదు. కనెక్షన్‌ను తనిఖీ చేసి మళ్ళీ ప్రయత్నించండి.",fa:"نتایج منتشر نشد — رکورد آنلاین مدرسه ذخیره نشد. اتصال را بررسی کنید و دوباره تلاش کنید.",tr:"Sonuçlar yayımlanamadı — okulun çevrimiçi kaydı kaydedilemedi. Bağlantıyı kontrol edip tekrar deneyin.",ta:"முடிவுகளை வெளியிட முடியவில்லை — பள்ளியின் ஆன்லைன் பதிவைச் சேமிக்க முடியவில்லை. இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",vi:"Không thể công bố kết quả — không lưu được hồ sơ trực tuyến của trường. Hãy kiểm tra kết nối và thử lại.",ko:"결과를 게시할 수 없습니다 — 학교 온라인 기록을 저장할 수 없습니다. 연결을 확인하고 다시 시도하세요.",tl:"Hindi maipublish ang mga resulta — hindi ma-save ang online record ng paaralan. Suriin ang koneksyon at subukang muli.",ha:"Ba a iya buga sakamako ba — ba a iya adana bayanan makaranta na intanet ba. Duba haɗin intanet kuma a sake gwadawa.",it:"Impossibile pubblicare i risultati: il registro online della scuola non è stato salvato. Controlla la connessione e riprova.",ps:"پایلې خپرې نه شوې — د ښوونځي آنلاین ریکارډ خوندي نه شو. اړیکه وګورئ او بیا هڅه وکړئ.",ms:"Keputusan tidak dapat diterbitkan — rekod dalam talian sekolah tidak dapat disimpan. Semak sambungan dan cuba lagi.",yo:"A kò le è tẹ àwọn èsì jáde — a kò le fi ìwé ìforúkọạsílẹ̀ orí ayélujára ti ilé-ẹ̀kọ́ pamọ́. Ṣàyẹ̀wò ìsopọ̀ náà kí o sì tún gbìyànjú.",ig:"Enweghị ike ibipụta nsonaazụ — enweghị ike ịchekwa ndekọ n'ịntanetị nke ụlọ akwụkwọ. Lelee njikọ wee nwaa ọzo."},
 portal_unreachable:{en:"Could not reach the school's records. Check the connection and try again.",ur:"اسکول کا ریکارڈ نہیں مل سکا۔ کنکشن چیک کریں اور دوبارہ کوشش کریں۔",bn:"স্কুলের রেকর্ডে পোঁছানো যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।",hi:"स्कूल के रिकॉर्ड तक नहीं पहुँचा जा सका। कनेक्शन जाँचें औौर पुनः प्रयास करें।",ne:"विद्यालयको रेकर्डमा पुग्न सकिएन। जडान जाँचेर फेरि प्रयास गर्नुहोस्।",sw:"Haikuweza kufikia rekodi za shule. Angalia muunganisho na ujaribu tena.",ar:"تعذّر الوصول إلى سجلات المدرسة. تحقّق من الاتصال وحاول مرة أخرى.",zh:"无法访问学校的记录。请检查连接并重试。",es:"No se pudo acceder a los registros de la escuela. Comprueba la conexión e inténtalo de nuevo.",fr:"Impossible d'accéder aux registres de l'école. Vérifiez la connexion et réessayez.",pt:"Não foi possível aceder aos registos da escola. Verifique a ligação e tente novamente.",ru:"Не удалось получить доступ к записям школы. Проверьте соединение и попробуйте ещё раз.",id:"Tidak dapat mengakses catatan sekolah. Periksa koneksi dan coba lagi.",de:"Auf die Daten der Schule konnte nicht zugegriffen werden. Prüfen Sie die Verbindung und versuchen Sie es erneut.",ja:"学校の記録にアクセスできませんでした。接続を確認して、もう一度お試しください。",pa:"ਸਕੂਲ ਦੇ ਰਿਕਾਰਡ ਤੱਕ ਪਹੁੰਚ ਨਹੀਂ ਹੋ ਸਕੀ। ਕੁਨੈਕਸ਼ਨ ਚੈੱਕ ਕਰੋ ਤੇ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",mr:"शाळेच्या नोंदीपर्यंत पोहोचता आले नाही. कनेक्शन तपासा आणि पुन्हा प्रयत्न करा.",te:"పాఠశాల రికార్డులను చేరుకోలేకపోయాము. కనెక్షన్‌ను తనిఖీ చేసి మళ్ళీ ప్రయత్నించండి.",fa:"به رکوردهای مدرسه دسترسی پیدا نشد. اتصال را بررسی کنید و دوباره تلاش کنید.",tr:"Okul kayıtlarına ulaşılamadı. Bağlantıyı kontrol edip tekrar deneyin.",ta:"பள்ளியின் பதிவுகளை அணுக முடியவில்லை. இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",vi:"Không thể truy cập hồ sơ của trường. Hãy kiểm tra kết nối và thử lại.",ko:"학교 기록에 접근할 수 없습니다. 연결을 확인하고 다시 시도하세요.",tl:"Hindi ma-access ang mga record ng paaralan. Suriin ang koneksyon at subukang muli.",ha:"Ba a iya samun bayanan makaranta ba. Duba haɗin intanet kuma a sake gwadawa.",it:"Impossibile accedere ai registri della scuola. Controlla la connessione e riprova.",ps:"د ښوونځي ریکارډونو ته لاسرسی ونه شو. اړیکه وګورئ او بیا هڅه وکړئ.",ms:"Tidak dapat mengakses rekod sekolah. Semak sambungan dan cuba lagi.",yo:"A kò le è dé ìwé ìforúkọạsílẹ̀ ilé-ẹ̀kọ́. Ṣàyẹ̀wò ìsopọ̀ náà kí o sì tún gbìyànjú.",ig:"Enweghị ike ịnweta ndekọ ụlọ akwụkwọ. Lelee njikọ wee nwaa ọzo."},
+docimp_doc_old:{en:"This old .doc format can't be read — re-save it as .docx or PDF, or photograph the pages.",ur:"یہ پرانا .doc فارمیٹ پڑھا نہیں جا سکتا — اسے .docx یا PDF کے طور پر دوبارہ محفوظ کریں، یا صفحات کی تصویر لیں۔",bn:"এই পুরনো .doc ফরম্যাটটি পড়া যায় না — এটিকে .docx বা PDF হিসাবে আবার সংরক্ষণ করুন, অথবা পৃষ্ঠাগুলির ছবি তুলুন।",hi:"यह पुराना .doc प्रारूप पढ़ा नहीं जा सकता — इसे .docx या PDF के रूप में दोबारा सहेजें, या पृष्ठों की फ़ोटो लें।",ne:"यो पुरानो .doc ढाँचा पढ्न सकिँदैन — यसलाई .docx वा PDF रूपमा फेरि सेभ गर्नुहोस्, वा पृष्ठहरूको फोटो लिनुहोस्।",sw:"Umbizo hili la zamani la .doc haliwezi kusomwa — ihifadhi tena kama .docx au PDF, au piga picha za kurasa.",ar:"لا يمكن قراءة تنسيق .doc القديم هذا — أعد حفظه بصيغة .docx أو PDF، أو صوّر الصفحات.",zh:"无法读取旧的 .doc 格式——请将其另存为 .docx 或 PDF，或拍摄页面照片。",es:"No se puede leer este formato .doc antiguo: vuelve a guardarlo como .docx o PDF, o fotografía las páginas.",fr:"Cet ancien format .doc ne peut pas être lu : réenregistrez-le en .docx ou PDF, ou photographiez les pages.",pt:"Este formato .doc antigo não pode ser lido — volta a guardá-lo como .docx ou PDF, ou fotografa as páginas.",ru:"Старый формат .doc прочитать нельзя — сохраните файл как .docx или PDF либо сфотографируйте страницы.",id:"Format .doc lama ini tidak dapat dibaca — simpan ulang sebagai .docx atau PDF, atau foto halamannya.",de:"Dieses alte .doc-Format kann nicht gelesen werden — speichern Sie es erneut als .docx oder PDF, oder fotografieren Sie die Seiten.",ja:"古い.doc形式は読み取れません — .docxまたはPDFとして再保存するか、ページを写真に撮ってください。",pa:"ایہہ پرانا .doc فارمیٹ پڑھیا نئیں جا سکدا — ایہنوں .docx یا PDF وجوں دوبارہ محفوظ کرو، یا صفحات دی تصویر لو۔",mr:"हे जुने .doc स्वरूप वाचता येत नाही — ते .docx किंवा PDF म्हणून पुन्हा जतन करा, किंवा पृष्ठांचे फोटो घ्या.",te:"ఈ పాత .doc ఫార్మాట్ చదవడం సాధ్యం కాదు — దానిని .docx లేదా PDF గా మళ్లీ సేవ్ చేయండి, లేదా పేజీల ఫోటో తీయండి.",fa:"این قالب قدیمی .doc خوانده نمی‌شود — آن را به‌صورت .docx یا PDF دوباره ذخیره کنید، یا از صفحه‌ها عکس بگیرید.",tr:"Bu eski .doc biçimi okunamıyor — dosyayı .docx veya PDF olarak yeniden kaydedin ya da sayfaların fotoğrafını çekin.",ta:"இந்தப் பழைய .doc வடிவத்தைப் படிக்க முடியாது — அதை .docx அல்லது PDF ஆக மீண்டும் சேமிக்கவும், அல்லது பக்கங்களைப் புகைப்படம் எடுக்கவும்.",vi:"Không thể đọc định dạng .doc cũ này — hãy lưu lại dưới dạng .docx hoặc PDF, hoặc chụp ảnh các trang.",ko:"이 오래된 .doc 형식은 읽을 수 없습니다 — .docx 또는 PDF로 다시 저장하거나 페이지를 사진으로 찍으세요.",tl:"Hindi mabasa ang lumang format na .doc na ito — i-save itong muli bilang .docx o PDF, o kuhanan ng larawan ang mga pahina.",ha:"Ba a iya karanta wannan tsohon tsarin .doc ba — sake ajiye shi a matsayin .docx ko PDF, ko ɗauki hotunan shafuka.",it:"Questo vecchio formato .doc non può essere letto: salvalo di nuovo come .docx o PDF, oppure fotografa le pagine.",ps:"دا زوړ .doc بڼه نه لوستل کېږي — هغه بیا د .docx یا PDF په توګه وساتئ، یا د پاڼو عکس واخلئ.",ms:"Format .doc lama ini tidak dapat dibaca — simpan semula sebagai .docx atau PDF, atau ambil gambar halaman.",yo:"A kò lè ka ọ̀nà .doc àtijọ́ yìí — tún fi pamọ́ gẹ́gẹ́ bí .docx tàbí PDF, tàbí ya àwọn ojú-ìwé náà ní fọ́tò.",ig:"Enweghị ike ịgụ usoro .doc ochie a — chekwaa ya ọzọ dị ka .docx ma ọ bụ PDF, ma ọ bụ see foto nke ibe ndị ahụ."},
+docimp_xls_old:{en:"This old .xls format can't be read — re-save it as .xlsx or CSV, or photograph the pages.",ur:"یہ پرانا .xls فارمیٹ پڑھا نہیں جا سکتا — اسے .xlsx یا CSV کے طور پر دوبارہ محفوظ کریں، یا صفحات کی تصویر لیں۔",bn:"এই পুরনো .xls ফরম্যাটটি পড়া যায় না — এটিকে .xlsx বা CSV হিসাবে আবার সংরক্ষণ করুন, অথবা পৃষ্ঠাগুলির ছবি তুলুন।",hi:"यह पुराना .xls प्रारूप पढ़ा नहीं जा सकता — इसे .xlsx या CSV के रूप में दोबारा सहेजें, या पृष्ठों की फ़ोटो लें।",ne:"यो पुरानो .xls ढाँचा पढ्न सकिँदैन — यसलाई .xlsx वा CSV रूपमा फेरि सेभ गर्नुहोस्, वा पृष्ठहरूको फोटो लिनुहोस्।",sw:"Umbizo hili la zamani la .xls haliwezi kusomwa — ihifadhi tena kama .xlsx au CSV, au piga picha za kurasa.",ar:"لا يمكن قراءة تنسيق .xls القديم هذا — أعد حفظه بصيغة .xlsx أو CSV، أو صوّر الصفحات.",zh:"无法读取旧的 .xls 格式——请将其另存为 .xlsx 或 CSV，或拍摄页面照片。",es:"No se puede leer este formato .xls antiguo: vuelve a guardarlo como .xlsx o CSV, o fotografía las páginas.",fr:"Cet ancien format .xls ne peut pas être lu : réenregistrez-le en .xlsx ou CSV, ou photographiez les pages.",pt:"Este formato .xls antigo não pode ser lido — volta a guardá-lo como .xlsx ou CSV, ou fotografa as páginas.",ru:"Старый формат .xls прочитать нельзя — сохраните файл как .xlsx или CSV либо сфотографируйте страницы.",id:"Format .xls lama ini tidak dapat dibaca — simpan ulang sebagai .xlsx atau CSV, atau foto halamannya.",de:"Dieses alte .xls-Format kann nicht gelesen werden — speichern Sie es erneut als .xlsx oder CSV, oder fotografieren Sie die Seiten.",ja:"古い.xls形式は読み取れません — .xlsxまたはCSVとして再保存するか、ページを写真に撮ってください。",pa:"ایہہ پرانا .xls فارمیٹ پڑھیا نئیں جا سکدا — ایہنوں .xlsx یا CSV وجوں دوبارہ محفوظ کرو، یا صفحات دی تصویر لو۔",mr:"हे जुने .xls स्वरूप वाचता येत नाही — ते .xlsx किंवा CSV म्हणून पुन्हा जतन करा, किंवा पृष्ठांचे फोटो घ्या.",te:"ఈ పాత .xls ఫార్మాట్ చదవడం సాధ్యం కాదు — దానిని .xlsx లేదా CSV గా మళ్లీ సేవ్ చేయండి, లేదా పేజీల ఫోటో తీయండి.",fa:"این قالب قدیمی .xls خوانده نمی‌شود — آن را به‌صورت .xlsx یا CSV دوباره ذخیره کنید، یا از صفحه‌ها عکس بگیرید.",tr:"Bu eski .xls biçimi okunamıyor — dosyayı .xlsx veya CSV olarak yeniden kaydedin ya da sayfaların fotoğrafını çekin.",ta:"இந்தப் பழைய .xls வடிவத்தைப் படிக்க முடியாது — அதை .xlsx அல்லது CSV ஆக மீண்டும் சேமிக்கவும், அல்லது பக்கங்களைப் புகைப்படம் எடுக்கவும்.",vi:"Không thể đọc định dạng .xls cũ này — hãy lưu lại dưới dạng .xlsx hoặc CSV, hoặc chụp ảnh các trang.",ko:"이 오래된 .xls 형식은 읽을 수 없습니다 — .xlsx 또는 CSV로 다시 저장하거나 페이지를 사진으로 찍으세요.",tl:"Hindi mabasa ang lumang format na .xls na ito — i-save itong muli bilang .xlsx o CSV, o kuhanan ng larawan ang mga pahina.",ha:"Ba a iya karanta wannan tsohon tsarin .xls ba — sake ajiye shi a matsayin .xlsx ko CSV, ko ɗauki hotunan shafuka.",it:"Questo vecchio formato .xls non può essere letto: salvalo di nuovo come .xlsx o CSV, oppure fotografa le pagine.",ps:"دا زوړ .xls بڼه نه لوستل کېږي — هغه بیا د .xlsx یا CSV په توګه وساتئ، یا د پاڼو عکس واخلئ.",ms:"Format .xls lama ini tidak dapat dibaca — simpan semula sebagai .xlsx atau CSV, atau ambil gambar halaman.",yo:"A kò lè ka ọ̀nà .xls àtijọ́ yìí — tún fi pamọ́ gẹ́gẹ́ bí .xlsx tàbí CSV, tàbí ya àwọn ojú-ìwé náà ní fọ́tò.",ig:"Enweghị ike ịgụ usoro .xls ochie a — chekwaa ya ọzọ dị ka .xlsx ma ọ bụ CSV, ma ọ bụ see foto nke ibe ndị ahụ."},
+docimp_prev:{en:"Previous",ur:"پچھلا",bn:"আগের",hi:"पिछला",ne:"अघिल्लो",sw:"Iliyotangulia",ar:"السابق",zh:"上一页",es:"Anterior",fr:"Précédent",pt:"Anterior",ru:"Назад",id:"Sebelumnya",de:"Zurück",ja:"前へ",pa:"پچھلا",mr:"मागील",te:"మునుపటి",fa:"قبلی",tr:"Önceki",ta:"முந்தைய",vi:"Trước",ko:"이전",tl:"Nakaraan",ha:"Na baya",it:"Precedente",ps:"مخکینی",ms:"Sebelumnya",yo:"Tẹ́lẹ̀",ig:"Nke gara aga"},
+docimp_next:{en:"Next",ur:"اگلا",bn:"পরের",hi:"अगला",ne:"अर्को",sw:"Inayofuata",ar:"التالي",zh:"下一页",es:"Siguiente",fr:"Suivant",pt:"Seguinte",ru:"Далее",id:"Berikutnya",de:"Weiter",ja:"次へ",pa:"اگلا",mr:"पुढील",te:"తదుపరి",fa:"بعدی",tr:"Sonraki",ta:"அடுத்து",vi:"Tiếp",ko:"다음",tl:"Susunod",ha:"Na gaba",it:"Successivo",ps:"راتلونکی",ms:"Seterusnya",yo:"Tókàn",ig:"Na-esote"},
+docimp_page:{en:"Page",ur:"صفحہ",bn:"পৃষ্ঠা",hi:"पृष्ठ",ne:"पृष्ठ",sw:"Ukurasa",ar:"صفحة",zh:"页",es:"Página",fr:"Page",pt:"Página",ru:"Страница",id:"Halaman",de:"Seite",ja:"ページ",pa:"صفحہ",mr:"पृष्ठ",te:"పేజీ",fa:"صفحه",tr:"Sayfa",ta:"பக்கம்",vi:"Trang",ko:"페이지",tl:"Pahina",ha:"Shafi",it:"Pagina",ps:"پاڼه",ms:"Halaman",yo:"Ojú-ìwé",ig:"Peeji"},
+docimp_f_clsmatch:{en:"Class does not match",ur:"جماعت میل نہیں کھاتی",bn:"শ্রেণি মিলছে না",hi:"कक्षा मेल नहीं खाती",ne:"कक्षा मिल्दैन",sw:"Darasa halilingani",ar:"الصف غير مطابق",zh:"班级不匹配",es:"La clase no coincide",fr:"La classe ne correspond pas",pt:"A turma não corresponde",ru:"Класс не совпадает",id:"Kelas tidak cocok",de:"Klasse stimmt nicht überein",ja:"クラスが一致しません",pa:"جماعت میل نئیں کھاندی",mr:"वर्ग जुळत नाही",te:"తరగతి సరిపోలడం లేదు",fa:"کلاس مطابقت ندارد",tr:"Sınıf uyuşmuyor",ta:"வகுப்பு பொருந்தவில்லை",vi:"Lớp không khớp",ko:"반이 일치하지 않습니다",tl:"Hindi tugma ang klase",ha:"Aji bai dace ba",it:"La classe non corrisponde",ps:"ټولګی سره نه سمون خوري",ms:"Kelas tidak sepadan",yo:"Kíláàsì kò báramu",ig:"Klas adabaghị"},
+docimp_fmt_photo:{en:"Photo",ur:"تصویر",bn:"ছবি",hi:"फ़ोटो",ne:"फोटो",sw:"Picha",ar:"صورة",zh:"照片",es:"Foto",fr:"Photo",pt:"Foto",ru:"Фото",id:"Foto",de:"Foto",ja:"写真",pa:"تصویر",mr:"फोटो",te:"ఫోటో",fa:"عکس",tr:"Fotoğraf",ta:"புகைப்படம்",vi:"Ảnh",ko:"사진",tl:"Larawan",ha:"Hoto",it:"Foto",ps:"انځور",ms:"Foto",yo:"Fọ́tò",ig:"Foto"},
+docimp_fmt_pdf:{en:"PDF",ur:"PDF",bn:"PDF",hi:"PDF",ne:"PDF",sw:"PDF",ar:"PDF",zh:"PDF",es:"PDF",fr:"PDF",pt:"PDF",ru:"PDF",id:"PDF",de:"PDF",ja:"PDF",pa:"PDF",mr:"PDF",te:"PDF",fa:"PDF",tr:"PDF",ta:"PDF",vi:"PDF",ko:"PDF",tl:"PDF",ha:"PDF",it:"PDF",ps:"PDF",ms:"PDF",yo:"PDF",ig:"PDF"},
+docimp_fmt_word:{en:"Word",ur:"Word",bn:"Word",hi:"Word",ne:"Word",sw:"Word",ar:"Word",zh:"Word",es:"Word",fr:"Word",pt:"Word",ru:"Word",id:"Word",de:"Word",ja:"Word",pa:"Word",mr:"Word",te:"Word",fa:"Word",tr:"Word",ta:"Word",vi:"Word",ko:"Word",tl:"Word",ha:"Word",it:"Word",ps:"Word",ms:"Word",yo:"Word",ig:"Word"},
+docimp_fmt_excel:{en:"Excel",ur:"Excel",bn:"Excel",hi:"Excel",ne:"Excel",sw:"Excel",ar:"Excel",zh:"Excel",es:"Excel",fr:"Excel",pt:"Excel",ru:"Excel",id:"Excel",de:"Excel",ja:"Excel",pa:"Excel",mr:"Excel",te:"Excel",fa:"Excel",tr:"Excel",ta:"Excel",vi:"Excel",ko:"Excel",tl:"Excel",ha:"Excel",it:"Excel",ps:"Excel",ms:"Excel",yo:"Excel",ig:"Excel"},
+docimp_fmt_csv:{en:"CSV",ur:"CSV",bn:"CSV",hi:"CSV",ne:"CSV",sw:"CSV",ar:"CSV",zh:"CSV",es:"CSV",fr:"CSV",pt:"CSV",ru:"CSV",id:"CSV",de:"CSV",ja:"CSV",pa:"CSV",mr:"CSV",te:"CSV",fa:"CSV",tr:"CSV",ta:"CSV",vi:"CSV",ko:"CSV",tl:"CSV",ha:"CSV",it:"CSV",ps:"CSV",ms:"CSV",yo:"CSV",ig:"CSV"},
+docimp_all_boys:{en:"Set all to Boy",ur:"سب کو لڑکا کریں",bn:"সবাইকে ছেলে করুন",hi:"सभी को लड़का करें",ne:"सबैलाई केटा बनाउनुहोस्",sw:"Weka wote kuwa wavulana",ar:"تعيين الكل إلى ولد",zh:"全部设为男生",es:"Poner a todos como niño",fr:"Tout mettre à garçon",pt:"Definir todos como rapaz",ru:"Сделать всех мальчиками",id:"Set semua ke Laki-laki",de:"Alle auf Junge setzen",ja:"全員を男子にする",pa:"سبھ نوں لڑکا کرو",mr:"सर्वांना मुलगा करा",te:"అందరినీ అబ్బాయిగా సెట్ చేయండి",fa:"همه را پسر کنید",tr:"Tümünü erkek yap",ta:"அனைவரையும் ஆணாக அமைக்கவும்",vi:"Đặt tất cả thành Nam",ko:"모두 남자로 설정",tl:"Itakda lahat sa Lalaki",ha:"Sanya duka su zama Yaro",it:"Imposta tutti a Maschio",ps:"ټول هلک کړئ",ms:"Tetapkan semua kepada Lelaki",yo:"Fi gbogbo sí Ọmọkùnrin",ig:"Tọọ ihe niile ka Nwoke"},
+docimp_all_girls:{en:"Set all to Girl",ur:"سب کو لڑکی کریں",bn:"সবাইকে মেয়ে করুন",hi:"सभी को लड़की करें",ne:"सबैलाई केटी बनाउनुहोस्",sw:"Weka wote kuwa wasichana",ar:"تعيين الكل إلى بنت",zh:"全部设为女生",es:"Poner a todas como niña",fr:"Tout mettre à fille",pt:"Definir todas como rapariga",ru:"Сделать всех девочками",id:"Set semua ke Perempuan",de:"Alle auf Mädchen setzen",ja:"全員を女子にする",pa:"سبھ نوں لڑکی کرو",mr:"सर्वांना मुलगी करा",te:"అందరినీ అమ్మాయిగా సెట్ చేయండి",fa:"همه را دختر کنید",tr:"Tümünü kız yap",ta:"அனைவரையும் பெண்ணாக அமைக்கவும்",vi:"Đặt tất cả thành Nữ",ko:"모두 여자로 설정",tl:"Itakda lahat sa Babae",ha:"Sanya duka su zama Yarinya",it:"Imposta tutte a Femmina",ps:"ټولې نجلۍ کړئ",ms:"Tetapkan semua kepada Perempuan",yo:"Fi gbogbo sí Ọmọbìnrin",ig:"Tọọ ihe niile ka Nwanyị"},
+docimp_camera:{en:"Take a photo",ur:"تصویر لیں",bn:"ছবি তুলুন",hi:"फ़ोटो लें",ne:"फोटो लिनुहोस्",sw:"Piga picha",ar:"التقط صورة",zh:"拍照",es:"Tomar una foto",fr:"Prendre une photo",pt:"Tirar uma foto",ru:"Сделать фото",id:"Ambil foto",de:"Foto aufnehmen",ja:"写真を撮る",pa:"تصویر لو",mr:"फोटो घ्या",te:"ఫోటో తీయండి",fa:"عکس بگیرید",tr:"Fotoğraf çek",ta:"புகைப்படம் எடுக்கவும்",vi:"Chụp ảnh",ko:"사진 찍기",tl:"Kumuha ng larawan",ha:"Ɗauki hoto",it:"Scatta una foto",ps:"عکس واخلئ",ms:"Ambil gambar",yo:"Ya fọ́tò",ig:"Were foto"},
+docimp_fmt_doc:{en:"Old Word (.doc)",ur:"پرانا Word (.doc)",bn:"পুরনো Word (.doc)",hi:"पुराना Word (.doc)",ne:"पुरानो Word (.doc)",sw:"Word ya zamani (.doc)",ar:"Word قديم (.doc)",zh:"旧 Word（.doc）",es:"Word antiguo (.doc)",fr:"Word ancien (.doc)",pt:"Word antigo (.doc)",ru:"Старый Word (.doc)",id:"Word lama (.doc)",de:"Altes Word (.doc)",ja:"古い Word（.doc）",pa:"پرانا Word (.doc)",mr:"जुने Word (.doc)",te:"పాత Word (.doc)",fa:"Word قدیمی (.doc)",tr:"Eski Word (.doc)",ta:"பழைய Word (.doc)",vi:"Word cũ (.doc)",ko:"오래된 Word(.doc)",tl:"Lumang Word (.doc)",ha:"Tsohon Word (.doc)",it:"Vecchio Word (.doc)",ps:"زوړ Word (.doc)",ms:"Word lama (.doc)",yo:"Word àtijọ́ (.doc)",ig:"Word ochie (.doc)"},
+docimp_fmt_xls:{en:"Old Excel (.xls)",ur:"پرانا Excel (.xls)",bn:"পুরনো Excel (.xls)",hi:"पुराना Excel (.xls)",ne:"पुरानो Excel (.xls)",sw:"Excel ya zamani (.xls)",ar:"Excel قديم (.xls)",zh:"旧 Excel（.xls）",es:"Excel antiguo (.xls)",fr:"Excel ancien (.xls)",pt:"Excel antigo (.xls)",ru:"Старый Excel (.xls)",id:"Excel lama (.xls)",de:"Altes Excel (.xls)",ja:"古い Excel（.xls）",pa:"پرانا Excel (.xls)",mr:"जुने Excel (.xls)",te:"పాత Excel (.xls)",fa:"Excel قدیمی (.xls)",tr:"Eski Excel (.xls)",ta:"பழைய Excel (.xls)",vi:"Excel cũ (.xls)",ko:"오래된 Excel(.xls)",tl:"Lumang Excel (.xls)",ha:"Tsohon Excel (.xls)",it:"Vecchio Excel (.xls)",ps:"زوړ Excel (.xls)",ms:"Excel lama (.xls)",yo:"Excel àtijọ́ (.xls)",ig:"Excel ochie (.xls)"},
 publish_results:{en:"Publish results",ur:"نتائج شائع کریں",bn:"ফলাফল প্রকাশ করুন",hi:"परिणाम प्रकाशित करें",ne:"नतिजा प्रकाशित गर्नुहोस्",sw:"Chapisha matokeo",ar:"نشر النتائج",zh:"发布成绩",es:"Publicar resultados",fr:"Publier les résultats",pt:"Publicar resultados",ru:"Опубликовать результаты",id:"Terbitkan hasil",de:"Ergebnisse veröffentlichen",ja:"結果を公開",pa:"نتیجے شائع کرو",mr:"निकाल प्रकाशित करा",te:"ఫలితాలను ప్రచురించండి",fa:"انتشار نتایج",tr:"Sonuçları yayımla",ta:"முடிவுகளை வெளியிடவும்",vi:"Công bố kết quả",ko:"결과 게시",tl:"Ilathala ang mga resulta",ha:"Buga sakamako",it:"Pubblica risultati",ps:"پایلې خپرې کړئ",ms:"Terbitkan keputusan",yo:"Ṣe àtẹ̀jáde èsì",ig:"Bipụta nsonaazụ"},
 unpublish_results:{en:"Remove published results",ur:"شائع شدہ نتائج ہٹائیں",bn:"প্রকাশিত ফলাফল সরান",hi:"प्रकाशित परिणाम हटाएं",ne:"प्रकाशित नतिजा हटाउनुहोस्",sw:"Ondoa matokeo yaliyochapishwa",ar:"إزالة النتائج المنشورة",zh:"撤回已发布的成绩",es:"Quitar resultados publicados",fr:"Retirer les résultats publiés",pt:"Remover resultados publicados",ru:"Удалить опубликованные результаты",id:"Hapus hasil yang diterbitkan",de:"Veröffentlichte Ergebnisse entfernen",ja:"公開済みの結果を削除",pa:"شائع شدہ نتیجے ہٹاؤ",mr:"प्रकाशित निकाल काढा",te:"ప్రచురించిన ఫలితాలను తీసివేయండి",fa:"حذف نتایج منتشرشده",tr:"Yayımlanan sonuçları kaldır",ta:"வெளியிடப்பட்ட முடிவுகளை அகற்று",vi:"Gỡ các kết quả đã công bố",ko:"게시된 결과 제거",tl:"Alisin ang mga nailathalang resulta",ha:"Cire sakamakon da aka buga",it:"Rimuovi i risultati pubblicati",ps:"خپرې شوې پایلې لرې کړئ",ms:"Buang keputusan yang diterbitkan",yo:"Yọ àwọn èsì tí a ti ṣe àtẹ̀jáde kúrò",ig:"Wepụ nsonaazụ ebipụtara"},
 publish_locked_only:{en:"Results can only be published after the exam is locked (approved).",ur:"نتائج صرف امتحان بند (منظور) ہونے کے بعد شائع ہو سکتے ہیں۔",bn:"পরীক্ষা লক (অনুমোদিত) হওয়ার পরেই ফলাফল প্রকাশ করা যাবে।",hi:"परिणाम तभी प्रकाशित किए जा सकते हैं जब परीक्षा लॉक (स्वीकृत) हो।",ne:"नतिजा परीक्षा लक (स्वीकृत) भएपछि मात्र प्रकाशित गर्न सकिन्छ।",sw:"Matokeo yanaweza kuchapishwa tu baada ya mtihani kufungwa (kuidhinishwa).",ar:"لا يمكن نشر النتائج إلا بعد قفل الامتحان (الموافقة عليه).",zh:"只有在考试锁定（批准）后才能发布成绩。",es:"Los resultados solo se pueden publicar después de que el examen esté bloqueado (aprobado).",fr:"Les résultats ne peuvent être publiés qu'après le verrouillage (l'approbation) de l'examen.",pt:"Os resultados só podem ser publicados depois de o exame estar bloqueado (aprovado).",ru:"Результаты могут быть опубликованы только после того, как экзамен будет заблокирован (утвержден).",id:"Hasil hanya dapat diterbitkan setelah ujian dikunci (disetujui).",de:"Ergebnisse können erst veröffentlicht werden, nachdem die Prüfung gesperrt (genehmigt) wurde.",ja:"結果は試験がロック（承認）された後にのみ公開できます。",pa:"نتیجے صرف امتحان بند (منظور شدہ) ہون توں بعد شائع ہو سکدے نیں۔",mr:"परीक्षा लॉक (मंजूर) झाल्यानंतरच निकाल प्रकाशित करता येतात.",te:"పరీక్ష లాక్ చేయబడిన (ఆమోదించబడిన) తర్వాత మాత్రమే ఫలితాలు ప్రచురించబడతాయి.",fa:"نتایج فقط پس از قفل شدن (تأیید) امتحان قابل انتشارند.",tr:"Sonuçlar yalnızca sınav kilitlendikten (onaylandıktan) sonra yayımlanabilir.",ta:"தேர்வு பூட்டப்பட்ட பின்னரே (அங்கீகரிக்கப்பட்ட) முடிவுகளை வெளியிட முடியும்.",vi:"Kết quả chỉ được công bố sau khi kỳ thi bị khóa (đã phê duyệt).",ko:"결과는 시험이 잠긴(승인된) 후에만 게시할 수 있습니다.",tl:"Maaari lamang ilathala ang mga resulta pagkatapos ma-lock (maaprubahan) ang pagsusulit.",ha:"Za a iya buga sakamako kaɗai bayan an kulle jarrabawa (an amince).",it:"I risultati possono essere pubblicati solo dopo che l'esame è stato bloccato (approvato).",ps:"پایلې یوازې د ازموینې له تړل کېدو (منظورېدو) وروسته خپرېدای شي.",ms:"Keputusan hanya boleh diterbitkan selepas peperiksaan dikunci (diluluskan).",yo:"A lè ṣe àtẹ̀jáde èsì nìkan lẹ́yìn tí a bá ti tì ìdánwò (tí a bá ti fọwọ́ sí).",ig:"Enwere ike ibipụta nsonaazụ naanị mgbe akpọchiri ule (akwadoro)."},
@@ -21265,7 +21429,7 @@ const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,LAN
   awardSheetHTML:awardSheetHTML,awardListPrintHTML:awardListPrintHTML,
   studentPhotoHTML:studentPhotoHTML,setStudentPhoto:setStudentPhoto,
   captureStudentPhoto:captureStudentPhoto,storageBytes:storageBytes,storageMeterHTML:storageMeterHTML,
-  scanFromText:scanFromText,docImpPrompt:docImpPrompt,docImpParseResponse:docImpParseResponse,docImpNormDate:docImpNormDate,docImpNormAdm:docImpNormAdm,docImpNormMarks:docImpNormMarks,docImpNormAtt:docImpNormAtt,findStudentByName:findStudentByName,docImpFlagRows:docImpFlagRows,docImpCommit:docImpCommit,docImpUndo:docImpUndo,docImpLastBatch:docImpLastBatch,docImpFileParts:docImpFileParts,docImpExtract:docImpExtract,docImpExtractFromParts:docImpExtractFromParts,docImpCardHTML:docImpCardHTML,docImpPaint:docImpPaint,bindDocImp:bindDocImp,docImpUndoClick:docImpUndoClick,
+  scanFromText:scanFromText,docImpPrompt:docImpPrompt,docImpParseResponse:docImpParseResponse,docImpNormDate:docImpNormDate,docImpNormAdm:docImpNormAdm,docImpNormMarks:docImpNormMarks,docImpNormAtt:docImpNormAtt,findStudentByName:findStudentByName,docImpFlagRows:docImpFlagRows,docImpCommit:docImpCommit,docImpUndo:docImpUndo,docImpLastBatch:docImpLastBatch,docImpFileParts:docImpFileParts,docImpExtract:docImpExtract,docImpExtractFromParts:docImpExtractFromParts,docImpCardHTML:docImpCardHTML,docImpPaint:docImpPaint,bindDocImp:bindDocImp,docImpUndoClick:docImpUndoClick,docImpNormCls:docImpNormCls,docImpResolveStudent:docImpResolveStudent,docImpPaginate:docImpPaginate,DOCIMP_PAGE_SIZE:DOCIMP_PAGE_SIZE,docImpFileKind:docImpFileKind,docImpReadAsDataURL:docImpReadAsDataURL,docImpPickFormat:docImpPickFormat,docImpRowChanged:docImpRowChanged,docImpSetAllGender:docImpSetAllGender,docImpSetPage:docImpSetPage,docImpReadRowsFromDOM:docImpReadRowsFromDOM,docImpOnFile:docImpOnFile,
   viewDossier:viewDossier,
   toolsCalcEval:toolsCalcEval,toolsFmtNum:toolsFmtNum,solveArith:solveArith,solveFraction:solveFraction,solvePercent:solvePercent,solveHcfLcm:solveHcfLcm,solveLinear:solveLinear,solveQuad:solveQuad,solveInterest:solveInterest,solveShape:solveShape,convertUnits:convertUnits,tablesData:tablesData,tablesAllData:tablesAllData,countWorkingDays:countWorkingDays,calcAgeYMD:calcAgeYMD,toolsPickNext:toolsPickNext,makeGroups:makeGroups,solvePythagoras:solvePythagoras,solveAngleSum:solveAngleSum,solveStraightLine:solveStraightLine,solveAroundPoint:solveAroundPoint,solveTriangleArea:solveTriangleArea,solveCircleTh:solveCircleTh,solveParallel:solveParallel,checkCongSim:checkCongSim,EXPLAIN_TOPICS:EXPLAIN_TOPICS,PRACTICALS:PRACTICALS,THEOREMS:THEOREMS,CONV_UNITS:CONV_UNITS,qotdFor:qotdFor,qotdToday:qotdToday,qotdDayOfYear:qotdDayOfYear,DAILY_QUESTIONS:DAILY_QUESTIONS,TEACH_STRATEGIES:TEACH_STRATEGIES,teachStrategyFor:teachStrategyFor,tbParseGuide:tbParseGuide,tbPrompt:tbPrompt,addTextbookGuide:addTextbookGuide,getTextbookGuide:getTextbookGuide,deleteTextbookGuide:deleteTextbookGuide,textbookGuideHTML:textbookGuideHTML,tbPrintHTML:tbPrintHTML,topicVisualHTML:topicVisualHTML,theoremVisualHTML:theoremVisualHTML,practicalVisualHTML:practicalVisualHTML,svgDiagram:svgDiagram,svgWaterCycle:svgWaterCycle,visualHTML:visualHTML,teachStrategiesHTML:teachStrategiesHTML,toolsShareText:toolsShareText,qotdShareText:qotdShareText,qotdCardHTML:qotdCardHTML,textbookHTML:textbookHTML,viewTools:viewTools};
 function initApp(){db();takeSnapshot("auto");applyLang();
