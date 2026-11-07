@@ -11414,6 +11414,7 @@ const Cloud = {
       self.lastSyncedJSON=JSON.stringify(db());
     }catch(e){self.recordSyncError("apply:"+coll,e);}
     self.applyingRemote=false;
+    if(!keepScrollY&&typeof window!=="undefined"){var _v75c=$("view");keepScrollY={wy:window.scrollY||0,vt:_v75c?_v75c.scrollTop:0};}
     if(typeof document!=="undefined")render();
   },
   upsertLocal: function(coll,id,d){
