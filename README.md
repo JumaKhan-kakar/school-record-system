@@ -30,3 +30,4 @@ https://JumaKhan-kakar.github.io/school-record-system/
 ## Round 74 — Assistant reliability
 
 - **Assistant reliability** — auto-retry with backoff, one-at-a-time queue, pacing, Test/Ask button guards, and honest final error messages.
+- Deploy retry (7 Nov 2026): README-only retrigger after Pages runs #26 and #27 failed at deploy; Round 74 code unchanged.
