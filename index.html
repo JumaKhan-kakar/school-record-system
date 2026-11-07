@@ -46,6 +46,7 @@ button{font:inherit}
 .field label{display:block;font-weight:600;margin-bottom:.25rem;font-size:.92rem}
 .field input,.field select,.field textarea{width:100%;padding:.6rem .65rem;min-height:44px;
   border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff;color:var(--ink)}
+select[multiple]{min-height:9.5rem;}
 .field .hint{font-size:.8rem;color:var(--muted)}
 .btn{display:inline-block;border:1px solid var(--line);background:#fff;color:var(--ink);
   border-radius:10px;padding:.6rem 1rem;min-height:44px;cursor:pointer;font-weight:600;margin:.15rem}
@@ -11198,7 +11199,7 @@ function defaultDB(){return {
   seq:{adm:{},cert:{}},
   students:[],exams:[],marks:{},remarks:{},labItems:[],labMaint:[],certificates:[],timetable:{},attendance:{},feeHeads:[],feeRecords:[],subPayments:[],staff:[],staffAtt:{},salaryRecords:[],dateSheets:{},admitIssued:{},broadcasts:[],homework:[],routes:[],libBooks:[],libLoans:[],applications:[],complaints:[],signupRequests:[],hePrograms:[],heCourses:[],heResults:[],heEnrollments:[],textbookGuides:[],imports:[],
   settings:{
-    schoolName:"",deviceName:"",schoolPhone:"",feesEnabled:true,attEnabled:true,ttEnabled:true,labEnabled:true,certEnabled:true,staffEnabled:true,bcEnabled:true,hwEnabled:true,transportEnabled:true,libEnabled:true,admAppEnabled:true,cmpEnabled:true,heEnabled:false,bankTitle:"",bankAccount:"",bankIBAN:"",jazzcashNo:"",easypaisaNo:"",country:"PK",lang:"en",passPct:33,regPhotoDataUrl:"",
+    schoolName:"",deviceName:"",schoolPhone:"",feesEnabled:true,attEnabled:true,ttEnabled:true,labEnabled:true,certEnabled:true,staffEnabled:true,bcEnabled:true,hwEnabled:true,transportEnabled:true,libEnabled:true,admAppEnabled:true,cmpEnabled:true,heEnabled:false,bankTitle:"",bankAccount:"",bankIBAN:"",jazzcashNo:"",easypaisaNo:"",nayapayNo:"",sadapayNo:"",payMethods:null,country:"PK",lang:"en",passPct:33,regPhotoDataUrl:"",
     gradeScale:[{min:90,g:"A+"},{min:80,g:"A"},{min:70,g:"B"},{min:60,g:"C"},{min:50,g:"D"},{min:0,g:"F"}],
     divisions:[{min:60,d:"1st"},{min:50,d:"2nd"},{min:40,d:"3rd"},{min:0,d:"Fail"}],
     board:defaultBoard(),
@@ -11796,7 +11797,7 @@ const Cloud = {
   },
   pushPublicInfo: function(){
     if(!this.ready||!this.fs||!this.schoolId)return;
-    try{this.coll("publicInfo").doc("main").set(JSON.parse(JSON.stringify({name:db().settings.schoolName||"",phone:db().settings.schoolPhone||"",fees:feesOn(),summary:schoolSummary(),at:tsNow()})));this.lastSummaryAt=Date.now();}catch(e){}
+    try{this.coll("publicInfo").doc("main").set(JSON.parse(JSON.stringify({name:db().settings.schoolName||"",phone:db().settings.schoolPhone||"",fees:feesOn(),summary:schoolSummary(),payMethods:payMethods(),at:tsNow()})));this.lastSummaryAt=Date.now();}catch(e){}
   },
   onLocalSave: function(){
     if(demoMode)return;
@@ -12102,7 +12103,37 @@ function awardSubjectPass(ex,sj){
   return Math.round(sj.max*pp/100*10)/10;
 }
 /* Payment method display name: Cash/Bank translate, brands stay as-is. */
-function methodName(m){return m==="Cash"?t("method_cash"):m==="Bank"?t("method_bank"):m;}
+function methodName(m){return m==="Cash"?t("method_cash"):m==="Bank"?t("method_bank"):m==="NayaPay"?t("method_nayapay"):m==="SadaPay"?t("method_sadapay"):m==="Payoneer"?t("method_payoneer"):m;}
+/* ---- Round 80: payment methods accepted by this school ---- */
+const ALL_PAY_METHODS=["Cash","JazzCash","EasyPaisa","Bank","NayaPay","SadaPay"];
+const DEFAULT_PAY_METHODS=["Cash","JazzCash","EasyPaisa","Bank"];
+function payMethods(){
+  const s=db().settings||{};
+  const raw=(s.payMethods&&Array.isArray(s.payMethods)&&s.payMethods.length)?s.payMethods:DEFAULT_PAY_METHODS;
+  const out=[];ALL_PAY_METHODS.forEach(function(m){if(raw.indexOf(m)>=0&&out.indexOf(m)<0)out.push(m);});
+  return out.length?out:DEFAULT_PAY_METHODS.slice();
+}
+function payMethodOptions(list){
+  const seen=[];const out=[];
+  (list||[]).forEach(function(m){if(ALL_PAY_METHODS.indexOf(m)>=0&&seen.indexOf(m)<0){seen.push(m);out.push('<option value="'+m+'">'+esc(methodName(m))+"</option>");}});
+  return out.join("");
+}
+function payMethodsFromSelect(){
+  const el=$("s-paymethods");
+  if(!el)return payMethods();
+  const sel=[];for(let i=0;i<el.options.length;i++){if(el.options[i].selected)sel.push(el.options[i].value);}
+  return sel.length?sel:payMethods();
+}
+function togglePayRows(){
+  const sel=payMethodsFromSelect();
+  const has=function(m){return sel.indexOf(m)>=0;};
+  const setRow=function(id,show){const el=$(id);if(el)el.style.display=show?"":"none";};
+  setRow("payrow-bank",has("Bank"));
+  setRow("payrow-jazzcash",has("JazzCash"));
+  setRow("payrow-easypaisa",has("EasyPaisa"));
+  setRow("payrow-nayapay",has("NayaPay"));
+  setRow("payrow-sadapay",has("SadaPay"));
+}
 /* Remarks per the paper award roll: Fail, or Pass with 1st/2nd/3rd position. */
 function awardRemark(r){
   if(!r.complete)return "—";
@@ -12704,7 +12735,7 @@ function salarySetAdjust(staffId,month,allowances,advances){
 function recordSalaryPayment(staffId,month,amount,method,txnId){
   amount=Number(amount)||0;
   if(amount<=0)return {ok:false,error:t("req")};
-  if(["Cash","JazzCash","EasyPaisa","Bank"].indexOf(method)<0)return {ok:false,error:t("req")};
+  if((["Cash"].concat(payMethods())).indexOf(method)<0)return {ok:false,error:t("req")};
   const rec=salaryRecord(staffId,month);
   if(!rec)return {ok:false,error:t("no_records")};
   const pay={amount:amount,method:method,txnId:String(txnId||"").trim(),at:tsNow()};
@@ -12841,7 +12872,7 @@ function viewStaff(){
     '<div class="toolbar"><div class="field" style="margin:0"><label>'+esc(t("staff_name"))+'</label><select id="sp-staff">'+
     list.map(function(st){return '<option value="'+st.id+'"'+(st.id===curSalaryStaff?" selected":"")+'>'+esc(st.name)+"</option>";}).join("")+"</select></div>"+
     '<div class="field" style="margin:0"><label>'+esc(t("pay_amount"))+'</label><input id="sp-amount" inputmode="numeric"></div>'+
-    '<div class="field" style="margin:0"><label>'+esc(t("pay_method"))+'</label><select id="sp-method">'+["Cash","JazzCash","EasyPaisa","Bank"].map(function(m){return "<option value=\""+m+"\">"+esc(methodName(m))+"</option>";}).join("")+"</select></div>"+
+    '<div class="field" style="margin:0"><label>'+esc(t("pay_method"))+'</label><select id="sp-method">'+payMethodOptions(["Cash"].concat(payMethods()))+"</select></div>"+
     '<div class="field" style="margin:0"><label>'+esc(t("pay_txn"))+'</label><input id="sp-txn"></div>'+
     '<button type="button" class="btn btn-primary" id="sp-pay">'+esc(t("sal_pay"))+"</button></div>"+
     '<div id="sp-msg"></div>';
@@ -14258,7 +14289,7 @@ function nextFeeReceipt(year){
 function recordFeePayment(studentId,month,amount,method,txnId){
   amount=Number(amount)||0;
   if(amount<=0)return {ok:false,error:t("req")};
-  if(["Cash","JazzCash","EasyPaisa","Bank"].indexOf(method)<0)return {ok:false,error:t("req")};
+  if(payMethods().indexOf(method)<0)return {ok:false,error:t("req")};
   const rec=feeEnsureRecord(studentId,month);
   if(!rec)return {ok:false,error:t("no_records")};
   const pay={amount:amount,method:method,txnId:String(txnId||"").trim(),at:tsNow(),receiptNo:nextFeeReceipt(String(new Date().getFullYear()))};
@@ -14316,7 +14347,7 @@ function reportSubPayment(d){
   const cycle=d.cycle==="annual"?"annual":"monthly";
   const amt=Number(d.amount);
   if(!(amt>0))return {ok:false,error:t("req")};
-  if(["Cash","JazzCash","EasyPaisa","Bank"].indexOf(d.method)<0)return {ok:false,error:t("req")};
+  if(payMethods().concat(["Payoneer"]).indexOf(d.method)<0)return {ok:false,error:t("req")};
   const p={id:uid("sp"),at:tsNow(),amount:amt,method:d.method,txnId:String(d.txnId||"").trim(),cycle:cycle,months:subCycleMonths(cycle),status:"reported",reportedBy:(typeof Cloud!=="undefined"&&Cloud.user?Cloud.user.email:"")};
   dbArr("subPayments").push(p);
   audit("sub-report",p.cycle+" "+p.amount+" "+p.method+" "+(p.txnId||"—"));
@@ -14335,11 +14366,13 @@ function waNumber(phone){
 function subReminderMsg(school){
   const pk=countryPack(school.country||"PK");
   const cycle=school.billing==="annual"?"annual":"monthly";
-  return t("sub_remind_msg")
+  let _msg=t("sub_remind_msg")
     .replace("{school}",school.name||"—")
     .replace("{cycle}",cycle==="annual"?t("sub_annual"):t("sub_monthly"))
     .replace("{until}",String(school.paidUntil||school.trialEndsAt||"").slice(0,10))
     .replace("{amount}",pk.cur+" "+fmtNum(subAmountFor(pk,cycle)));
+  if((school.country||"PK")!=="PK")_msg+=" "+t("sub_renew_intl");
+  return _msg;
 }
 /* Module toggles (Round 22): a module is on unless the school explicitly
    turned it off in Settings. Old data has no field, so it defaults to on. */
@@ -14399,11 +14432,14 @@ function feeDueDate(month){
 
 function payDetailsHTML(){
   const s=db().settings||{};
+  const ms=payMethods();
   const lines=[];
-  if(s.bankTitle||s.bankAccount)lines.push(esc(t("bank_title"))+": "+esc(s.bankTitle||"—")+" • "+esc(t("bank_account"))+": "+esc(s.bankAccount||"—"));
-  if(s.bankIBAN)lines.push(esc(t("bank_iban"))+": "+esc(s.bankIBAN));
-  if(s.jazzcashNo)lines.push("JazzCash: "+esc(s.jazzcashNo));
-  if(s.easypaisaNo)lines.push("EasyPaisa: "+esc(s.easypaisaNo));
+  if(ms.indexOf("Bank")>=0&&(s.bankTitle||s.bankAccount))lines.push(esc(t("bank_title"))+": "+esc(s.bankTitle||"—")+" • "+esc(t("bank_account"))+": "+esc(s.bankAccount||"—"));
+  if(ms.indexOf("Bank")>=0&&s.bankIBAN)lines.push(esc(t("bank_iban"))+": "+esc(s.bankIBAN));
+  if(ms.indexOf("JazzCash")>=0&&s.jazzcashNo)lines.push("JazzCash: "+esc(s.jazzcashNo));
+  if(ms.indexOf("EasyPaisa")>=0&&s.easypaisaNo)lines.push("EasyPaisa: "+esc(s.easypaisaNo));
+  if(ms.indexOf("NayaPay")>=0&&s.nayapayNo)lines.push("NayaPay: "+esc(s.nayapayNo));
+  if(ms.indexOf("SadaPay")>=0&&s.sadapayNo)lines.push("SadaPay: "+esc(s.sadapayNo));
   if(!lines.length)return "";
   return '<div style="margin-top:6px;border-top:1px solid #000;padding-top:4px"><b>'+esc(t("pay_by"))+'</b><br>'+lines.join("<br>")+"</div>";
 }
@@ -14497,7 +14533,7 @@ function viewFee(){
       h+='<div class="card" style="margin-top:.8rem"><h3>'+esc(displayName(b.student))+" — "+esc(t("fee_pay"))+"</h3>"+
         '<div class="toolbar"><span class="chip">'+esc(t("fee_balance"))+": <b>"+b.balance+"</b></span></div>"+
         '<div class="toolbar"><input id="fp-amount" inputmode="numeric" value="'+(b.balance>0?b.balance:"")+'" placeholder="'+esc(t("fee_amount"))+'" style="width:120px">'+
-        '<select id="fp-method"><option value="JazzCash">JazzCash</option><option value="EasyPaisa">EasyPaisa</option><option value="Bank">'+esc(t("method_bank"))+'</option><option value="Cash">'+esc(t("method_cash"))+'</option></select>'+
+        '<select id="fp-method">'+payMethodOptions(payMethods())+'</select>'+
         '<input id="fp-txn" placeholder="'+esc(t("fee_txn"))+'" style="min-width:140px"></div>'+
         '<div class="toolbar"><input id="fp-disc" inputmode="numeric" value="'+b.discount+'" placeholder="'+esc(t("fee_discount"))+'" style="width:110px">'+
         '<input id="fp-fine" inputmode="numeric" value="'+b.fine+'" placeholder="'+esc(t("fee_fine"))+'" style="width:110px">'+
@@ -14704,7 +14740,7 @@ function verifyBlockHTML(code,url){
    The school's country lives in settings (synced across the school's devices);
    the school document's country, when the admin sets it, wins. */
 const COUNTRY_PACKS=[
-  {code:"PK",name:"Pakistan",cur:"PKR",sym:"Rs",price:1500,rails:"JazzCash / EasyPaisa / bank transfer",board:"BISE",note:""},
+  {code:"PK",name:"Pakistan",cur:"PKR",sym:"Rs",price:1500,rails:"EasyPaisa / NayaPay / SadaPay / JazzCash / bank transfer",board:"BISE",note:""},
   {code:"BD",name:"Bangladesh",cur:"BDT",sym:"৳",price:1500,rails:"bKash / Nagad + transaction ID",board:"NCTB / Education Boards",note:""},
   {code:"IN",name:"India",cur:"INR",sym:"₹",price:1000,rails:"UPI / bank transfer / card",board:"CBSE / ICSE / State Boards",note:""},
   {code:"NP",name:"Nepal",cur:"NPR",sym:"Rs",price:1500,rails:"eSewa / Khalti / FonePay",board:"NEB (SEE +2)",note:""},
@@ -15605,6 +15641,17 @@ tb_saved_busy:{ur:"گوگل مصروف ہے، اس لیے میں نے آپ کا 
 });
 
 Object.assign(T,{
+method_nayapay:{en:"NayaPay",ur:"NayaPay",bn:"NayaPay",hi:"NayaPay",ne:"NayaPay",sw:"NayaPay",ar:"NayaPay",zh:"NayaPay",es:"NayaPay",fr:"NayaPay",pt:"NayaPay",ru:"NayaPay",id:"NayaPay",de:"NayaPay",ja:"NayaPay",pa:"NayaPay",mr:"NayaPay",te:"NayaPay",fa:"NayaPay",tr:"NayaPay",ta:"NayaPay",vi:"NayaPay",ko:"NayaPay",tl:"NayaPay",ha:"NayaPay",it:"NayaPay",ps:"NayaPay",ms:"NayaPay",yo:"NayaPay",ig:"NayaPay"},
+method_sadapay:{en:"SadaPay",ur:"SadaPay",bn:"SadaPay",hi:"SadaPay",ne:"SadaPay",sw:"SadaPay",ar:"SadaPay",zh:"SadaPay",es:"SadaPay",fr:"SadaPay",pt:"SadaPay",ru:"SadaPay",id:"SadaPay",de:"SadaPay",ja:"SadaPay",pa:"SadaPay",mr:"SadaPay",te:"SadaPay",fa:"SadaPay",tr:"SadaPay",ta:"SadaPay",vi:"SadaPay",ko:"SadaPay",tl:"SadaPay",ha:"SadaPay",it:"SadaPay",ps:"SadaPay",ms:"SadaPay",yo:"SadaPay",ig:"SadaPay"},
+method_payoneer:{en:"Payoneer",ur:"Payoneer",bn:"Payoneer",hi:"Payoneer",ne:"Payoneer",sw:"Payoneer",ar:"Payoneer",zh:"Payoneer",es:"Payoneer",fr:"Payoneer",pt:"Payoneer",ru:"Payoneer",id:"Payoneer",de:"Payoneer",ja:"Payoneer",pa:"Payoneer",mr:"Payoneer",te:"Payoneer",fa:"Payoneer",tr:"Payoneer",ta:"Payoneer",vi:"Payoneer",ko:"Payoneer",tl:"Payoneer",ha:"Payoneer",it:"Payoneer",ps:"Payoneer",ms:"Payoneer",yo:"Payoneer",ig:"Payoneer"},
+nayapay_no:{en:"NayaPay number",ur:"نیا پے نمبر",bn:"NayaPay নম্বর",hi:"NayaPay नंबर",ne:"NayaPay नम्बर",sw:"Namba ya NayaPay",ar:"رقم NayaPay",zh:"NayaPay 号码",es:"Número de NayaPay",fr:"Numéro NayaPay",pt:"Número NayaPay",ru:"Номер NayaPay",id:"Nomor NayaPay",de:"NayaPay-Nummer",ja:"NayaPay番号",pa:"NayaPay نمبر",mr:"NayaPay क्रमांक",te:"నయాపే నంబర్",fa:"شمارهٔ NayaPay",tr:"NayaPay numarası",ta:"NayaPay எண்",vi:"Số NayaPay",ko:"NayaPay 번호",tl:"Numero ng NayaPay",ha:"Lambar NayaPay",it:"Numero NayaPay",ps:"د NayaPay شمېره",ms:"Nombor NayaPay",yo:"Nọ́mbà NayaPay",ig:"Nọmba NayaPay"},
+sadapay_no:{en:"SadaPay number",ur:"سدا پے نمبر",bn:"SadaPay নম্বর",hi:"SadaPay नंबर",ne:"SadaPay नम्बर",sw:"Namba ya SadaPay",ar:"رقم SadaPay",zh:"SadaPay 号码",es:"Número de SadaPay",fr:"Numéro SadaPay",pt:"Número SadaPay",ru:"Номер SadaPay",id:"Nomor SadaPay",de:"SadaPay-Nummer",ja:"SadaPay番号",pa:"SadaPay نمبر",mr:"SadaPay क्रमांक",te:"సదాపే నంబర్",fa:"شمارهٔ SadaPay",tr:"SadaPay numarası",ta:"SadaPay எண்",vi:"Số SadaPay",ko:"SadaPay 번호",tl:"Numero ng SadaPay",ha:"Lambar SadaPay",it:"Numero SadaPay",ps:"د SadaPay شمېره",ms:"Nombor SadaPay",yo:"Nọ́mbà SadaPay",ig:"Nọmba SadaPay"},
+pay_methods_title:{en:"Payment methods accepted",ur:"قبول شدہ ادائیگی کے طریقے",bn:"গৃহীত পেমেন্ট পদ্ধতি",hi:"स्वीकृत भुगतान विधियाँ",ne:"स्वीकृत भुक्तानी विधिहरू",sw:"Njia za malipo zinazokubalika",ar:"طرق الدفع المقبولة",zh:"接受的付款方式",es:"Métodos de pago aceptados",fr:"Moyens de paiement acceptés",pt:"Métodos de pagamento aceites",ru:"Принимаемые способы оплаты",id:"Metode pembayaran yang diterima",de:"Akzeptierte Zahlungsmethoden",ja:"受け付ける支払い方法",pa:"قبول شدہ ادائیگی دے طریقے",mr:"स्वीकृत भरणा पद्धती",te:"ఆమోదించబడిన చెల్లింపు పద్ధతులు",fa:"روش‌های پرداخت پذیرفته‌شده",tr:"Kabul edilen ödeme yöntemleri",ta:"ஏற்றுக்கொள்ளப்பட்ட கட்டண முறைகள்",vi:"Phương thức thanh toán được chấp nhận",ko:"수락되는 결제 방법",tl:"Mga tinatanggap na paraan ng pagbabayad",ha:"Hanyoyin biyan kuɗi da aka karɓa",it:"Metodi di pagamento accettati",ps:"د تادیې منل شوې لارې",ms:"Kaedah pembayaran yang diterima",yo:"Àwọn ọ̀nà ìsanwó tí a gbà",ig:"Ụzọ ịkwụ ụgwọ anabatara"},
+pay_methods_hint:{en:"Tick the methods parents may use. Only the ticked methods appear on fee challans and in the payment lists.",ur:"وہ طریقے منتخب کریں جو والدین استعمال کر سکتے ہیں۔ صرف منتخب شدہ طریقے فیس چالان اور ادائیگی کی فہرستوں میں نظر آئیں گے۔",bn:"অভিভাবকেরা যে পদ্ধতিগুলো ব্যবহার করতে পারবেন সেগুলোতে টিক দিন। শুধু টিক দেওয়া পদ্ধতিগুলোই ফি চালান ও পেমেন্টের তালিকায় দেখাবে।",hi:"माता-पिता जिन तरीकों से भुगतान कर सकते हैं, उन पर टिक करें। केवल टिक किए गए तरीके ही फीस चालान और भुगतान सूचियों में दिखेंगे।",ne:"अभिभावकले प्रयोग गर्न सक्ने विधिहरूमा टिक लगाउनुहोस्। टिक लगाइएका विधिहरू मात्र शुल्क चलान र भुक्तानी सूचीमा देखिन्छन्।",sw:"Teua njia ambazo wazazi wanaweza kutumia. Ni njia zilizoteuliwa tu ndizo zinazoonekana kwenye ankara za ada na orodha za malipo.",ar:"حدّد الطرق التي يمكن للأهل استخدامها. الطرق المحددة فقط هي التي تظهر في إيصالات الرسوم وقوائم الدفع.",zh:"勾选家长可使用的付款方式。只有勾选的方式才会显示在学费单和付款列表中。",es:"Marca los métodos que pueden usar los padres. Solo los métodos marcados aparecerán en los recibos de pago y en las listas de pago.",fr:"Cochez les moyens que les parents peuvent utiliser. Seuls les moyens cochés apparaissent sur les reçus de frais et dans les listes de paiement.",pt:"Assinale os métodos que os pais podem usar. Só os métodos assinalados aparecem nos recibos de propinas e nas listas de pagamento.",ru:"Отметьте способы, которыми могут платить родители. Только отмеченные способы появятся в квитанциях и списках платежей.",id:"Centang metode yang boleh digunakan orang tua. Hanya metode yang dicentang yang muncul di kwitansi biaya dan daftar pembayaran.",de:"Haken Sie die Methoden an, die Eltern nutzen dürfen. Nur die angehakten Methoden erscheinen auf den Gebührenbelegen und in den Zahlungslisten.",ja:"保護者が利用できる方法にチェックを入れてください。チェックした方法のみが料金請求書と支払い一覧に表示されます。",pa:"اوہ طریقے منتخب کرو جیہڑے والدین ورت سکدے نیں۔ صرف منتخب شدہ طریقے فیس چالان تے ادائیگی دیاں فہرستاں وچ نظر آون گے۔",mr:"पालक वापरू शकतील अशा पद्धतींवर खूण करा. फक्त खूण केलेल्या पद्धतीच फी पावती आणि भरणा याद्यांमध्ये दिसतील.",te:"తల్లిదండ్రులు ఉపయోగించగల పద్ధతులను టిక్ చేయండి. టిక్ చేసిన పద్ధతులు మాత్రమే ఫీజు చలాన్లు మరియు చెల్లింపు జాబితాలలో కనిపిస్తాయి.",fa:"روش‌هایی را که والدین می‌توانند استفاده کنند تیک بزنید. فقط روش‌های تیک‌خورده در رسیدهای شهریه و فهرست‌های پرداخت دیده می‌شوند.",tr:"Velilerin kullanabileceği yöntemleri işaretleyin. Yalnızca işaretlenen yöntemler ücret makbuzlarında ve ödeme listelerinde görünür.",ta:"பெற்றோர் பயன்படுத்தக்கூடிய முறைகளைத் தேர்ந்தெடுக்கவும். தேர்ந்தெடுக்கப்பட்ட முறைகள் மட்டுமே கட்டண ரசீதுகளிலும் கட்டணப் பட்டியல்களிலும் தோன்றும்.",vi:"Đánh dấu các phương thức phụ huynh có thể dùng. Chỉ các phương thức đã đánh dấu mới xuất hiện trên phiếu thu học phí và danh sách thanh toán.",ko:"학부모가 사용할 수 있는 방법을 선택하세요. 선택한 방법만 수업료 청구서와 결제 목록에 표시됩니다.",tl:"Lagyan ng tsek ang mga paraang maaaring gamitin ng mga magulang. Ang mga may tsek lang ang lalabas sa mga resibo ng bayarin at listahan ng bayad.",ha:"Yi alama kan hanyoyin da iyaye za su iya amfani da su. Hanyoyin da aka yi wa alama kaɗai ne ke bayyana a rasit ɗin kuɗin makaranta da jerin biyan kuɗi.",it:"Seleziona i metodi che i genitori possono usare. Solo i metodi selezionati compaiono sulle ricevute delle rette e negli elenchi dei pagamenti.",ps:"هغه لارې په نښه کړئ چې مور او پلار یې کارولی شي. یوازې په نښه شوې لارې به د فیس په رسیدونو او د تادیې په لیستونو کې ښکاري.",ms:"Tandakan kaedah yang boleh digunakan oleh ibu bapa. Hanya kaedah yang ditandakan akan muncul pada resit yuran dan senarai pembayaran.",yo:"Samisi àwọn ọ̀nà tí àwọn òbí lè lò. Àwọn ọ̀nà tí a samisi nìkan ni yóò hàn ní orí àwọn ìwé-ẹ̀rí owó ilé-ìwé àti àwọn àkójọ ìsanwó.",ig:"Ka akara ụzọ ndị nne na nna nwere ike iji. Naanị ụzọ ndị akara akara ga-apụta na nnata ego ụlọ akwụkwọ na ndepụta ịkwụ ụgwọ."},
+sub_renew_intl:{en:"International schools: ask the admin for a Payoneer payment request — pay by card or bank transfer, and access is switched on after payment.",ur:"بین الاقوامی اسکول: ایڈمن سے Payoneer ادائیگی کی درخواست مانگیں — کارڈ یا بینک ٹرانسفر سے ادائیگی کریں، اور ادائیگی کے بعد رسائی آن کر دی جائے گی۔",bn:"আন্তর্জাতিক স্কুল: অ্যাডমিনের কাছে Payoneer পেমেন্টের অনুরোধ করুন — কার্ড বা ব্যাংক ট্রান্সফারে পেমেন্ট করুন, পেমেন্টের পর অ্যাক্সেস চালু করা হবে।",hi:"अंतरराष्ट्रीय स्कूल: एडमिन से Payoneer भुगतान अनुरोध माँगें — कार्ड या बैंक ट्रांसफ़र से भुगतान करें, भुगतान के बाद एक्सेस चालू कर दिया जाएगा।",ne:"अन्तर्राष्ट्रिय विद्यालयहरू: एडमिनसँग Payoneer भुक्तानी अनुरोध माग्नुहोस् — कार्ड वा बैंक स्थानान्तरणबाट भुक्तानी गर्नुहोस्, भुक्तानीपछि पहुँच खोलिन्छ।",sw:"Shule za kimataifa: mwombe msimamizi ombi la malipo la Payoneer — lipa kwa kadi au uhamisho wa benki, na ufikiaji utawashwa baada ya malipo.",ar:"المدارس الدولية: اطلب من المدير طلب دفع عبر Payoneer — ادفع بالبطاقة أو التحويل البنكي، وسيتم تشغيل الوصول بعد الدفع.",zh:"国际学校：请向管理员索取 Payoneer 付款请求——可通过银行卡或银行转账付款，付款后即开通使用权限。",es:"Escuelas internacionales: pidan al administrador una solicitud de pago de Payoneer; paguen con tarjeta o transferencia bancaria y el acceso se activará después del pago.",fr:"Écoles internationales : demandez à l'administrateur une demande de paiement Payoneer — payez par carte ou virement bancaire, et l'accès sera activé après le paiement.",pt:"Escolas internacionais: peçam ao administrador um pedido de pagamento Payoneer — paguem por cartão ou transferência bancária e o acesso será ativado após o pagamento.",ru:"Международные школы: попросите у администратора запрос платежа Payoneer — оплатите картой или банковским переводом, доступ включат после оплаты.",id:"Sekolah internasional: minta permintaan pembayaran Payoneer kepada admin — bayar dengan kartu atau transfer bank, dan akses akan diaktifkan setelah pembayaran.",de:"Internationale Schulen: Bitten Sie den Administrator um eine Payoneer-Zahlungsanfrage — zahlen Sie per Karte oder Banküberweisung, der Zugang wird nach der Zahlung freigeschaltet.",ja:"海外の学校：管理者にPayoneerの支払いリクエストを依頼してください — カードまたは銀行振込でお支払いいただくと、お支払い後にアクセスが有効になります。",pa:"بین الاقوامی سکول: ایڈمن توں Payoneer ادائیگی دی درخواست منگو — کارڈ یا بینک ٹرانسفر نال ادا کرو، تے ادائیگی توں بعد رسائی چالو کر دتی جاوے گی۔",mr:"आंतरराष्ट्रीय शाळा: प्रशासकाकडे Payoneer भरणा विनंती मागा — कार्ड किंवा बँक हस्तांतरणाद्वारे भरा, भरणा केल्यावर प्रवेश सुरू केला जाईल.",te:"అంతర్జాతీయ పాఠశాలలు: నిర్వాహకుడిని Payoneer చెల్లింపు అభ్యర్థన అడగండి — కార్డ్ లేదా బ్యాంక్ బదిలీ ద్వారా చెల్లించండి, చెల్లింపు తర్వాత యాక్సెస్ ఆన్ చేయబడుతుంది.",fa:"مدارس بین‌المللی: از مدیر درخواست پرداخت Payoneer بخواهید — با کارت یا انتقال بانکی پرداخت کنید و دسترسی پس از پرداخت فعال می‌شود.",tr:"Uluslararası okullar: yöneticiden bir Payoneer ödeme isteği isteyin — kart veya banka havalesi ile ödeyin, erişim ödemeden sonra açılır.",ta:"சர்வதேச பள்ளிகள்: நிர்வாகியிடம் Payoneer கட்டண கோரிக்கையைக் கேளுங்கள் — அட்டை அல்லது வங்கிப் பரிமாற்றம் மூலம் செலுத்தவும், கட்டணம் செலுத்திய பிறகு அணுகல் இயக்கப்படும்.",vi:"Trường quốc tế: hãy xin quản trị viên yêu cầu thanh toán Payoneer — thanh toán bằng thẻ hoặc chuyển khoản ngân hàng, quyền truy cập sẽ được bật sau khi thanh toán.",ko:"국제 학교: 관리자에게 Payoneer 결제 요청을 요청하세요 — 카드나 은행 송금으로 납부하시면 납부 후 이용이 활성화됩니다.",tl:"Mga internasyonal na paaralan: humingi sa admin ng kahilingan sa pagbabayad sa Payoneer — magbayad sa pamamagitan ng card o bank transfer, at bubuksan ang access pagkatapos ng bayad.",ha:"Makarantun ƙasashen waje: ku roƙi admin buƙatar biyan kuɗi ta Payoneer — ku biya da katin ko canja wurin banki, kuma za a kunna damar ku bayan biya.",it:"Scuole internazionali: chiedete all'amministratore una richiesta di pagamento Payoneer — pagate con carta o bonifico bancario e l'accesso verrà attivato dopo il pagamento.",ps:"نړیوال ښوونځي: له مدیر څخه د Payoneer د تادیې غوښتنه وکړئ — د کارت یا بانکي لېږد له لارې ورکړئ، او لاسرسی به له تادیې وروسته فعال شي.",ms:"Sekolah antarabangsa: minta permintaan pembayaran Payoneer daripada admin — bayar dengan kad atau pindahan bank, dan akses akan diaktifkan selepas pembayaran.",yo:"Àwọn ilé-ìwé àgbáyé: béèrè lọ́wọ́ adámì fún ìbéèrè ìsanwó Payoneer — san nípa káàdì tàbí gbé owó lọ sí báǹkì, a ó sì tan ìwọ̀lẹ̀ lẹ́yìn ìsanwó.",ig:"Ụlọ akwụkwọ mba ụwa: rịọ onye nchịkwa arịrịọ ịkwụ ụgwọ Payoneer — kwụọ site na kaadị maọbụ mbufe ụlọ akụ, a ga-agbanye ohere gị mgbe ịkwụchara ụgwọ."},
+});
+
+Object.assign(T,{
 tools_th_pyth:{en:"Pythagoras theorem",ur:"قضیہ فیثاغورث",bn:"পিথাগোরাসের উপপাদ্য",hi:"पाइथागोरस प्रमेय",ne:"पाइथागोरस प्रमेय",sw:"Nadharia ya Pythagoras",ar:"نظرية فيثاغورس",zh:"勾股定理",es:"Teorema de Pitágoras",fr:"Théorème de Pythagore",pt:"Teorema de Pitágoras",ru:"Теорема Пифагора",id:"Teorema Pythagoras",de:"Satz des Pythagoras",ja:"ピタゴラスの定理",pa:"قضیہ فیثاغورث",mr:"पायथागोरसचे प्रमेय",te:"పైథాగరస్ సిద్ధాంతం",fa:"قضیه فیثاغورس",tr:"Pisagor teoremi",ta:"பிதாகரஸ் தேற்றம்",vi:"Định lý Pythagoras",ko:"피타고라스 정리",tl:"Teorama ni Pythagoras",ha:"Ka'idar Pythagoras",it:"Teorema di Pitagora",ps:"د فیثاغورث قضیه",ms:"Teorem Pythagoras",yo:"Ẹ̀kọ́ Pythagoras",ig:"Usoro Pythagoras"},
 tools_th_anglesum:{en:"Angles in a triangle",ur:"مثلث کے زاویے",bn:"ত্রিভুজের কোণ",hi:"त्रिभुज के कोण",ne:"त्रिभुजका कोणहरू",sw:"Pembe za pembetatu",ar:"زوايا المثلث",zh:"三角形的内角",es:"Ángulos de un triángulo",fr:"Angles d'un triangle",pt:"Ângulos de um triângulo",ru:"Углы треугольника",id:"Sudut-sudut segitiga",de:"Winkel im Dreieck",ja:"三角形の角",pa:"تکون دے زاویے",mr:"त्रिकोणाचे कोन",te:"త్రిభుజంలో కోణాలు",fa:"زاویه‌های مثلث",tr:"Üçgenin açıları",ta:"முக்கோணத்தின் கோணங்கள்",vi:"Các góc trong tam giác",ko:"삼각형의 각",tl:"Mga anggulo ng tatsulok",ha:"Kusurwoyin uku-uku",it:"Angoli di un triangolo",ps:"د مثلث زاویې",ms:"Sudut dalam segi tiga",yo:"Àwọn igun onígun-mẹ́ta",ig:"Akụkụ nke triaṅgụl"},
 tools_th_straight:{en:"Angles on a straight line",ur:"سیدھی لکیر پر زاویے",bn:"সরলরেখার কোণ",hi:"सीधी रेखा पर कोण",ne:"सिधा रेखाका कोणहरू",sw:"Pembe kwenye mstari ulionyooka",ar:"الزوايا على خط مستقيم",zh:"直线上的角",es:"Ángulos en una línea recta",fr:"Angles sur une droite",pt:"Ângulos numa linha reta",ru:"Углы на прямой",id:"Sudut pada garis lurus",de:"Winkel auf einer Geraden",ja:"直線上の角",pa:"سدھی لکیر تے زاویے",mr:"सरळ रेषेवरील कोन",te:"సరళ రేఖపై కోణాలు",fa:"زاویه‌ها روی خط مستقیم",tr:"Doğru üzerindeki açılar",ta:"நேர்கோட்டில் கோணங்கள்",vi:"Các góc trên đường thẳng",ko:"직선 위의 각",tl:"Mga anggulo sa tuwid na linya",ha:"Kusurwoyi a kan madaidaiciyar layi",it:"Angoli su una retta",ps:"په مستقیمه کرښه کې زاویې",ms:"Sudut pada garis lurus",yo:"Àwọn igun lórí ìlà tààrà",ig:"Akụkụ dị n'ahịrị kwụ ọtọ"},
@@ -16324,12 +16371,12 @@ function loadParentApply(){
   };
 }
 
-function parentFeeHTML(){
+function parentFeeHTML(methods){
   return '<div class="card" style="max-width:480px;margin:1rem auto"><h3>💰 '+esc(t("fee_report_title"))+'</h3>'+
     '<p class="muted">'+esc(t("fee_report_hint"))+'</p>'+
     '<div class="field"><label>'+esc(t("adm_no"))+'</label><input id="ppf-adm" autocomplete="off"></div>'+
     '<div class="field"><label>'+esc(t("fee_amount"))+'</label><input id="ppf-amount" inputmode="numeric"></div>'+
-    '<div class="field"><label>'+esc(t("fee_method"))+'</label><select id="ppf-method"><option value="JazzCash">JazzCash</option><option value="EasyPaisa">EasyPaisa</option><option value="Bank">'+esc(t("method_bank"))+'</option><option value="Cash">'+esc(t("method_cash"))+'</option></select></div>'+
+    '<div class="field"><label>'+esc(t("fee_method"))+'</label><select id="ppf-method">'+payMethodOptions(((methods&&methods.length)?methods:payMethods()).filter(function(m){return m!=="Cash";}))+'</select></div>'+
     '<div class="field"><label>'+esc(t("fee_txn"))+'</label><input id="ppf-txn" autocomplete="off"></div>'+
     '<div id="ppf-msg"></div>'+
     '<button type="button" class="btn btn-primary" id="ppf-go" style="width:100%">'+esc(t("fee_report_go"))+"</button></div>";
@@ -16340,7 +16387,7 @@ function loadParentFeeInfo(){
   Cloud.getPublicInfo(parentSchoolId).then(function(info){
     const b=$("pp-fee");if(!b)return;
     if(!info||!info.phone||info.fees===false)return;
-    b.innerHTML=parentFeeHTML();
+    b.innerHTML=parentFeeHTML(info.payMethods);
     const go2=$("ppf-go");
     if(go2)go2.onclick=function(){
       const adm=$("ppf-adm").value.trim(),amt=Number($("ppf-amount").value)||0,
@@ -19691,14 +19738,14 @@ function schoolCardHTML(){
   const due=subDue(s);
   if(due.state==="overdue")h+='<p class="msg err">⚠️ '+esc(t("sub_overdue"))+(until?" — "+esc(String(until).slice(0,10)):"")+'</p>';
   else if(due.state==="due_soon")h+='<p class="msg warn">⏰ '+esc(t("sub_due_in").replace("{days}",String(due.days)))+'</p>';
-  if(s.status!=="active")h+='<p class="muted">'+esc(t("sub_renew"))+'</p>';
+  if(s.status!=="active")h+='<p class="muted">'+esc(t("sub_renew"))+((schoolCountry()!=="PK")?"<br>"+esc(t("sub_renew_intl")):"")+'</p>';
   /* Report a subscription payment (teacher side). */
   h+='<h3 style="margin:.8rem 0 .3rem">'+esc(t("sub_report_title"))+'</h3>'+
     '<p class="muted">'+esc(t("sub_report_hint"))+'</p>'+
     '<div class="grid2">'+
     '<div class="field"><label>'+esc(t("sub_billing"))+'</label><select id="sub-cycle"><option value="monthly">'+esc(t("sub_monthly"))+'</option><option value="annual">'+esc(t("sub_annual"))+'</option></select></div>'+
     '<div class="field"><label>'+esc(t("sub_amount"))+' ('+esc(pk.cur)+')</label><input id="sub-amount" inputmode="numeric" value="'+subAmountFor(pk,"monthly")+'"></div>'+
-    '<div class="field"><label>'+esc(t("sub_method"))+'</label><select id="sub-method"><option value="JazzCash">JazzCash</option><option value="EasyPaisa">EasyPaisa</option><option value="Bank">'+esc(t("method_bank"))+'</option><option value="Cash">'+esc(t("method_cash"))+'</option></select></div>'+
+    '<div class="field"><label>'+esc(t("sub_method"))+'</label><select id="sub-method">'+payMethodOptions(payMethods().concat(["Payoneer"]))+'</select></div>'+
     '<div class="field"><label>'+esc(t("sub_txn"))+'</label><input id="sub-txn" placeholder="..."></div></div>'+
     '<button type="button" class="btn btn-primary" id="sub-report">'+esc(t("sub_report"))+'</button><div id="sub-msg"></div>';
   const list=subPaymentsList();
@@ -19742,7 +19789,7 @@ function adminSchoolHTML(row){
     '<button type="button" class="btn btn-sm" data-block="'+s.id+'" data-cur="'+(s.blocked?"1":"0")+'">'+esc(s.blocked?t("admin_unblock"):t("admin_block"))+'</button> '+
     '<button type="button" class="btn btn-sm" data-teachers="'+s.id+'">'+esc(t("admin_teachers"))+'</button></div>'+
     '<div id="adm-teachers-'+s.id+'"></div>'+
-    '<span class="muted">'+esc(s.plan==="trial"?t("plan_trial"):t("plan_paid"))+' • '+esc(cycle==="annual"?t("sub_annual"):t("sub_monthly"))+' • '+esc(t("sub_until"))+': '+esc(until||"—")+' • '+esc(pk.cur+" "+fmtNum(amt))+'</span>'+
+    '<span class="muted">'+esc(s.plan==="trial"?t("plan_trial"):t("plan_paid"))+' • '+esc(cycle==="annual"?t("sub_annual"):t("sub_monthly"))+' • '+esc(t("sub_until"))+': '+esc(until||"—")+' • '+esc(pk.cur+" "+fmtNum(amt))+'</span><br><span class="muted">'+esc(t("sub_rails"))+": "+esc(pk.rails)+(((s.country||"PK")!=="PK")?" • "+esc(t("sub_renew_intl")):"")+'</span>'+
     (function(){const sm=row.info&&row.info.summary;if(!sm)return '<br><span class="muted">'+esc(t("ho_no_summary"))+"</span>";return '<br><span class="muted">'+esc(t("ho_students"))+": "+sm.students+" • "+esc(t("ho_staff"))+": "+sm.staff+" • "+esc(t("ho_att_today"))+": "+(sm.attPct===null?"—":sm.attPct+"%")+" • "+esc(t("ho_fee_collected"))+": "+esc(pk.cur+" "+fmtNum(sm.feeCollected))+" / "+esc(t("ho_fee_due"))+": "+esc(pk.cur+" "+fmtNum(sm.feeDue))+"</span>";})();
   if(due.state!=="active"){
     h+='<div class="toolbar" style="margin-top:.4rem">'+
@@ -20016,6 +20063,27 @@ function boardCardHTML(){
     '<div class="field"><label>'+esc(t("board_p2"))+" ("+esc(t("years"))+" / "+esc(t("months"))+')</label><div class="toolbar"><input id="s-bp2y" inputmode="numeric" value="'+(b.part2Y||0)+'" style="width:80px"><input id="s-bp2m" inputmode="numeric" value="'+(b.part2M||0)+'" style="width:80px"></div></div>'+
     '</div><button type="button" class="btn btn-primary" id="s-save4">'+esc(t("save"))+"</button></div>";
 }
+/* ---- Round 80: payment methods card (billing surface) ---- */
+function payCardHTML(){
+  const s=db().settings||{};
+  const ms=payMethods();
+  const sel=function(m){return ms.indexOf(m)>=0?" selected":"";};
+  return '<div class="card"><h3>\uD83D\uDCB3 '+esc(t("pay_methods_title"))+'</h3>'
+  +'<p class="muted">'+esc(t("pay_methods_hint"))+'</p>'
+  +'<div class="field"><label>'+esc(t("pay_methods_title"))+'</label>'
+  +'<select id="s-paymethods" multiple size="6">'
+  +ALL_PAY_METHODS.map(function(m){return '<option value="'+m+'"'+sel(m)+'>'+esc(methodName(m))+"</option>";}).join("")
+  +'</select></div>'
+  +'<div class="grid2">'
+  +'<div id="payrow-bank">'+fld("bank_title",'<input id="s-banktitle" value="'+esc(s.bankTitle||"")+'">')
+  +fld("bank_account",'<input id="s-bankacct" value="'+esc(s.bankAccount||"")+'">')
+  +fld("bank_iban",'<input id="s-bankiban" value="'+esc(s.bankIBAN||"")+'" placeholder="PK00...">')+'</div>'
+  +'<div id="payrow-jazzcash">'+fld("jazzcash_no",'<input id="s-jazzcash" value="'+esc(s.jazzcashNo||"")+'" placeholder="03XX-XXXXXXX">')+'</div>'
+  +'<div id="payrow-easypaisa">'+fld("easypaisa_no",'<input id="s-easypaisa" value="'+esc(s.easypaisaNo||"")+'" placeholder="03XX-XXXXXXX">')+'</div>'
+  +'<div id="payrow-nayapay">'+fld("nayapay_no",'<input id="s-nayapay" value="'+esc(s.nayapayNo||"")+'" placeholder="03XX-XXXXXXX">')+'</div>'
+  +'<div id="payrow-sadapay">'+fld("sadapay_no",'<input id="s-sadapay" value="'+esc(s.sadapayNo||"")+'" placeholder="03XX-XXXXXXX">')+'</div>'
+  +'</div></div>';
+}
 function viewSettings(){
   const s=db().settings;
   let h='<div class="card"><h2>'+esc(t("set_title"))+"</h2>"+
@@ -20023,11 +20091,6 @@ function viewSettings(){
     fld("device_name",'<input id="s-device" value="'+esc(s.deviceName||"")+'" placeholder="'+esc(t("device_ph"))+'">')+
     fld("school_phone",'<input id="s-phone" value="'+esc(s.schoolPhone||"")+'" placeholder="03XX-XXXXXXX">')+
     fld("country",'<select id="s-country">'+COUNTRY_PACKS.map(function(p){return '<option value="'+p.code+'"'+((s.country||"PK")===p.code?" selected":"")+'>'+esc(p.name)+" ("+esc(p.cur)+")</option>";}).join("")+"</select>")+
-    fld("bank_title",'<input id="s-banktitle" value="'+esc(s.bankTitle||"")+'">')+
-    fld("bank_account",'<input id="s-bankacct" value="'+esc(s.bankAccount||"")+'">')+
-    fld("bank_iban",'<input id="s-bankiban" value="'+esc(s.bankIBAN||"")+'" placeholder="PK00...">')+
-    fld("jazzcash_no",'<input id="s-jazzcash" value="'+esc(s.jazzcashNo||"")+'" placeholder="03XX-XXXXXXX">')+
-    fld("easypaisa_no",'<input id="s-easypaisa" value="'+esc(s.easypaisaNo||"")+'" placeholder="03XX-XXXXXXX">')+
     fld("fees_enabled",'<select id="s-feeson"><option value="1"'+(feesOn()?" selected":"")+'>'+esc(t("fees_yes"))+'</option><option value="0"'+(!feesOn()?" selected":"")+'>'+esc(t("fees_no"))+"</option></select>")+
     '<h3 style="margin:.8rem 0 .3rem">'+esc(t("mod_title"))+'</h3>'+
     fld("nav_att",'<select id="s-atton"><option value="1"'+(attOn()?" selected":"")+'>'+esc(t("mod_on"))+'</option><option value="0"'+(!attOn()?" selected":"")+'>'+esc(t("mod_off"))+"</option></select>")+
@@ -20051,6 +20114,7 @@ function viewSettings(){
     fld("def_lang",'<input id="s-lang-search" autocomplete="off" placeholder="'+esc(t("lang_search"))+'" value="'+esc((LANGS[s.lang||"en"]||LANGS.en).native)+'"><input type="hidden" id="s-lang" value="'+esc(s.lang||"en")+'"><div id="s-lang-list"></div>')+
     fld("pass_pct",'<input id="s-pass" inputmode="numeric" value="'+s.passPct+'">')+
     '<button type="button" class="btn btn-primary" id="s-save">'+esc(t("save"))+"</button></div>";
+  h+=payCardHTML();
   const platKey=(typeof Cloud!=="undefined"&&Cloud.enabled&&Cloud.platformKey)?Cloud.platformKey:"";
   h+='<div class="card"><h3>✨ '+esc(t("ai_title"))+'</h3>'+
     (platKey?'<p class="muted">✅ '+esc(t("ai_platform"))+'</p>'
@@ -20124,7 +20188,7 @@ function afterSettings(){
   $("s-save").onclick=function(){
     const oldLang75=lang();
     const s=db().settings;
-    s.schoolName=$("s-name").value.trim();s.deviceName=$("s-device").value.trim();s.schoolPhone=$("s-phone").value.trim();s.country=$("s-country").value;s.feesEnabled=$("s-feeson").value==="1";s.attEnabled=$("s-atton").value==="1";s.staffEnabled=$("s-staffon").value==="1";s.bcEnabled=$("s-bcon").value==="1";s.hwEnabled=$("s-hwon").value==="1";s.transportEnabled=$("s-tron").value==="1";s.libEnabled=$("s-libon").value==="1";s.admAppEnabled=$("s-appon").value==="1";s.cmpEnabled=$("s-cmpon").value==="1";s.heEnabled=$("s-heon").value==="1";s.ttEnabled=$("s-tton").value==="1";s.labEnabled=$("s-labon").value==="1";s.certEnabled=$("s-certon").value==="1";s.bankTitle=$("s-banktitle").value.trim();s.bankAccount=$("s-bankacct").value.trim();s.bankIBAN=$("s-bankiban").value.trim();s.jazzcashNo=$("s-jazzcash").value.trim();s.easypaisaNo=$("s-easypaisa").value.trim();s.lang=$("s-lang").value;s.passPct=Number($("s-pass").value)||33;const gk=$("s-gemini");if(gk)s.geminiKey=gk.value.trim();
+    s.schoolName=$("s-name").value.trim();s.deviceName=$("s-device").value.trim();s.schoolPhone=$("s-phone").value.trim();s.country=$("s-country").value;s.feesEnabled=$("s-feeson").value==="1";s.attEnabled=$("s-atton").value==="1";s.staffEnabled=$("s-staffon").value==="1";s.bcEnabled=$("s-bcon").value==="1";s.hwEnabled=$("s-hwon").value==="1";s.transportEnabled=$("s-tron").value==="1";s.libEnabled=$("s-libon").value==="1";s.admAppEnabled=$("s-appon").value==="1";s.cmpEnabled=$("s-cmpon").value==="1";s.heEnabled=$("s-heon").value==="1";s.ttEnabled=$("s-tton").value==="1";s.labEnabled=$("s-labon").value==="1";s.certEnabled=$("s-certon").value==="1";s.bankTitle=$("s-banktitle").value.trim();s.bankAccount=$("s-bankacct").value.trim();s.bankIBAN=$("s-bankiban").value.trim();s.jazzcashNo=$("s-jazzcash").value.trim();s.easypaisaNo=$("s-easypaisa").value.trim();s.nayapayNo=$("s-nayapay").value.trim();s.sadapayNo=$("s-sadapay").value.trim();s.payMethods=payMethodsFromSelect();s.lang=$("s-lang").value;s.passPct=Number($("s-pass").value)||33;const gk=$("s-gemini");if(gk)s.geminiKey=gk.value.trim();
     if(typeof Cloud!=="undefined")Cloud.pushPublicInfo();
     if($("s-lang").value!==oldLang75&&typeof window!=="undefined"){var _v75b=$("view");keepScrollY={wy:window.scrollY||0,vt:_v75b?_v75b.scrollTop:0};}
     Store.save();render();
@@ -20261,6 +20325,7 @@ function afterSettings(){
     if(!r.ok){if(m)m.innerHTML='<div class="msg err">'+esc(r.error||t("req"))+'</div>';return;}
     render();
   };
+  if($("s-paymethods")){$("s-paymethods").onchange=function(){togglePayRows();};togglePayRows();}
   bindSyncTest();
 }
 
@@ -21576,7 +21641,7 @@ const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,LAN
   sha256Hex:sha256Hex,parentHash:parentHash,publishResults:publishResults,unpublishResults:unpublishResults,parentLink:parentLink,mergeDefaults:mergeDefaults,dbArr:dbArr,
   verifyCodeFor:verifyCodeFor,verifyURL:verifyURL,qrSVG:qrSVG,verifyBlockHTML:verifyBlockHTML,scanQRText:scanQRText,findStudentByScan:findStudentByScan,openStudentByScan:openStudentByScan,geminiKey:geminiKey,askGemini:askGemini,askGeminiSummary:askGeminiSummary,geminiPing:geminiPing,geminiReason:geminiReason,geminiCall:geminiCall,geminiCallOnce:geminiCallOnce,GEMINI_TUNING:GEMINI_TUNING,geminiTestGuard:geminiTestGuard,geminiTestDone:geminiTestDone,geminiTestBind:geminiTestBind,setupSteps:setupSteps,setupCardHTML:setupCardHTML,geminiAnswerHTML:geminiAnswerHTML,briefingHTML:briefingHTML,speakText:speakText,attMonthPct:attMonthPct,idCardHTML:idCardHTML,idCardPrintHTML:idCardPrintHTML,scanCardHTML:scanCardHTML,
   COUNTRY_PACKS:COUNTRY_PACKS,countryPack:countryPack,schoolCountry:schoolCountry,countryPriceText:countryPriceText,pricingHTML:pricingHTML,
-  payDetailsHTML:payDetailsHTML,concAmount:concAmount,setConcession:setConcession,removeConcession:removeConcession,concDossierHTML:concDossierHTML,weekKey:weekKey,attFlags:attFlags,attFlagsHTML:attFlagsHTML,teacherRemark:teacherRemark,setRemark:setRemark,
+  payDetailsHTML:payDetailsHTML,payMethods:payMethods,payMethodOptions:payMethodOptions,payMethodsFromSelect:payMethodsFromSelect,ALL_PAY_METHODS:ALL_PAY_METHODS,DEFAULT_PAY_METHODS:DEFAULT_PAY_METHODS,parentFeeHTML:parentFeeHTML,concAmount:concAmount,setConcession:setConcession,removeConcession:removeConcession,concDossierHTML:concDossierHTML,weekKey:weekKey,attFlags:attFlags,attFlagsHTML:attFlagsHTML,teacherRemark:teacherRemark,setRemark:setRemark,
   feesOn:feesOn,attOn:attOn,staffOn:staffOn,ttOn:ttOn,labOn:labOn,certOn:certOn,feePayStatus:feePayStatus,feePayStatusText:feePayStatusText,
   annualPrice:annualPrice,annualSave:annualSave,subAmountFor:subAmountFor,subCycleMonths:subCycleMonths,addMonthsISO:addMonthsISO,subDue:subDue,reportSubPayment:reportSubPayment,subPaymentsList:subPaymentsList,waNumber:waNumber,subReminderMsg:subReminderMsg,ANNUAL_DISC:ANNUAL_DISC,
   askAnswer:askAnswer,askNorm:askNorm,askFindStudent:askFindStudent,askFindClass:askFindClass,askBuild:askBuild,ASK_INTENTS:ASK_INTENTS,
