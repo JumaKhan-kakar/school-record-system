@@ -109,6 +109,11 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:1rem 0}
 .rcard .rc-head{text-align:center;border-bottom:2px solid var(--ink);padding-bottom:.6rem;margin-bottom:.8rem}
 .rcard .rc-head img{height:54px;vertical-align:middle;margin-inline-end:.6rem}
 .rcard .rc-head h2{margin:.1rem 0}
+.rcard .cert-head{text-align:center;border-bottom:3px double var(--ink);padding-bottom:.7rem;margin-bottom:.9rem}
+.rcard .cert-head .cert-logo{display:block;height:100px;margin:0 auto .5rem}
+.rcard .cert-head h2{margin:.1rem 0;font-size:1.55rem;letter-spacing:.02em}
+.rcard .cert-head .cert-type{font-size:1.15rem;margin:.25rem 0}
+.rcard .cert-head .cert-serial{font-size:.95rem}
 .rcard .rc-id{display:grid;grid-template-columns:1fr 1fr;gap:.25rem .8rem;font-size:.92rem;margin-bottom:.7rem}
 .rcard .rc-sum{display:flex;flex-wrap:wrap;gap:.4rem;margin:.7rem 0}
 /* ============ responsive: laptop / desktop ============ */
@@ -162,6 +167,10 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:1rem 0}
   .rcard{border:2px solid #000;border-radius:0;padding:8px;max-width:none;margin:0}
   .rcard .rc-head{border-bottom:2px solid #000}
   .rcard .rc-head img{height:50px}
+  .rcard .cert-head{border-bottom:3px double #000}
+  .rcard .cert-head .cert-logo{height:100px}
+  .rcard .cert-head h2{font-size:22px}
+  .rcard .cert-head .cert-type{font-size:15px}
   .rcard .rc-id{font-size:12px}
   .rcard table{font-size:12px}
 }
@@ -19209,11 +19218,11 @@ function certPrintHTML(certId){
   const c=getCertificate(certId);if(!c)return "";
   const s=c.snapshot;
   const typeB={slc:bl("bl_slc"),prov:bl("bl_prov"),bon:bl("bl_bon"),char:bl("bl_char"),trf:bl("bl_trf")}[c.type]||bl("bl_prov");
-  const logo=(db().settings&&db().settings.logoDataUrl)?'<img src="'+db().settings.logoDataUrl+'" alt="" style="height:50px">':"";
+  const logo=(db().settings&&db().settings.logoDataUrl)?'<img src="'+db().settings.logoDataUrl+'" alt="" class="cert-logo">':"";
   let h='<div class="rc-page"><div class="rcard">';
-  h+='<div class="rc-head">'+logo+"<h2>"+esc(db().settings.schoolName||"—")+"</h2>"+
-     "<div><b>"+esc(typeB)+"</b></div>"+
-     "<div>"+esc(bl("bl_serial"))+": <b>"+esc(c.serial)+"</b></div></div>";
+  h+='<div class="cert-head">'+logo+"<h2>"+esc(headerSchoolName())+"</h2>"+
+     "<div class=\"cert-type\"><b>"+esc(typeB)+"</b></div>"+
+     "<div class=\"cert-serial\">"+esc(bl("bl_serial"))+": <b>"+esc(c.serial)+"</b></div></div>";
   h+='<div class="rc-id">'+
     "<div><b>"+esc(bl("bl_name"))+":</b> "+esc(s.display)+"</div>"+
     "<div><b>"+esc(bl("bl_admno"))+":</b> "+esc(s.admNo)+"</div>"+
