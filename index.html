@@ -11189,7 +11189,7 @@ function boardEligible(st){
 function defaultDB(){return {
   v:1,
   seq:{adm:{},cert:{}},
-  students:[],exams:[],marks:{},remarks:{},labItems:[],labMaint:[],certificates:[],timetable:{},attendance:{},feeHeads:[],feeRecords:[],subPayments:[],staff:[],staffAtt:{},salaryRecords:[],dateSheets:{},admitIssued:{},broadcasts:[],homework:[],routes:[],libBooks:[],libLoans:[],applications:[],complaints:[],signupRequests:[],hePrograms:[],heCourses:[],heResults:[],heEnrollments:[],imports:[],
+  students:[],exams:[],marks:{},remarks:{},labItems:[],labMaint:[],certificates:[],timetable:{},attendance:{},feeHeads:[],feeRecords:[],subPayments:[],staff:[],staffAtt:{},salaryRecords:[],dateSheets:{},admitIssued:{},broadcasts:[],homework:[],routes:[],libBooks:[],libLoans:[],applications:[],complaints:[],signupRequests:[],hePrograms:[],heCourses:[],heResults:[],heEnrollments:[],textbookGuides:[],imports:[],
   settings:{
     schoolName:"",deviceName:"",schoolPhone:"",feesEnabled:true,attEnabled:true,ttEnabled:true,labEnabled:true,certEnabled:true,staffEnabled:true,bcEnabled:true,hwEnabled:true,transportEnabled:true,libEnabled:true,admAppEnabled:true,cmpEnabled:true,heEnabled:false,bankTitle:"",bankAccount:"",bankIBAN:"",jazzcashNo:"",easypaisaNo:"",country:"PK",lang:"en",passPct:33,regPhotoDataUrl:"",
     gradeScale:[{min:90,g:"A+"},{min:80,g:"A"},{min:70,g:"B"},{min:60,g:"C"},{min:50,g:"D"},{min:0,g:"F"}],
@@ -11393,7 +11393,7 @@ const Cloud = {
   stopListeners: function(){this.unsubs.forEach(function(u){try{u();}catch(e){}});this.unsubs=[];this.firstSeen={};this.firstDone=false;this.seedChecked=false;this.cloudFirst={};},
   startListeners: function(){
     const self=this;self.stopListeners();
-    const colls=["students","exams","marks","remarks","labItems","labMaint","certificates","settings","timetable","attendance","feeHeads","feeRecords","subPayments","staff","staffAtt","salaryRecords","dateSheets","admitIssued","broadcasts","homework","routes","libBooks","libLoans","applications","complaints","hePrograms","heCourses","heResults","heEnrollments"];
+    const colls=["students","exams","marks","remarks","labItems","labMaint","certificates","settings","timetable","attendance","feeHeads","feeRecords","subPayments","staff","staffAtt","salaryRecords","dateSheets","admitIssued","broadcasts","homework","routes","libBooks","libLoans","applications","complaints","hePrograms","heCourses","heResults","heEnrollments","textbookGuides"];
     colls.forEach(function(c){
       const un=self.coll(c).onSnapshot(function(snap){
         self.applyChanges(c,snap.docChanges());
@@ -11444,7 +11444,7 @@ const Cloud = {
     if(coll==="dateSheets"){D.dateSheets[id]={entries:d.entries||[]};return;}
     if(coll==="admitIssued"){D.admitIssued[id]={at:d.at,count:d.count};return;}
     if(coll==="remarks"){D.remarks[id]=d.recs||{};return;}
-    let arr={students:D.students,exams:D.exams,labItems:D.labItems,labMaint:D.labMaint,certificates:D.certificates,feeHeads:D.feeHeads,feeRecords:D.feeRecords,subPayments:D.subPayments,staff:D.staff,salaryRecords:D.salaryRecords,broadcasts:D.broadcasts,homework:D.homework,routes:D.routes,libBooks:D.libBooks,libLoans:D.libLoans,applications:D.applications,complaints:D.complaints,signupRequests:D.signupRequests,hePrograms:D.hePrograms,heCourses:D.heCourses,heResults:D.heResults,heEnrollments:D.heEnrollments,imports:D.imports}[coll];
+    let arr={students:D.students,exams:D.exams,labItems:D.labItems,labMaint:D.labMaint,certificates:D.certificates,feeHeads:D.feeHeads,feeRecords:D.feeRecords,subPayments:D.subPayments,staff:D.staff,salaryRecords:D.salaryRecords,broadcasts:D.broadcasts,homework:D.homework,routes:D.routes,libBooks:D.libBooks,libLoans:D.libLoans,applications:D.applications,complaints:D.complaints,signupRequests:D.signupRequests,hePrograms:D.hePrograms,heCourses:D.heCourses,heResults:D.heResults,heEnrollments:D.heEnrollments,textbookGuides:D.textbookGuides,imports:D.imports}[coll];
     /* Round 52: a stale db can lack the array — create it instead of
        silently dropping the incoming cloud record. */
     if(!arr){arr=[];D[coll]=arr;}
@@ -11470,13 +11470,13 @@ const Cloud = {
     if(coll==="dateSheets"){delete D.dateSheets[id];return;}
     if(coll==="admitIssued"){delete D.admitIssued[id];return;}
     if(coll==="remarks"){delete D.remarks[id];return;}
-    const arr={students:D.students,exams:D.exams,labItems:D.labItems,labMaint:D.labMaint,certificates:D.certificates,feeHeads:D.feeHeads,feeRecords:D.feeRecords,subPayments:D.subPayments,staff:D.staff,salaryRecords:D.salaryRecords,broadcasts:D.broadcasts,homework:D.homework,routes:D.routes,libBooks:D.libBooks,libLoans:D.libLoans,applications:D.applications,complaints:D.complaints,hePrograms:D.hePrograms,heCourses:D.heCourses,heResults:D.heResults,heEnrollments:D.heEnrollments}[coll];
+    const arr={students:D.students,exams:D.exams,labItems:D.labItems,labMaint:D.labMaint,certificates:D.certificates,feeHeads:D.feeHeads,feeRecords:D.feeRecords,subPayments:D.subPayments,staff:D.staff,salaryRecords:D.salaryRecords,broadcasts:D.broadcasts,homework:D.homework,routes:D.routes,libBooks:D.libBooks,libLoans:D.libLoans,applications:D.applications,complaints:D.complaints,hePrograms:D.hePrograms,heCourses:D.heCourses,heResults:D.heResults,heEnrollments:D.heEnrollments,textbookGuides:D.textbookGuides}[coll];
     if(!arr)return;
     const ix=arr.findIndex(function(x){return x.id===id;});
     if(ix>=0)arr.splice(ix,1);
   },
   flatten: function(d){
-    const f={students:{},exams:{},marks:{},remarks:{},labItems:{},labMaint:{},certificates:{},settings:{},timetable:{},attendance:{},feeHeads:{},feeRecords:{},subPayments:{},staff:{},staffAtt:{},salaryRecords:{},dateSheets:{},admitIssued:{},broadcasts:{},homework:{},routes:{},libBooks:{},libLoans:{},applications:{},complaints:{},hePrograms:{},heCourses:{},heResults:{},heEnrollments:{}};
+    const f={students:{},exams:{},marks:{},remarks:{},labItems:{},labMaint:{},certificates:{},settings:{},timetable:{},attendance:{},feeHeads:{},feeRecords:{},subPayments:{},staff:{},staffAtt:{},salaryRecords:{},dateSheets:{},admitIssued:{},broadcasts:{},homework:{},routes:{},libBooks:{},libLoans:{},applications:{},complaints:{},hePrograms:{},heCourses:{},heResults:{},heEnrollments:{},textbookGuides:{}};
     (d.students||[]).forEach(function(s){f.students[s.id]=s;});
     (d.exams||[]).forEach(function(e){f.exams[e.id]=e;});
     Object.keys(d.marks||{}).forEach(function(ex){Object.keys(d.marks[ex]||{}).forEach(function(st){
@@ -11504,6 +11504,7 @@ const Cloud = {
     (d.heCourses||[]).forEach(function(x){f.heCourses[x.id]=x;});
     (d.heResults||[]).forEach(function(x){f.heResults[x.id]=x;});
     (d.heEnrollments||[]).forEach(function(x){f.heEnrollments[x.id]=x;});
+    (d.textbookGuides||[]).forEach(function(x){f.textbookGuides[x.id]=x;});
     Object.keys(d.staffAtt||{}).forEach(function(k){f.staffAtt[k]={date:k,recs:d.staffAtt[k]};});
     Object.keys(d.dateSheets||{}).forEach(function(k){f.dateSheets[k]={examId:k,entries:d.dateSheets[k].entries||[]};});
     Object.keys(d.admitIssued||{}).forEach(function(k){f.admitIssued[k]={examId:k,at:d.admitIssued[k].at,count:d.admitIssued[k].count};});
@@ -15544,6 +15545,32 @@ gemini_status_busy:{en:"Google answered {status} — Google is busy right now. T
 test_cooldown:{en:"Tested just now — wait a moment before testing again.",ur:"ابھی جانچ ہوئی — دوبارہ جانچنے سے پہلے ذرا انتظار کریں۔",bn:"এইমাত্র পরীক্ষা করা হয়েছে — আবার পরীক্ষার আগে একটু অপেক্ষা করুন।",hi:"अभी जांचा गया — फिर से जांचने से पहले थोड़ा इंतज़ार करें।",ne:"अहिले भर्खरै परीक्षण गरियो — फेरि परीक्षण गर्नु अघि केही क्षण पर्खनुहोस्।",sw:"Imejaribiwa sasa hivi — subiri kidogo kabla ya kujaribu tena.",ar:"تم الاختبار للتو — انتظر لحظة قبل إعادة الاختبار.",zh:"刚刚测试过——请稍后再测试。",es:"Probado hace un momento: espera un poco antes de volver a probar.",fr:"Testé à l'instant — attendez un moment avant de tester de nouveau.",pt:"Testado agora mesmo — espere um momento antes de testar novamente.",ru:"Только что проверено — подождите немного перед повторной проверкой.",id:"Baru saja diuji — tunggu sebentar sebelum menguji lagi.",de:"Gerade getestet — bitte warten Sie einen Moment vor dem erneuten Testen.",ja:"たった今テストしました——もう一度テストする前に少しお待ちください。",pa:"ہنے ای جانچ ہوئی — دوبارہ جانچن توں پہلاں ذرا انتظار کرو۔",mr:"आत्ताच तपासले — पुन्हा तपासण्यापूर्वी थोडा वेळ थांबा.",te:"ఇప్పుడే పరీక్షించారు — మళ్లీ పరీక్షించే ముందు కొద్దిసేపు వేచి ఉండండి.",fa:"همین حالا آزمایش شد — پیش از آزمایش دوباره لحظه‌ای صبر کنید.",tr:"Az önce test edildi — tekrar test etmeden önce biraz bekleyin.",ta:"இப்போதுதான் சோதிக்கப்பட்டது — மீண்டும் சோதிக்கும் முன் சிறிது நேரம் காத்திருக்கவும்.",vi:"Vừa kiểm tra xong — hãy đợi một lát trước khi kiểm tra lại.",ko:"방금 테스트했습니다 — 다시 테스트하기 전에 잠시 기다려 주세요.",tl:"Katatapos lang subukan — maghintay sandali bago subukang muli.",ha:"An gwada yanzu — jira ɗan lokaci kafin a sake gwadawa.",it:"Appena testato — attendi un momento prima di testare di nuovo.",ps:"همدا اوس وازمایل شو — له بیا ازموینې مخکې یوه شېبه انتظار وکړئ.",ms:"Baru sahaja diuji — tunggu sebentar sebelum menguji lagi.",yo:"A ṣẹ̀ṣẹ̀ dán wò — dúró díẹ̀ kí o tó tún dán wò.",ig:"Nwalere ya ugbu a — chere obere oge tupu ịnwalee ọzọ."}
 });
 
+/* ================= i18n additions: Round 69 Daily question + Textbook helper ================= */
+Object.assign(T,{
+qotd_title:{ur:"آج کا سوال",en:"Question of the day",bn:"আজকের প্রশ্ন",hi:"आज का सवाल",ne:"आजको प्रश्न",sw:"Swali la siku",ar:"سؤال اليوم",zh:"今日问题",es:"Pregunta del día",fr:"Question du jour",pt:"Pergunta do dia",ru:"Вопрос дня",id:"Pertanyaan hari ini",de:"Frage des Tages",ja:"今日の質問",pa:"ਅੱਜ ਦਾ ਸਵਾਲ",mr:"आजचा प्रश्न",te:"నేటి ప్రశ్న",fa:"سؤال امروز",tr:"Günün sorusu",ta:"இன்றைய கேள்வி",vi:"Câu hỏi hôm nay",ko:"오늘의 질문",tl:"Tanong ngayong araw",ha:"Tambayar yau",it:"Domanda del giorno",ps:"د نن ورځې پوښتنه",ms:"Soalan hari ini",yo:"Ìbéèrè òní",ig:"Ajụjụ taa"},
+qotd_show:{ur:"جواب دیکھیں",en:"Show answer",bn:"উত্তর দেখুন",hi:"उत्तर देखें",ne:"उत्तर हेर्नुहोस्",sw:"Onyesha jibu",ar:"أظهر الإجابة",zh:"显示答案",es:"Mostrar respuesta",fr:"Voir la réponse",pt:"Mostrar resposta",ru:"Показать ответ",id:"Tampilkan jawaban",de:"Antwort zeigen",ja:"答えを見る",pa:"ਜਵਾਬ ਵੇਖੋ",mr:"उत्तर पहा",te:"సమాధానం చూపు",fa:"پاسخ را نشان بده",tr:"Cevabı göster",ta:"பதிலைக் காட்டு",vi:"Hiện đáp án",ko:"정답 보기",tl:"Ipakita ang sagot",ha:"Nuna amsa",it:"Mostra la risposta",ps:"ځواب وښایاست",ms:"Tunjukkan jawapan",yo:"Fi ìdáhùn hàn",ig:"Gosi azịza"},
+qotd_hide:{ur:"جواب چھپائیں",en:"Hide answer",bn:"উত্তর লুকান",hi:"उत्तर छिपाएँ",ne:"उत्तर लुकाउनुहोस्",sw:"Ficha jibu",ar:"أخفِ الإجابة",zh:"隐藏答案",es:"Ocultar respuesta",fr:"Cacher la réponse",pt:"Ocultar resposta",ru:"Скрыть ответ",id:"Sembunyikan jawaban",de:"Antwort ausblenden",ja:"答えを隠す",pa:"ਜਵਾਬ ਲੁਕਾਓ",mr:"उत्तर लपवा",te:"సమాధానం దాచు",fa:"پاسخ را پنهان کن",tr:"Cevabı gizle",ta:"பதிலை மறை",vi:"Ẩn đáp án",ko:"정답 숨기기",tl:"Itago ang sagot",ha:"Boye amsa",it:"Nascondi la risposta",ps:"ځواب پټ کړئ",ms:"Sembunyikan jawapan",yo:"Pa ìdáhùn mọ́",ig:"Zoo azịza"},
+qotd_share:{ur:"شیئر کریں",en:"Share",bn:"শেয়ার করুন",hi:"साझा करें",ne:"साझा गर्नुहोस्",sw:"Shiriki",ar:"شارك",zh:"分享",es:"Compartir",fr:"Partager",pt:"Partilhar",ru:"Поделиться",id:"Bagikan",de:"Teilen",ja:"共有する",pa:"ਸਾਂਝਾ ਕਰੋ",mr:"शेअर करा",te:"షేర్ చేయి",fa:"به اشتراک بگذار",tr:"Paylaş",ta:"பகிர்",vi:"Chia sẻ",ko:"공유하기",tl:"Ibahagi",ha:"Raba",it:"Condividi",ps:"شریک کړئ",ms:"Kongsi",yo:"Pín",ig:"Kesaa"},
+qotd_share_fail:{ur:"شیئر نہیں ہوا۔ واٹس ایپ یا ای میل آزمائیں۔",en:"Sharing failed. Try WhatsApp or Email.",bn:"শেয়ার হয়নি। WhatsApp বা Email চেষ্টা করুন।",hi:"साझा नहीं हुआ। WhatsApp या Email आज़माएँ।",ne:"साझा भएन। WhatsApp वा Email प्रयास गर्नुहोस्।",sw:"Kushiriki kumeshindwa. Jaribu WhatsApp au Barua pepe.",ar:"فشلت المشاركة. جرّب واتساب أو البريد.",zh:"分享失败。请试试 WhatsApp 或电子邮件。",es:"No se pudo compartir. Prueba WhatsApp o correo.",fr:"Le partage a échoué. Essayez WhatsApp ou e-mail.",pt:"Falha ao partilhar. Tente WhatsApp ou e-mail.",ru:"Не удалось поделиться. Попробуйте WhatsApp или почту.",id:"Berbagi gagal. Coba WhatsApp atau Email.",de:"Teilen fehlgeschlagen. Versuchen Sie WhatsApp oder E-Mail.",ja:"共有できませんでした。WhatsAppかメールをお試しください。",pa:"ਸਾਂਝਾ ਨਹੀਂ ਹੋਇਆ। WhatsApp ਜਾਂ ਈਮੇਲ ਅਜ਼ਮਾਓ।",mr:"शेअर अयशस्वी. WhatsApp किंवा ईमेल वापरून पहा.",te:"షేర్ విఫలమైంది. WhatsApp లేదా Email ప్రయత్నించండి.",fa:"اشتراک‌گذاری ناموفق بود. واتس‌اپ یا ایمیل را امتحان کنید.",tr:"Paylaşılamadı. WhatsApp veya E-posta deneyin.",ta:"பகிர முடியவில்லை. WhatsApp அல்லது மின்னஞ்சலை முயற்சி செய்க.",vi:"Chia sẻ thất bại. Hãy thử WhatsApp hoặc Email.",ko:"공유에 실패했습니다. WhatsApp나 이메일을 시도해 보세요.",tl:"Hindi maibahagi. Subukan ang WhatsApp o Email.",ha:"Raba bai yi ba. Gwada WhatsApp ko Imel.",it:"Condivisione non riuscita. Prova WhatsApp o e-mail.",ps:"شریکول ناکام شول. واټساپ یا برېښنالیک وازمایئ.",ms:"Perkongsian gagal. Cuba WhatsApp atau E-mel.",yo:"Pípín kùnà. Gbìyànjú WhatsApp tàbí Ímeèlì.",ig:"Ịkekọrịta ada ada. Nwaa WhatsApp ma ọ bụ Email."},
+tb_title:{ur:"نصابی کتاب کی مدد",en:"Textbook Helper",bn:"পাঠ্যবই সহায়ক",hi:"पाठ्यपुस्तक सहायक",ne:"पाठ्यपुस्तक सहायक",sw:"Msaidizi wa Kitabu",ar:"مساعد الكتاب المدرسي",zh:"课本助手",es:"Ayudante del libro",fr:"Aide du manuel",pt:"Ajudante do manual",ru:"Помощник по учебнику",id:"Pembantu Buku Teks",de:"Lehrbuch-Helfer",ja:"教科書ヘルパー",pa:"کتاب دی مدد",mr:"पाठ्यपुस्तक सहाय्यक",te:"పాఠ్యపుస్తక సహాయకుడు",fa:"یار کتاب درسی",tr:"Ders Kitabı Yardımcısı",ta:"பாடநூல் உதவியாளர்",vi:"Trợ giúp sách giáo khoa",ko:"교과서 도우미",tl:"Katutulong sa Aklat",ha:"Mataimakin Littafi",it:"Aiuto del libro di testo",ps:"د درسي کتاب مرستندوی",ms:"Pembantu Buku Teks",yo:"Olùrànlọ́wọ́ Ìwé-ẹ̀kọ́",ig:"Onye inyeaka Akwụkwọ"},
+tb_sub:{ur:"صفحے اپ لوڈ کریں یا متن لکھیں — خلاصہ، تدریسی خیالات اور حل شدہ جوابات پائیں۔",en:"Upload pages or paste the text — get a summary, teaching ideas and worked answers.",bn:"পৃষ্ঠা আপলোড করুন বা লেখা লিখুন — সারাংশ, শিক্ষার ধারণা ও সমাধান পান।",hi:"पन्ने अपलोड करें या पाठ लिखें — सारांश, पढ़ाने के विचार और हल पाएँ।",ne:"पृष्ठहरू अपलोड गर्नुहोस् वा पाठ टाँस्नुहोस् — सारांश, शिक्षण विचार र हल पाउनुहोस्।",sw:"Pakia kurasa au bandika maandishi — pata muhtasari, mawazo ya kufundisha na majibu yaliyofanyiwa kazi.",ar:"ارفع الصفحات أو الصق النص — واحصل على ملخص وأفكار للتدريس وإجابات محلولة.",zh:"上传页面或粘贴文本——获得摘要、教学思路和例题解答。",es:"Sube páginas o pega el texto: resumen, ideas para enseñar y respuestas resueltas.",fr:"Envoyez des pages ou collez le texte : résumé, idées pour enseigner et réponses détaillées.",pt:"Envie páginas ou cole o texto: resumo, ideias para ensinar e respostas resolvidas.",ru:"Загрузите страницы или вставьте текст — получите конспект, идеи для урока и решённые задания.",id:"Unggah halaman atau tempel teks — dapatkan ringkasan, ide mengajar, dan jawaban yang dikerjakan.",de:"Seiten hochladen oder Text einfügen – Zusammenfassung, Lehrideen und gelöste Aufgaben erhalten.",ja:"ページをアップロードするかテキストを貼り付けて、要約・教え方のアイデア・解答例を入手。",pa:"صفحے اپ لوڈ کرو یا متن لکھو — خلاصہ، پڑھان دے خیال تے حل شدے جواب پاؤ۔",mr:"पाने अपलोड करा किंवा मजकूर लिहा — सारांश, शिकवण्याच्या कल्पना व सोडवलेली उत्तरे मिळवा.",te:"పేజీలను అప్‌లోడ్ చేయండి లేదా వచనాన్ని అతికించండి — సారాంశం, బోధన ఆలోచనలు, పరిష్కారాలు పొందండి.",fa:"صفحه‌ها را بارگذاری کنید یا متن را بچسبانید — خلاصه، ایده‌های تدریس و پاسخ‌های حل‌شده بگیرید.",tr:"Sayfaları yükleyin veya metni yapıştırın — özet, öğretim fikirleri ve çözümlü cevaplar alın.",ta:"பக்கங்களைப் பதிவேற்றவும் அல்லது உரையை ஒட்டவும் — சுருக்கம், கற்பித்தல் கருத்துகள், தீர்க்கப்பட்ட விடைகள் பெறுங்கள்.",vi:"Tải trang lên hoặc dán văn bản — nhận tóm tắt, ý tưởng dạy học và đáp án có lời giải.",ko:"페이지를 업로드하거나 텍스트를 붙여넣으세요 — 요약, 교수 아이디어, 풀이 답안을 받으세요.",tl:"Mag-upload ng mga pahina o i-paste ang teksto — makakuha ng buod, ideya sa pagtuturo at nasagutang halimbawa.",ha:"Loda shafuka ko liƙa rubutu — sami taƙaitaccen bayani, ra'ayoyin koyarwa da amsoshi da aka warware.",it:"Carica le pagine o incolla il testo: riassunto, idee per insegnare e risposte svolte.",ps:"پاڼې پورته کړئ یا متن ولیکئ — لنډیز، د ښوونې نظریې او حل شوي ځوابونه ترلاسه کړئ.",ms:"Muat naik halaman atau tampal teks — dapatkan ringkasan, idea mengajar dan jawapan yang diselesaikan.",yo:"Gbé àwọn ojú-ìwé sókè tàbí lẹ̀mọ́ ọ̀rọ̀ — gba àkópọ̀, èrò ìkọ́ni àti ìdáhùn tí a ṣe.",ig:"Bulite peeji ma ọ bụ mado ederede — nweta nchịkọta, echiche nkuzi na azịza e doziri."},
+tb_chapter:{ur:"باب / موضوع",en:"Chapter / topic",bn:"অধ্যায় / বিষয়",hi:"अध्याय / विषय",ne:"अध्याय / विषय",sw:"Sura / mada",ar:"الفصل / الموضوع",zh:"章节 / 主题",es:"Capítulo / tema",fr:"Chapitre / sujet",pt:"Capítulo / tema",ru:"Глава / тема",id:"Bab / topik",de:"Kapitel / Thema",ja:"章 / トピック",pa:"باب / موضوع",mr:"प्रकरण / विषय",te:"అధ్యాయం / అంశం",fa:"فصل / موضوع",tr:"Bölüm / konu",ta:"அத்தியாயம் / தலைப்பு",vi:"Chương / chủ đề",ko:"장 / 주제",tl:"Kabanata / paksa",ha:"Babi / batu",it:"Capitolo / argomento",ps:"څپرکی / موضوع",ms:"Bab / topik",yo:"Orí / kókó-ọrọ̀",ig:"Isi / isiokwu"},
+tb_paste:{ur:"کتاب کا متن یہاں لکھیں",en:"Paste the text from the book",bn:"বইয়ের লেখা এখানে লিখুন",hi:"किताब का पाठ यहाँ लिखें",ne:"पुस्तकको पाठ यहाँ टाँस्नुहोस्",sw:"Bandika maandishi ya kitabu hapa",ar:"الصق نص الكتاب هنا",zh:"在此粘贴书中的文字",es:"Pega aquí el texto del libro",fr:"Collez ici le texte du livre",pt:"Cole aqui o texto do livro",ru:"Вставьте текст из книги сюда",id:"Tempel teks dari buku di sini",de:"Text aus dem Buch hier einfügen",ja:"本のテキストをここに貼り付け",pa:"کتاب دا متن اتھے لکھو",mr:"पुस्तकातील मजकूर येथे लिहा",te:"పుస్తకంలోని వచనాన్ని ఇక్కడ అతికించండి",fa:"متن کتاب را اینجا بچسبانید",tr:"Kitaptaki metni buraya yapıştırın",ta:"புத்தக உரையை இங்கே ஒட்டவும்",vi:"Dán văn bản trong sách vào đây",ko:"책의 텍스트를 여기에 붙여넣으세요",tl:"I-paste dito ang teksto mula sa aklat",ha:"Liƙa rubutun littafi a nan",it:"Incolla qui il testo del libro",ps:"د کتاب متن دلته ولیکئ",ms:"Tampal teks dari buku di sini",yo:"Lẹ̀mọ́ ọ̀rọ̀ inú ìwé náà síbí",ig:"Mado ederede site n'akwụkwọ ebe a"},
+tb_upload:{ur:"تصویر یا PDF صفحہ اپ لوڈ کریں",en:"Upload a photo or PDF page",bn:"ছবি বা PDF পৃষ্ঠা আপলোড করুন",hi:"फोटो या PDF पन्ना अपलोड करें",ne:"फोटो वा PDF पृष्ठ अपलोड गर्नुहोस्",sw:"Pakia picha au ukurasa wa PDF",ar:"ارفع صورة أو صفحة PDF",zh:"上传照片或 PDF 页面",es:"Sube una foto o una página PDF",fr:"Envoyez une photo ou une page PDF",pt:"Envie uma foto ou página PDF",ru:"Загрузите фото или страницу PDF",id:"Unggah foto atau halaman PDF",de:"Foto oder PDF-Seite hochladen",ja:"写真またはPDFページをアップロード",pa:"فوٹو یا PDF صفحہ اپ لوڈ کرو",mr:"फोटो किंवा PDF पान अपलोड करा",te:"ఫోటో లేదా PDF పేజీని అప్‌లోడ్ చేయండి",fa:"یک عکس یا صفحه PDF بارگذاری کنید",tr:"Fotoğraf veya PDF sayfası yükleyin",ta:"புகைப்படம் அல்லது PDF பக்கத்தைப் பதிவேற்றவும்",vi:"Tải lên ảnh hoặc trang PDF",ko:"사진 또는 PDF 페이지를 업로드하세요",tl:"Mag-upload ng larawan o pahina ng PDF",ha:"Loda hoto ko shafin PDF",it:"Carica una foto o una pagina PDF",ps:"یو عکس یا د PDF پاڼه پورته کړئ",ms:"Muat naik foto atau halaman PDF",yo:"Gbé fọ́tò tàbí ojú-ìwé PDF sókè",ig:"Bulite foto ma ọ bụ peeji PDF"},
+tb_get:{ur:"میری رہنما بنائیں",en:"Make my guide",bn:"আমার গাইড তৈরি করুন",hi:"मेरी गाइड बनाएँ",ne:"मेरो गाइड बनाउनुहोस्",sw:"Tengeneza mwongozo wangu",ar:"اصنع دليلي",zh:"制作我的指南",es:"Crear mi guía",fr:"Créer mon guide",pt:"Criar o meu guia",ru:"Сделать мой конспект",id:"Buat panduan saya",de:"Meine Anleitung erstellen",ja:"ガイドを作る",pa:"میری رہنما بناؤ",mr:"माझे मार्गदर्शक बनवा",te:"నా గైడ్ తయారు చేయండి",fa:"راهنمای من را بساز",tr:"Rehberimi oluştur",ta:"என் வழிகாட்டியை உருவாக்கு",vi:"Tạo hướng dẫn của tôi",ko:"내 가이드를 만들기",tl:"Gawin ang gabay ko",ha:"Yi jagorana",it:"Crea la mia guida",ps:"زما لارښود جوړ کړئ",ms:"Buat panduan saya",yo:"Ṣe ìtọ́sọ́nà mi",ig:"Mee nduzi m"},
+tb_need:{ur:"پہلے کچھ متن لکھیں یا صفحہ اپ لوڈ کریں",en:"Paste some text or upload a page first",bn:"আগে কিছু লেখা লিখুন বা পৃষ্ঠা আপলোড করুন",hi:"पहले कुछ पाठ लिखें या पन्ना अपलोड करें",ne:"पहिले केही पाठ टाँस्नुहोस् वा पृष्ठ अपलोड गर्नुहोस्",sw:"Bandika maandishi kwanza au pakia ukurasa",ar:"الصق بعض النص أو ارفع صفحة أولاً",zh:"请先粘贴一些文字或上传一页",es:"Primero pega un texto o sube una página",fr:"Collez d'abord un texte ou envoyez une page",pt:"Primeiro cole um texto ou envie uma página",ru:"Сначала вставьте текст или загрузите страницу",id:"Tempel dulu teks atau unggah halaman",de:"Zuerst Text einfügen oder Seite hochladen",ja:"まずテキストを貼り付けるかページをアップロードしてください",pa:"پہلاں کجھ متن لکھو یا صفحہ اپ لوڈ کرو",mr:"आधी थोडा मजकूर लिहा किंवा पान अपलोड करा",te:"ముందు కొంత వచనాన్ని అతికించండి లేదా పేజీని అప్‌లోడ్ చేయండి",fa:"اول کمی متن بچسبانید یا صفحه‌ای بارگذاری کنید",tr:"Önce biraz metin yapıştırın veya sayfa yükleyin",ta:"முதலில் சிறிது உரையை ஒட்டவும் அல்லது பக்கத்தைப் பதிவேற்றவும்",vi:"Hãy dán một đoạn văn bản hoặc tải lên một trang trước",ko:"먼저 텍스트를 붙여넣거나 페이지를 업로드하세요",tl:"Mag-paste muna ng teksto o mag-upload ng pahina",ha:"Da farko liƙa wasu rubutu ko loda shafi",it:"Prima incolla un testo o carica una pagina",ps:"لومړی یو څه متن ولیکئ یا پاڼه پورته کړئ",ms:"Tampal sedikit teks atau muat naik halaman dahulu",yo:"Kọ́kọ́ lẹ̀mọ́ ọ̀rọ̀ díẹ̀ tàbí gbe ojú-ìwé sókè",ig:"Buru ụzọ mado ederede ma ọ bụ bulite peeji"},
+tb_summary:{ur:"خلاصہ",en:"Summary",bn:"সারাংশ",hi:"सारांश",ne:"सारांश",sw:"Muhtasari",ar:"ملخص",zh:"摘要",es:"Resumen",fr:"Résumé",pt:"Resumo",ru:"Конспект",id:"Ringkasan",de:"Zusammenfassung",ja:"要約",pa:"خلاصہ",mr:"सारांश",te:"సారాంశం",fa:"خلاصه",tr:"Özet",ta:"சுருக்கம்",vi:"Tóm tắt",ko:"요약",tl:"Buod",ha:"Taƙaitaccen bayani",it:"Riassunto",ps:"لنډیز",ms:"Ringkasan",yo:"Àkópọ̀",ig:"Nchịkọta"},
+tb_strat:{ur:"اسے کیسے پڑھائیں",en:"How to teach it",bn:"কীভাবে পড়াবেন",hi:"इसे कैसे पढ़ाएँ",ne:"यसलाई कसरी पढाउने",sw:"Jinsi ya kuifundisha",ar:"كيف تدرّسه",zh:"如何讲授",es:"Cómo enseñarlo",fr:"Comment l'enseigner",pt:"Como ensiná-lo",ru:"Как это преподать",id:"Cara mengajarkannya",de:"So unterrichten Sie es",ja:"教え方",pa:"اینوں کیویں پڑھائیے",mr:"ते कसे शिकवावे",te:"దాన్ని ఎలా బోధించాలి",fa:"چگونه آن را تدریس کنیم",tr:"Nasıl öğretilir",ta:"இதை எப்படிக் கற்பிப்பது",vi:"Cách dạy nó",ko:"가르치는 방법",tl:"Paano ito ituturo",ha:"Yadda ake koyar da shi",it:"Come insegnarlo",ps:"څنګه یې وښایو",ms:"Cara mengajarnya",yo:"Báwo ni a ṣe ń kọ́ ọn",ig:"Otu esi akụzi ya"},
+tb_solved:{ur:"حل شدہ جوابات",en:"Worked answers",bn:"সমাধানসহ উত্তর",hi:"हल सहित उत्तर",ne:"हलसहित उत्तरहरू",sw:"Majibu yaliyofanyiwa kazi",ar:"إجابات محلولة",zh:"例题解答",es:"Respuestas resueltas",fr:"Réponses détaillées",pt:"Respostas resolvidas",ru:"Решённые задания",id:"Jawaban yang dikerjakan",de:"Gelöste Aufgaben",ja:"解答例",pa:"حل شدے جواب",mr:"सोडवलेली उत्तरे",te:"పరిష్కారాలతో సమాధానాలు",fa:"پاسخ‌های حل‌شده",tr:"Çözümlü cevaplar",ta:"தீர்க்கப்பட்ட விடைகள்",vi:"Đáp án có lời giải",ko:"풀이 답안",tl:"Mga nasagutang halimbawa",ha:"Amsoshi da aka warware",it:"Risposte svolte",ps:"حل شوي ځوابونه",ms:"Jawapan yang diselesaikan",yo:"Ìdáhùn tí a ṣe",ig:"Azịza e doziri"},
+tb_open:{ur:"کھولیں",en:"Open",bn:"খুলুন",hi:"खोलें",ne:"खोल्नुहोस्",sw:"Fungua",ar:"افتح",zh:"打开",es:"Abrir",fr:"Ouvrir",pt:"Abrir",ru:"Открыть",id:"Buka",de:"Öffnen",ja:"開く",pa:"کھولو",mr:"उघडा",te:"తెరవండి",fa:"باز کن",tr:"Aç",ta:"திற",vi:"Mở",ko:"열기",tl:"Buksan",ha:"Buɗe",it:"Apri",ps:"پرانیستل",ms:"Buka",yo:"Ṣí",ig:"Mepee"},
+tb_mine:{ur:"میری رہنمائیں",en:"My guides",bn:"আমার গাইড",hi:"मेरी गाइड",ne:"मेरा गाइडहरू",sw:"Miongozo yangu",ar:"أدلّتي",zh:"我的指南",es:"Mis guías",fr:"Mes guides",pt:"Os meus guias",ru:"Мои конспекты",id:"Panduan saya",de:"Meine Anleitungen",ja:"私のガイド",pa:"میریاں رہنماواں",mr:"माझे मार्गदर्शक",te:"నా గైడ్లు",fa:"راهنماهای من",tr:"Rehberlerim",ta:"என் வழிகாட்டிகள்",vi:"Hướng dẫn của tôi",ko:"내 가이드",tl:"Ang aking mga gabay",ha:"Jagororina",it:"Le mie guide",ps:"زما لارښودونه",ms:"Panduan saya",yo:"Àwọn ìtọ́sọ́nà mi",ig:"Nduzi m"},
+tb_visual:{ur:"تصویر",en:"Picture",bn:"ছবি",hi:"तस्वीर",ne:"तस्बिर",sw:"Picha",ar:"صورة",zh:"图片",es:"Imagen",fr:"Image",pt:"Imagem",ru:"Картинка",id:"Gambar",de:"Bild",ja:"図",pa:"تصویر",mr:"चित्र",te:"చిత్రం",fa:"تصویر",tr:"Resim",ta:"படம்",vi:"Hình",ko:"그림",tl:"Larawan",ha:"Hoto",it:"Immagine",ps:"انځور",ms:"Gambar",yo:"Àwòrán",ig:"Foto"},
+tb_none_vis:{ur:"کوئی تصویر نہیں",en:"No picture",bn:"কোনো ছবি নেই",hi:"কোনো তस्वीर नहीं",ne:"कुनै तस्बिर छैन",sw:"Hakuna picha",ar:"لا صورة",zh:"无图片",es:"Sin imagen",fr:"Aucune image",pt:"Sem imagem",ru:"Без картинки",id:"Tanpa gambar",de:"Kein Bild",ja:"図なし",pa:"کوئی تصویر نئیں",mr:"चित्र नाही",te:"చిత్రం లేదు",fa:"بدون تصویر",tr:"Resim yok",ta:"படம் இல்லை",vi:"Không có hình",ko:"그림 없음",tl:"Walang larawan",ha:"Babu hoto",it:"Nessuna immagine",ps:"هېڅ انځور نشته",ms:"Tiada gambar",yo:"Kò sí àwòrán",ig:"Enweghị foto"},
+tb_strat_title:{ur:"تدریسی خیالات",en:"Teaching ideas",bn:"শিক্ষার ধারণা",hi:"पढ़ाने के विचार",ne:"शिक्षण विचारहरू",sw:"Mawazo ya kufundisha",ar:"أفكار للتدريس",zh:"教学思路",es:"Ideas para enseñar",fr:"Idées pour enseigner",pt:"Ideias para ensinar",ru:"Идеи для урока",id:"Ide mengajar",de:"Lehrideen",ja:"教え方のアイデア",pa:"پڑھان دے خیال",mr:"शिकवण्याच्या कल्पना",te:"బోధన ఆలోచనలు",fa:"ایده‌های تدریس",tr:"Öğretim fikirleri",ta:"கற்பித்தல் கருத்துகள்",vi:"Ý tưởng dạy học",ko:"교수 아이디어",tl:"Mga ideya sa pagtuturo",ha:"Ra'ayoyin koyarwa",it:"Idee per insegnare",ps:"د ښوونې نظریې",ms:"Idea mengajar",yo:"Èrò ìkọ́ni",ig:"Echiche nkuzi"},
+tb_watch:{ur:"خیال رکھیں",en:"Watch out for",bn:"সতর্ক থাকুন",hi:"इनसे सावधान रहें",ne:"यिनबाट सावधान रहनुहोस्",sw:"Jihadhari na",ar:"انتبه إلى",zh:"注意",es:"Cuidado con",fr:"Attention à",pt:"Atenção a",ru:"Остерегайтесь",id:"Waspadai",de:"Achtung bei",ja:"注意点",pa:"ایناں توں بچو",mr:"यांकडे लक्ष द्या",te:"వీటిని గమనించండి",fa:"مراقب باشید",tr:"Dikkat edin",ta:"கவனமாக இருங்கள்",vi:"Cẩn thận với",ko:"주의하세요",tl:"Mag-ingat sa",ha:"Yi hankali da",it:"Attenzione a",ps:"پام ورته وکړئ",ms:"Berhati-hati dengan",yo:"Ṣọ́ra fún",ig:"Lezienụ anya"},
+tb_like:{ur:"اسے یوں سمجھیں",en:"Think of it like this",bn:"এভাবে ভাবুন",hi:"इसे ऐसे समझें",ne:"यसलाई यसरी बुझ्नुहोस्",sw:"Ifikirie hivi",ar:"فكّر فيه هكذا",zh:"可以这样想",es:"Piénsalo así",fr:"Imaginez-le ainsi",pt:"Pense nisto assim",ru:"Представьте это так",id:"Bayangkan seperti ini",de:"Stellen Sie es sich so vor",ja:"こう考えてみましょう",pa:"اینوں ایویں سمجھو",mr:"असे समजा",te:"దీన్ని ఇలా ఆలోచించండి",fa:"این‌طور به آن فکر کن",tr:"Şöyle düşünün",ta:"இதை இப்படி நினைத்துப் பாருங்கள்",vi:"Hãy nghĩ như thế này",ko:"이렇게 생각해 보세요",tl:"Isipin mo ito nang ganito",ha:"Ka yi tunanin haka",it:"Pensala così",ps:"داسې یې فکر وکړئ",ms:"Fikirkan begini",yo:"Rò ó bíi bẹ́ẹ̀",ig:"Chee ya otú a"},
+});
+
 Object.assign(T,{
 tools_th_pyth:{en:"Pythagoras theorem",ur:"قضیہ فیثاغورث",bn:"পিথাগোরাসের উপপাদ্য",hi:"पाइथागोरस प्रमेय",ne:"पाइथागोरस प्रमेय",sw:"Nadharia ya Pythagoras",ar:"نظرية فيثاغورس",zh:"勾股定理",es:"Teorema de Pitágoras",fr:"Théorème de Pythagore",pt:"Teorema de Pitágoras",ru:"Теорема Пифагора",id:"Teorema Pythagoras",de:"Satz des Pythagoras",ja:"ピタゴラスの定理",pa:"قضیہ فیثاغورث",mr:"पायथागोरसचे प्रमेय",te:"పైథాగరస్ సిద్ధాంతం",fa:"قضیه فیثاغورس",tr:"Pisagor teoremi",ta:"பிதாகரஸ் தேற்றம்",vi:"Định lý Pythagoras",ko:"피타고라스 정리",tl:"Teorama ni Pythagoras",ha:"Ka'idar Pythagoras",it:"Teorema di Pitagora",ps:"د فیثاغورث قضیه",ms:"Teorem Pythagoras",yo:"Ẹ̀kọ́ Pythagoras",ig:"Usoro Pythagoras"},
 tools_th_anglesum:{en:"Angles in a triangle",ur:"مثلث کے زاویے",bn:"ত্রিভুজের কোণ",hi:"त्रिभुज के कोण",ne:"त्रिभुजका कोणहरू",sw:"Pembe za pembetatu",ar:"زوايا المثلث",zh:"三角形的内角",es:"Ángulos de un triángulo",fr:"Angles d'un triangle",pt:"Ângulos de um triângulo",ru:"Углы треугольника",id:"Sudut-sudut segitiga",de:"Winkel im Dreieck",ja:"三角形の角",pa:"تکون دے زاویے",mr:"त्रिकोणाचे कोन",te:"త్రిభుజంలో కోణాలు",fa:"زاویه‌های مثلث",tr:"Üçgenin açıları",ta:"முக்கோணத்தின் கோணங்கள்",vi:"Các góc trong tam giác",ko:"삼각형의 각",tl:"Mga anggulo ng tatsulok",ha:"Kusurwoyin uku-uku",it:"Angoli di un triangolo",ps:"د مثلث زاویې",ms:"Sudut dalam segi tiga",yo:"Àwọn igun onígun-mẹ́ta",ig:"Akụkụ nke triaṅgụl"},
@@ -17265,7 +17292,7 @@ function viewHome(){
     return '<div class="dirpane dossier-open"><div class="dircol">'+directoryCardHTML()+'</div>'+
       '<div class="doscol">'+viewDossier(dossierId)+"</div></div>"+quickLinksHTML();
   }
-  return setupCardHTML()+askCardHTML()+idScanBarHTML()+briefingHTML()+dashStatsHTML()+(attOn()?attFlagsHTML(todayISO().slice(0,7)):"")+promoteCardHTML()+directoryCardHTML()+quickLinksHTML();
+  return setupCardHTML()+askCardHTML()+idScanBarHTML()+briefingHTML()+qotdCardHTML("hm-qotd-")+dashStatsHTML()+(attOn()?attFlagsHTML(todayISO().slice(0,7)):"")+promoteCardHTML()+directoryCardHTML()+quickLinksHTML();
 }
 function kpi(n,l){return '<div class="kpi"><div class="n">'+n+'</div><div class="l">'+esc(l)+"</div></div>";}
 function drawDir(){
@@ -17289,7 +17316,7 @@ function drawDir(){
   });
 }
 function afterHome(){
-  bindMic();
+  bindMic();bindQotd("hm-qotd-");
   const aq=$("ask-q"),ag=$("ask-go"),ao=$("ask-out");
   const bindAskAnswer=function(){
     const cp=$("gemini-copy"),sp=$("gemini-speak");
@@ -20619,7 +20646,7 @@ function toolsTheoremsHTML(){
     h+='<hr class="sep"><h3>'+esc(t(th.titleKey))+'</h3><p><b>'+esc(t("tools_th_state"))+':</b> '+esc(toolsL(th.state[0],th.state[1]))+'</p>';
     h+=toolsTheoremInputsHTML(th);
     h+='<button type="button" class="btn btn-primary" id="tl-th-'+th.id+'-go">'+esc(t("tools_solve"))+'</button> <button type="button" class="btn btn-sm" id="tl-th-'+th.id+'-tog" style="display:none">'+esc(t("tools_steps"))+'</button><div class="tools-ans" id="tl-th-'+th.id+'-ans"></div><div class="tools-steps" id="tl-th-'+th.id+'-steps" style="display:none"></div>';
-    h+='<p><b>'+esc(t("tools_th_why"))+':</b> '+esc(toolsL(th.why[0],th.why[1]))+'</p>';
+    h+=theoremVisualHTML(th)+'<p><b>'+esc(t("tools_th_why"))+':</b> '+esc(toolsL(th.why[0],th.why[1]))+'</p>';
   });
   return h+'</div>';
 }
@@ -20709,7 +20736,7 @@ function toolsExpListHTML(){
   });
   if(!list.length)return '<p class="muted">'+esc(t("tools_exp_none"))+'</p>';
   return list.map(function(tp){
-    return '<div class="card" style="margin-bottom:.6rem"><b>'+esc(toolsL(tp.en.t,tp.ur.t))+'</b> <span class="chip">'+esc(t("tools_sub_"+tp.sub))+'</span><p>'+esc(toolsL(tp.en.b,tp.ur.b))+'</p><button type="button" class="btn btn-sm" data-more="'+tp.id+'">'+esc(t("tools_exp_more"))+'</button><div id="tl-exp-more-'+tp.id+'"></div></div>';
+    return '<div class="card" style="margin-bottom:.6rem"><b>'+esc(toolsL(tp.en.t,tp.ur.t))+'</b> <span class="chip">'+esc(t("tools_sub_"+tp.sub))+'</span><p>'+esc(toolsL(tp.en.b,tp.ur.b))+'</p>'+topicVisualHTML(tp)+'<button type="button" class="btn btn-sm" data-more="'+tp.id+'">'+esc(t("tools_exp_more"))+'</button><div id="tl-exp-more-'+tp.id+'"></div></div>';
   }).join("");
 }
 function toolsExpMoreClick(id){
@@ -20736,14 +20763,14 @@ function toolsBindExpMore(){
 }
 function toolsBindExpChips(){
   Array.prototype.forEach.call(document.querySelectorAll("#tl-exp-chips [data-sub]"),function(b){
-    b.onclick=function(){toolsExpSub=b.getAttribute("data-sub");$("tl-exp-chips").innerHTML=toolsExpChipsHTML();$("tl-exp-list").innerHTML=toolsExpListHTML();toolsBindExpChips();toolsBindExpMore();};
+    b.onclick=function(){toolsExpSub=b.getAttribute("data-sub");$("tl-exp-chips").innerHTML=toolsExpChipsHTML();$("tl-exp-list").innerHTML=toolsExpListHTML();$("tl-exp-strat").innerHTML=toolsExpSub==="all"?"":teachStrategiesHTML(toolsExpSub);toolsBindExpChips();toolsBindExpMore();};
   });
 }
 function toolsExplainerHTML(){
   var h='<div class="card"><h2>'+esc(t("tools_exp"))+'</h2>';
   h+='<div class="toolbar"><input class="search" id="tl-exp-q" placeholder="'+esc(t("tools_exp_search"))+'" value="'+esc(toolsExpQuery)+'"></div>';
   h+='<div class="toolbar" id="tl-exp-chips">'+toolsExpChipsHTML()+'</div>';
-  h+='<div id="tl-exp-list">'+toolsExpListHTML()+'</div></div>';
+  h+='<div id="tl-exp-list">'+toolsExpListHTML()+'</div><div id="tl-exp-strat">'+(toolsExpSub==="all"?"":teachStrategiesHTML(toolsExpSub))+'</div></div>';
   return h;
 }
 function toolsPracticalsHTML(){
@@ -20751,16 +20778,424 @@ function toolsPracticalsHTML(){
   PRACTICALS.forEach(function(p){
     var d=lang()==="ur"?p.ur:p.en;
     h+='<details style="margin-bottom:.6rem"><summary><b>'+esc(d.t)+'</b></summary>'+
-      '<p><b>'+esc(t("tools_pract_need"))+':</b></p><ul>'+d.need.map(function(n){return "<li>"+esc(n)+"</li>";}).join("")+'</ul>'+
+      practicalVisualHTML(p)+'<p><b>'+esc(t("tools_pract_need"))+':</b></p><ul>'+d.need.map(function(n){return "<li>"+esc(n)+"</li>";}).join("")+'</ul>'+
       '<p><b>'+esc(t("tools_pract_steps"))+':</b></p><ol>'+d.steps.map(function(s){return "<li>"+esc(s)+"</li>";}).join("")+'</ol>'+
       '<p><b>'+esc(t("tools_pract_happens"))+':</b> '+esc(d.hap)+'</p>'+
       '<p><b>'+esc(t("tools_pract_why"))+':</b> '+esc(d.why)+'</p></details>';
   });
   return h+'</div>';
 }
+/* ================= Round 69 data: daily scientific reasoning questions (60) ================= */
+const DAILY_QUESTIONS=[
+{q:["Why does the Moon shine at night?","رات کو چاند کیوں چمکتا ہے؟"],a:["It reflects sunlight.","یہ سورج کی روشنی کو واپس پھینکتا ہے۔"],why:["The Moon makes no light of its own; sunlight bounces off its surface to our eyes.","چاند اپنی روشنی نہیں بناتا؛ سورج کی روشنی اس کی سطح سے ٹکرا کر ہماری آنکھوں تک آتی ہے۔"]},
+{q:["Why do we see lightning before we hear thunder?","بجلی کی چمک ہمیں گرج سے پہلے کیوں نظر آتی ہے؟"],a:["Light travels faster than sound.","روشنی آواز سے زیادہ تیز چلتی ہے۔"],why:["Light reaches us almost at once; sound takes seconds to travel the same distance.","روشنی تقریباً فوراً پہنچ جاتی ہے؛ آواز کو وہی فاصلہ طے کرنے میں سیکنڈ لگتے ہیں۔"]},
+{q:["Why does a ball slow down and stop when you roll it?","لڑھکتی ہوئی گیند آہستہ ہو کر کیوں رک جاتی ہے؟"],a:["Friction.","رگڑ کی وجہ سے۔"],why:["The ground rubs against the ball and steals its motion bit by bit.","زمین گیند سے رگڑ کھاتی ہے اور اس کی حرکت کو تھوڑا تھوڑا کر کے چھین لیتی ہے۔"]},
+{q:["Why does ice float on water?","برف پانی پر کیوں تیرتی ہے؟"],a:["Ice is less dense than water.","برف پانی سے ہلکی ہوتی ہے۔"],why:["When water freezes, its molecules spread out, so the same weight takes more space.","جب پانی جمتا ہے تو اس کے ذرے پھیل جاتے ہیں، اس لیے وہی وزن زیادہ جگہ لیتا ہے۔"]},
+{q:["Why does a metal spoon feel colder than a wooden spoon?","دھات کا چمچ لکڑی کے چمچ سے زیادہ ٹھنڈا کیوں لگتا ہے؟"],a:["Metal carries heat away from your hand faster.","دھات آپ کے ہاتھ سے گرمی جلدی لے جاتی ہے۔"],why:["Metal is a good conductor; wood is not, so it feels warmer.","دھات گرمی کی اچھی موصل ہے؛ لکڑی نہیں، اس لیے وہ گرم لگتی ہے۔"]},
+{q:["Why do we wear white clothes in summer?","گرمی میں ہم سفید کپڑے کیوں پہنتے ہیں؟"],a:["White reflects sunlight.","سفید رنگ سورج کی روشنی کو واپس پھینکتا ہے۔"],why:["Dark colours absorb heat; white bounces most of it away.","گہرے رنگ گرمی جذب کرتے ہیں؛ سفید رنگ زیادہ تر روشنی واپس پھینک دیتا ہے۔"]},
+{q:["Why does sound travel faster in water than in air?","آواز پانی میں ہوا سے زیادہ تیز کیوں چلتی ہے؟"],a:["Particles in water are closer together.","پانی کے ذرے ایک دوسرے کے قریب ہوتے ہیں۔"],why:["Sound moves by pushing particles; closer particles pass the push along faster.","آواز ذروں کو دھکا دے کر چلتی ہے؛ قریب ذرے دھکا جلدی آگے پہنچاتے ہیں۔"]},
+{q:["Why does a rainbow appear after rain?","بارش کے بعد قوسِ قزح کیوں بنتی ہے؟"],a:["Sunlight splits into colours in raindrops.","سورج کی روشنی بارش کے قطروں میں رنگوں میں بٹ جاتی ہے۔"],why:["Each raindrop bends light and splits white light into seven colours.","ہر قطرہ روشنی کو موڑتا ہے اور سفید روشنی کو سات رنگوں میں بانٹ دیتا ہے۔"]},
+{q:["Why does the Earth have day and night?","زمین پر دن اور رات کیوں ہوتے ہیں؟"],a:["The Earth spins on its axis.","زمین اپنے محور پر گھومتی ہے۔"],why:["One part faces the Sun (day) while the other part faces away (night).","ایک حصہ سورج کی طرف ہوتا ہے (دن) اور دوسرا حصہ دور (رات)۔"]},
+{q:["Why does a magnet attract a nail but not a wooden stick?","مقناطیس کیل کو کیوں کھینچتا ہے، لکڑی کو کیوں نہیں؟"],a:["Only iron, nickel and cobalt are magnetic.","صرف لوہا، نکل اور کوبالٹ مقناطیسی ہوتے ہیں۔"],why:["Their tiny parts line up with the magnet; wood has no such parts.","ان کے چھوٹے حصے مقناطیس کے ساتھ سیدھے ہو جاتے ہیں؛ لکڑی میں ایسے حصے نہیں ہوتے۔"]},
+{q:["Why do we see our image in a mirror but not in a wall?","آئینے میں ہماری تصویر کیوں نظر آتی ہے، دیوار میں کیوں نہیں؟"],a:["A mirror reflects light smoothly.","آئینہ روشنی کو ہموار طریقے سے واپس پھینکتا ہے۔"],why:["A rough wall scatters light in all directions, so no clear image forms.","کھردری دیوار روشنی کو ہر طرف بکھیر دیتی ہے، اس لیے واضح تصویر نہیں بنتی۔"]},
+{q:["Why do a heavy stone and a light feather fall at different speeds in air?","بھاری پتھر اور ہلکا پر ہوا میں مختلف رفتار سے کیوں گرتے ہیں؟"],a:["Air resistance.","ہوا کی مزاحمت کی وجہ سے۔"],why:["Air pushes up on the feather much more than on the stone; without air they would fall together.","ہوا پر کو پتھر سے زیادہ اوپر دھکیلتی ہے؛ ہوا کے بغیر دونوں ساتھ گریں گے۔"]},
+{q:["Why does iron rust?","لوہے کو زنگ کیوں لگتا ہے؟"],a:["Iron + water + air make rust.","لوہا + پانی + ہوا = زنگ۔"],why:["The iron joins with oxygen from the air, helped by water, forming a brown crust.","لوہا ہوا کی آکسیجن سے مل جاتا ہے، پانی اس میں مدد کرتا ہے، اور بھوری تہہ بن جاتی ہے۔"]},
+{q:["Why does sugar disappear in tea?","چینی چائے میں کیوں غائب ہو جاتی ہے؟"],a:["It dissolves.","یہ حل ہو جاتی ہے۔"],why:["Sugar breaks into tiny pieces too small to see, spreading evenly through the water.","چینی اتنے چھوٹے ٹکڑوں میں بٹ جاتی ہے کہ نظر نہیں آتے، اور پانی میں یکساں پھیل جاتے ہیں۔"]},
+{q:["Why does lemon juice taste sour?","لیموں کا رس کھٹا کیوں ہوتا ہے؟"],a:["It contains citric acid.","اس میں سائٹرک ایسڈ ہوتا ہے۔"],why:["Acids taste sour; the more acid, the sharper the taste.","تیزاب کھٹے ہوتے ہیں؛ جتنا زیادہ تیزاب، اتنا تیز ذائقہ۔"]},
+{q:["Why does baking soda fizz in vinegar?","بیکنگ سوڈا سرکے میں جھاگ کیوں بناتا ہے؟"],a:["They react and make carbon dioxide gas.","دونوں مل کر کاربن ڈائی آکسائیڈ گیس بناتے ہیں۔"],why:["The acid and the base react, and the gas bubbles escape.","تیزاب اور اساس آپس میں ملتے ہیں، اور گیس بلبلوں کی صورت میں نکلتی ہے۔"]},
+{q:["Why does soap clean dirty hands?","صابن گندے ہاتھ کیوں صاف کرتا ہے؟"],a:["Soap lifts grease off the skin.","صابن چکنائی کو جلد سے اٹھا لیتا ہے۔"],why:["One end of a soap molecule holds grease, the other holds water, so dirt washes away.","صابن کے ذرے کا ایک سرا چکنائی پکڑتا ہے، دوسرا پانی، اس لیے گندگی دھل جاتی ہے۔"]},
+{q:["Why does ice melt faster in hot water than in cold?","برف گرم پانی میں ٹھنڈے پانی سے جلدی کیوں پگھلتی ہے؟"],a:["Heat moves faster into the ice.","گرمی برف تک جلدی پہنچتی ہے۔"],why:["Hot water gives its heat energy to the ice quickly, breaking the solid apart.","گرم پانی اپنی گرمی کی توانائی برف کو جلدی دیتا ہے، جس سے ٹھوس ٹوٹ جاتا ہے۔"]},
+{q:["Why does a cut apple turn brown?","کٹی ہوئی سیب بھوری کیوں ہو جاتی ہے؟"],a:["Oxygen in the air reacts with the apple.","ہوا کی آکسیجن سیب سے مل جاتی ہے۔"],why:["The apple's flesh meets air and oxidises; lemon juice slows this down.","سیب کا گودا ہوا سے مل کر آکسائیڈ بن جاتا ہے؛ لیموں کا رس اسے آہستہ کر دیتا ہے۔"]},
+{q:["Why is water called the best solvent?","پانی کو بہترین حل کنندہ کیوں کہتے ہیں؟"],a:["It dissolves more things than any other liquid.","یہ کسی بھی اور مائع سے زیادہ چیزیں حل کرتا ہے۔"],why:["Water molecules pull apart many solids, so salt, sugar and more disappear in it.","پانی کے ذرے بہت سے ٹھوس چیزوں کو الگ کر دیتے ہیں، اس لیے نمک، چینی اور بہت کچھ اس میں غائب ہو جاتا ہے۔"]},
+{q:["Why does salt make ice melt on roads?","نمک سڑک پر برف کیوں پگھلاتا ہے؟"],a:["Salt lowers the freezing point of water.","نمک پانی کے جمنے کا درجہ کم کر دیتا ہے۔"],why:["Salt water must get colder than pure water before it freezes.","نمک والا پانی خالص پانی سے زیادہ ٹھنڈا ہونے پر ہی جمتا ہے۔"]},
+{q:["Why do we smell perfume across the room?","عطر کی خوشبو کمرے کے دوسرے سرے تک کیوں پہنچتی ہے؟"],a:["Tiny particles spread through the air.","چھوٹے ذرے ہوا میں پھیل جاتے ہیں۔"],why:["The scent molecules move and mix with the air until they reach your nose.","خوشبو کے ذرے ہوا میں مل کر حرکت کرتے ہیں، یہاں تک کہ آپ کی ناک تک پہنچ جاتے ہیں۔"]},
+{q:["Why do plants need sunlight?","پودوں کو سورج کی روشنی کیوں چاہیے؟"],a:["To make food by photosynthesis.","روشنی سے کھانا بنانے کے لیے۔"],why:["Leaves catch sunlight and turn water and air into food for the plant.","پتے سورج کی روشنی پکڑتے ہیں اور پانی اور ہوا کو پودے کے لیے کھانے میں بدل دیتے ہیں۔"]},
+{q:["Why do we breathe faster when we run?","دوڑتے وقت ہم تیز سانس کیوں لیتے ہیں؟"],a:["Muscles need more oxygen.","پٹھوں کو زیادہ آکسیجن چاہیے ہوتی ہے۔"],why:["Running burns more energy, so the lungs work harder to bring in oxygen.","دوڑنے میں زیادہ توانائی جلتی ہے، اس لیے پھیپھڑے آکسیجن لانے کے لیے زیادہ محنت کرتے ہیں۔"]},
+{q:["Why does the heart beat faster when we are scared?","ڈر کے وقت دل تیز کیوں دھڑکتا ہے؟"],a:["The body prepares to run or fight.","جسم بھاگنے یا لڑنے کی تیاری کرتا ہے۔"],why:["A signal tells the heart to pump more blood and oxygen to the muscles.","ایک سگنل دل کو بتاتا ہے کہ پٹھوں تک زیادہ خون اور آکسیجن پہنچائے۔"]},
+{q:["Why do fish die out of water?","مچھلی پانی سے باہر کیوں مر جاتی ہے؟"],a:["They cannot take oxygen from air.","وہ ہوا سے آکسیجن نہیں لے سکتی۔"],why:["Gills pull oxygen from water only; in air they dry out and stop working.","گلپھڑے صرف پانی سے آکسیجن کھینچتے ہیں؛ ہوا میں وہ سوکھ کر کام کرنا بند کر دیتے ہیں۔"]},
+{q:["Why do some leaves turn yellow in autumn?","خزاں میں کچھ پتے پیلے کیوں ہو جاتے ہیں؟"],a:["The green colour fades.","سبز رنگ ختم ہو جاتا ہے۔"],why:["The tree stops making chlorophyll, so the yellow colours hidden under the green show.","درخت کلوروفل بنانا بند کر دیتا ہے، اس لیے سبز کے نیچے چھپا پیلا رنگ نظر آنے لگتا ہے۔"]},
+{q:["Why do we get goosebumps when cold?","سردی میں ہمیں رونگٹے کیوں کھڑے ہو جاتے ہیں؟"],a:["Tiny muscles pull the hairs up.","چھوٹے پٹھے بالوں کو کھڑا کر دیتے ہیں۔"],why:["Long ago this trapped warm air in fur; in humans it is left over from that time.","پہلے اس سے کھال میں گرم ہوا پھنس جاتی تھی؛ انسانوں میں یہ اسی زمانے کی باقیات ہے۔"]},
+{q:["Why do bees visit flowers?","شہد کی مکھیاں پھولوں پر کیوں جاتی ہیں؟"],a:["For nectar, and they carry pollen.","رس کے لیے، اور وہ زرگل لے جاتی ہیں۔"],why:["The bee drinks nectar for food and moves pollen from flower to flower, helping plants make seeds.","مکھی رس پی کر کھانا لیتی ہے اور زرگل ایک پھول سے دوسرے پھول تک لے جاتی ہے، جس سے پودے بیج بناتے ہیں۔"]},
+{q:["Why do we feel hungry?","ہمیں بھوک کیوں لگتی ہے؟"],a:["The stomach signals the brain.","معدہ دماغ کو سگنل بھیجتا ہے۔"],why:["When the stomach is empty it sends a message that the body needs food.","جب معدہ خالی ہوتا ہے تو وہ پیغام بھیجتا ہے کہ جسم کو کھانا چاہیے۔"]},
+{q:["Why do chameleons change colour?","گرگٹ رنگ کیوں بدلتا ہے؟"],a:["To hide and to show mood.","چھپنے اور اپنا موڈ بتانے کے لیے۔"],why:["Special skin cells expand or shrink, changing the colour the skin shows.","جلد کے خاص خلیے پھیلتے یا سکڑتے ہیں، جس سے جلد کا رنگ بدل جاتا ہے۔"]},
+{q:["Why do birds migrate?","پرندے ہجرت کیوں کرتے ہیں؟"],a:["To find food and warmth.","کھانا اور گرمی تلاش کرنے کے لیے۔"],why:["When winter comes, food gets scarce, so birds fly to warmer places and return in spring.","جب سردی آتی ہے تو کھانا کم ہو جاتا ہے، اس لیے پرندے گرم جگہوں کی طرف اڑ جاتے ہیں اور بہار میں واپس آتے ہیں۔"]},
+{q:["Why do we need to drink water every day?","ہمیں ہر روز پانی کیوں پینا چاہیے؟"],a:["Our body is mostly water and loses it daily.","ہمارا جسم زیادہ تر پانی ہے اور روز پانی کھوتا ہے۔"],why:["We lose water in sweat, breath and urine; drinking replaces it.","ہم پسینے، سانس اور پیشاب میں پانی کھوتے ہیں؛ پینے سے وہ پورا ہوتا ہے۔"]},
+{q:["Why do wounds heal?","زخم کیوں بھرتے ہیں؟"],a:["The body repairs itself.","جسم خود کو ٹھیک کرتا ہے۔"],why:["New skin cells grow over the cut and blood clots seal it first.","نئے جلد کے خلیے کٹے ہوئے حصے پر اگتے ہیں اور خون کا لوتھڑا پہلے اسے بند کر دیتا ہے۔"]},
+{q:["A shopkeeper gives you Rs 100 change from Rs 500. You bought 4 notebooks at Rs 75 each. Is the change right?","دکاندار نے 500 روپے میں سے 100 روپے واپس دیے۔ آپ نے 75 روپے والی 4 کاپیاں خریدیں۔ کیا واپسی درست ہے؟"],a:["No — you should get Rs 200.","نہیں — آپ کو 200 روپے ملنے چاہیے۔"],why:["4 × 75 = 300, and 500 − 300 = 200.","4 × 75 = 300، اور 500 − 300 = 200۔"]},
+{q:["If 3 pencils cost Rs 30, how much do 7 pencils cost?","اگر 3 پنسلیں 30 روپے کی ہوں، تو 7 پنسلیں کتنے کی ہوں گی؟"],a:["Rs 70.","70 روپے۔"],why:["One pencil costs Rs 10, so 7 × 10 = 70.","ایک پنسل 10 روپے کی ہے، اس لیے 7 × 10 = 70۔"]},
+{q:["A train travels 60 km in 1 hour. How far in 2.5 hours at the same speed?","ایک ٹرین 1 گھنٹے میں 60 کلومیٹر جاتی ہے۔ اسی رفتار سے 2.5 گھنٹے میں کتنی دور جائے گی؟"],a:["150 km.","150 کلومیٹر۔"],why:["60 × 2.5 = 150.","60 × 2.5 = 150۔"]},
+{q:["What is half of a quarter?","ایک چوتھائی کا آدھا کیا ہے؟"],a:["One eighth (1/8).","ایک آٹھواں (1/8)۔"],why:["Half of 1/4 means 1/2 × 1/4 = 1/8.","1/4 کا آدھا یعنی 1/2 × 1/4 = 1/8۔"]},
+{q:["Ali is 12. His father is 3 times his age. How old will Ali be when his father is 48?","علی 12 سال کا ہے۔ اس کے والد اس سے 3 گنا بڑے ہیں۔ جب والد 48 سال کے ہوں گے تو علی کتنے سال کا ہوگا؟"],a:["24.","24 سال کا۔"],why:["Father is 36 now (3 × 12); 12 years later he is 48, and Ali is 12 + 12 = 24.","والد اب 36 سال کے ہیں (3 × 12)؛ 12 سال بعد والد 48 کے اور علی 12 + 12 = 24 کے ہوں گے۔"]},
+{q:["A rectangle is 8 cm long and 3 cm wide. What is its perimeter?","ایک مستطیل 8 سینٹی میٹر لمبا اور 3 سینٹی میٹر چوڑا ہے۔ اس کا محیط کیا ہے؟"],a:["22 cm.","22 سینٹی میٹر۔"],why:["2 × (8 + 3) = 22.","2 × (8 + 3) = 22۔"]},
+{q:["What comes next: 2, 4, 8, 16, …?","اگلا عدد کیا ہے: 2، 4، 8، 16، …؟"],a:["32.","32۔"],why:["Each number is double the one before.","ہر عدد پچھلے سے دوگنا ہے۔"]},
+{q:["If you save Rs 50 every week, how much in 10 weeks?","اگر آپ ہر ہفتے 50 روپے بچائیں، تو 10 ہفتوں میں کتنے بچیں گے؟"],a:["Rs 500.","500 روپے۔"],why:["50 × 10 = 500.","50 × 10 = 500۔"]},
+{q:["A class has 30 students. One third are girls. How many boys?","ایک کلاس میں 30 طلبہ ہیں۔ ایک تہائی لڑکیاں ہیں۔ لڑکے کتنے ہیں؟"],a:["20 boys.","20 لڑکے۔"],why:["One third of 30 is 10 girls; 30 − 10 = 20 boys.","30 کا ایک تہائی 10 لڑکیاں ہیں؛ 30 − 10 = 20 لڑکے۔"]},
+{q:["What is 15% of 200?","200 کا 15 فیصد کیا ہے؟"],a:["30.","30۔"],why:["10% is 20 and 5% is 10; 20 + 10 = 30.","10 فیصد 20 ہے اور 5 فیصد 10 ہے؛ 20 + 10 = 30۔"]},
+{q:["A car uses 5 litres for 60 km. How much for 180 km?","ایک گاڑی 60 کلومیٹر کے لیے 5 لیٹر پیٹرول استعمال کرتی ہے۔ 180 کلومیٹر کے لیے کتنا چاہیے؟"],a:["15 litres.","15 لیٹر۔"],why:["180 is 3 times 60, so 3 × 5 = 15.","180، 60 کا 3 گنا ہے، اس لیے 3 × 5 = 15۔"]},
+{q:["Which is bigger: 3/4 or 2/3?","کون سا بڑا ہے: 3/4 یا 2/3؟"],a:["3/4.","3/4۔"],why:["3/4 = 0.75 and 2/3 = 0.67, so 3/4 is bigger.","3/4 = 0.75 اور 2/3 = 0.67، اس لیے 3/4 بڑا ہے۔"]},
+{q:["Why does the sky look blue?","آسمان نیلا کیوں نظر آتا ہے؟"],a:["Air scatters blue light most.","ہوا نیلی روشنی کو سب سے زیادہ بکھیرتی ہے۔"],why:["Sunlight hits tiny air particles, and blue light scatters in all directions.","سورج کی روشنی ہوا کے چھوٹے ذروں سے ٹکراتی ہے، اور نیلی روشنی ہر طرف بکھر جاتی ہے۔"]},
+{q:["Why do we see stars only at night?","ستارے صرف رات کو کیوں نظر آتے ہیں؟"],a:["Sunlight is too bright in the day.","دن میں سورج کی روشنی بہت تیز ہوتی ہے۔"],why:["The Sun's light washes out the faint starlight; at night the sky is dark enough to see them.","سورج کی روشنی ستاروں کی ہلکی روشنی کو دبا دیتی ہے؛ رات کو آسمان اندھیرا ہوتا ہے تو ستارے نظر آتے ہیں۔"]},
+{q:["Why does a wet cloth dry faster in wind?","گیلا کپڑا ہوا میں جلدی کیوں سوکھتا ہے؟"],a:["Wind carries the water vapour away.","ہوا پانی کے بخارات کو لے جاتی ہے۔"],why:["Still air fills with vapour and slows drying; moving air keeps taking it away.","ٹھہری ہوئی ہوا بخارات سے بھر جاتی ہے اور سوکھنے کو آہستہ کر دیتی ہے؛ چلتی ہوا بخارات کو مسلسل لے جاتی ہے۔"]},
+{q:["Why does bread rise when baked?","روٹی پکاتے وقت کیوں پھولتی ہے؟"],a:["Yeast makes gas bubbles.","خمیر گیس کے بلبلے بناتا ہے۔"],why:["Yeast eats sugar and gives off carbon dioxide, which puffs the dough up.","خمیر چینی کھا کر کاربن ڈائی آکسائیڈ دیتا ہے، جس سے آٹا پھول جاتا ہے۔"]},
+{q:["Why does a fan cool us if it only moves air?","پنکھا ہمیں ٹھنڈا کیوں کرتا ہے، حالانکہ وہ صرف ہوا چلاتا ہے؟"],a:["It moves sweat away and speeds evaporation.","وہ پسینہ اڑا کر بخارات بننے کی رفتار بڑھاتا ہے۔"],why:["Moving air takes sweat off the skin faster, and evaporation takes heat with it.","چلتی ہوا پسینہ جلد سے جلدی ہٹاتی ہے، اور بخارات بننے سے گرمی ساتھ چلی جاتی ہے۔"]},
+{q:["Why does metal feel cold in winter but wood does not?","سردی میں دھات ٹھنڈی اور لکڑی گرم کیوں لگتی ہے؟"],a:["Metal carries heat away from your hand.","دھات آپ کے ہاتھ سے گرمی جلدی لے جاتی ہے۔"],why:["Metal conducts heat quickly; wood holds it back, so it feels warmer.","دھات گرمی جلدی پہنچاتی ہے؛ لکڑی گرمی روکتی ہے، اس لیے وہ گرم لگتی ہے۔"]},
+{q:["Why do we yawn when we are tired?","تھکاوٹ میں ہمیں جمائی کیوں آتی ہے؟"],a:["To bring in more oxygen and cool the brain.","زیادہ آکسیجن لانے اور دماغ کو ٹھنڈا کرنے کے لیے۔"],why:["A big yawn pulls in fresh air; scientists think it also cools the brain a little.","بڑی جمائی تازہ ہوا کھینچتی ہے؛ سائنسدانوں کا خیال ہے کہ اس سے دماغ تھوڑا ٹھنڈا بھی ہوتا ہے۔"]},
+{q:["Why do onions make our eyes water?","پیاز کاٹنے سے آنکھوں میں پانی کیوں آتا ہے؟"],a:["They release a gas that stings the eyes.","وہ ایک گیس چھوڑتی ہے جو آنکھوں کو چبھتی ہے۔"],why:["Cutting breaks onion cells and frees a gas; tears wash it away.","کاٹنے سے پیاز کے خلیے ٹوٹتے ہیں اور گیس نکلتی ہے؛ آنسو اسے دھو دیتے ہیں۔"]},
+{q:["Why does the Moon look bigger near the horizon?","افق کے قریب چاند بڑا کیوں لگتا ہے؟"],a:["It is a trick of the brain.","یہ دماغ کا دھوکا ہے۔"],why:["The Moon is the same size; near the horizon your brain compares it with trees and houses and judges it bigger.","چاند کا حجم وہی رہتا ہے؛ افق کے قریب دماغ اس کا درختوں اور گھروں سے موازنہ کر کے اسے بڑا سمجھتا ہے۔"]},
+{q:["Why do we see steam above a hot cup?","گرم چائے کے اوپر بھاپ کیوں نظر آتی ہے؟"],a:["Hot vapour cools and turns into tiny drops.","گرم بخارات ٹھنڈے ہو کر چھوٹی بوندیں بن جاتے ہیں۔"],why:["The invisible vapour meets cool air and condenses into a visible mist.","نظر نہ آنے والے بخارات ٹھنڈی ہوا سے مل کر دکھائی دینے والی دھند بن جاتے ہیں۔"]},
+{q:["Why does a pencil look bent in a glass of water?","پانی کے گلاس میں پنسل ٹیڑھی کیوں نظر آتی ہے؟"],a:["Light bends when it moves from water to air.","روشنی پانی سے ہوا میں آتے ہوئے مڑ جاتی ہے۔"],why:["Light travels slower in water, so it changes direction at the surface — this is called refraction.","روشنی پانی میں آہستہ چلتی ہے، اس لیے سطح پر اس کی سمت بدل جاتی ہے — اسے انعطاف کہتے ہیں۔"]},
+{q:["Why do we get a shock from a car door in dry weather?","خشک موسم میں گاڑی کا دروازہ چھونے سے جھٹکا کیوں لگتا ہے؟"],a:["Static electricity builds up.","جامد بجلی جمع ہو جاتی ہے۔"],why:["Rubbing builds a charge on your body; touching metal lets it jump off at once.","رگڑ سے آپ کے جسم پر چارج جمع ہو جاتا ہے؛ دھات چھونے پر وہ ایک دم نکل جاتا ہے۔"]},
+{q:["Why does the Sun look red at sunset?","غروب کے وقت سورج لال کیوں نظر آتا ہے؟"],a:["Its light passes through more air.","اس کی روشنی زیادہ ہوا سے گزرتی ہے۔"],why:["At sunset the light travels a longer path, and the air scatters away the blue, leaving red.","غروب کے وقت روشنی لمبا راستہ طے کرتی ہے، اور ہوا نیلی روشنی بکھیر دیتی ہے، صرف لال رہ جاتی ہے۔"]},
+{q:["Why do we see our breath on a cold morning?","سرد صبح کو ہماری سانس کیوں نظر آتی ہے؟"],a:["Warm breath cools into tiny water drops.","گرم سانس ٹھنڈی ہو کر پانی کی چھوٹی بوندیں بن جاتی ہے۔"],why:["Your breath holds water vapour; cold air turns it into a little cloud.","آپ کی سانس میں پانی کے بخارات ہوتے ہیں؛ ٹھنڈی ہوا انہیں چھوٹے بادل میں بدل دیتی ہے۔"]}
+];
+
+/* ================= Round 69 data: seeded teaching-strategies bank ================= */
+const TEACH_STRATEGIES=[
+{sub:"maths",tips:[{en:"Start with one worked example on the board, then let pupils copy it.",ur:"پہلے بورڈ پر ایک حل شدہ مثال دکھائیں، پھر طلبہ سے نقل کرائیں۔"},{en:"Ask one pupil to explain the step back to you — if they can say it, they know it.",ur:"ایک طالب علم سے قدم واپس سمجھانے کو کہیں — اگر وہ بتا سکے تو سمجھ گیا۔"},{en:"Give 3 easy questions first, then 1 hard one.",ur:"پہلے 3 آسان سوال دیں، پھر 1 مشکل سوال۔"}],mistakes:[{en:"Pupils forget the order of steps in long division — write the steps on a card.",ur:"طلبہ لمبی تقسیم میں قدموں کی ترتیب بھول جاتے ہیں — قدم کارڈ پر لکھ کر دیں۔"},{en:"Many pupils add fractions by adding tops and bottoms — show why the bottoms must match first.",ur:"بہت سے طلبہ کسر جمع کرتے وقت اوپر اور نیچے دونوں جمع کر دیتے ہیں — پہلے دکھائیں کہ نیچے والے برابر کیوں ہونے چاہیے۔"}],analogy:["A fraction is like sharing a roti — the more people, the smaller each piece.","کسر روٹی بانٹنے جیسی ہے — جتنے زیادہ لوگ، اتنا چھوٹا ہر حصہ۔"]},
+{sub:"english",tips:[{en:"Read the passage aloud together before any questions.",ur:"سوالات سے پہلے عبارت سب مل کر بلند آواز سے پڑھیں۔"},{en:"Teach one new word a day and use it in a sentence.",ur:"روز ایک نیا لفظ سکھائیں اور جملے میں استعمال کرائیں۔"},{en:"Let pupils write first, then fix spelling together.",ur:"پہلے طلبہ کو لکھنے دیں، پھر املا سب مل کر درست کریں۔"}],mistakes:[{en:"Pupils mix up 'their' and 'there' — teach one spelling trick for each.",ur:"طلبہ 'their' اور 'there' میں فرق بھول جاتے ہیں — ہر ایک کی الگ چال سکھائیں۔"},{en:"Many write one long sentence with no full stop — practise stopping after one idea.",ur:"بہت سے ایک لمبا جملہ لکھتے ہیں جس میں کوئی نقطہ نہیں — ایک خیال کے بعد رکنے کی مشق کرائیں۔"}],analogy:["A sentence is like a train — the engine (verb) pulls the carriages (words) along.","جملہ ریل گاڑی جیسا ہے — انجن (فعل) ڈبوں (الفاظ) کو کھینچتا ہے۔"]},
+{sub:"science",tips:[{en:"Start with a question from daily life, not the definition.",ur:"تعریف سے نہیں، روزمرہ زندگی کے سوال سے شروع کریں۔"},{en:"Do one small experiment, even with a glass of water.",ur:"ایک چھوٹا تجربہ کریں، چاہے پانی کے گلاس سے ہی ہو۔"},{en:"Ask pupils to guess what will happen before you show it.",ur:"دکھانے سے پہلے طلبہ سے پوچھیں کہ کیا ہوگا۔"}],mistakes:[{en:"Pupils memorise definitions without seeing the thing — always show or draw it.",ur:"طلبہ تعریفیں یاد کر لیتے ہیں بغیر چیز دیکھے — ہمیشہ دکھائیں یا بنائیں۔"},{en:"Many confuse melting with dissolving — test both in class.",ur:"بہت سے پگھلنے اور حل ہونے کو ایک سمجھتے ہیں — دونوں کلاس میں آزمائیں۔"}],analogy:["The water cycle is like a kettle — steam rises, cools on the lid, and drips back down.","آبی چکر کیتلی جیسا ہے — بھاپ اٹھتی ہے، ڈھکن پر ٹھنڈی ہوتی ہے، اور قطرے واپس گرتے ہیں۔"]},
+{sub:"islamiat",tips:[{en:"Tell the story first, then the lesson in it.",ur:"پہلے کہانی سنائیں، پھر اس میں سبق بتائیں۔"},{en:"Connect each lesson to one good deed for today.",ur:"ہر سبق کو آج کے ایک نیک عمل سے جوڑیں۔"},{en:"Ask pupils to give one example from their own home.",ur:"طلبہ سے اپنے گھر کی ایک مثال دینے کو کہیں۔"}],mistakes:[{en:"Pupils memorise words without meaning — always explain the meaning first.",ur:"طلبہ الفاظ یاد کر لیتے ہیں بغیر معنی سمجھے — ہمیشہ پہلے معنی سمجھائیں۔"},{en:"Many rush the prayer words — practise them slowly, one line at a time.",ur:"بہت سے نماز کے الفاظ جلدی پڑھتے ہیں — ایک ایک سطر آہستہ آہستہ مشق کرائیں۔"}],analogy:["Good deeds are like seeds — small now, but they grow into a big tree.","نیک اعمال بیج جیسے ہیں — اب چھوٹے ہیں، مگر بڑے درخت بن جاتے ہیں۔"]},
+{sub:"urdu",tips:[{en:"Read the lesson aloud with correct pronunciation first.",ur:"سبق پہلے درست تلفظ کے ساتھ بلند آواز سے پڑھیں۔"},{en:"Teach one new idiom a week and use it in class.",ur:"ہر ہفتے ایک نیا محاورہ سکھائیں اور کلاس میں استعمال کرائیں۔"},{en:"Let pupils write one short paragraph every day.",ur:"طلبہ کو روز ایک چھوٹا پیراگراف لکھنے دیں۔"}],mistakes:[{en:"Pupils confuse similar letters — write them side by side.",ur:"طلبہ ملتے جلتے حروف (س، ص، ث) میں فرق بھول جاتے ہیں — انہیں ساتھ ساتھ لکھیں۔"},{en:"Many write without punctuation — mark the pauses together.",ur:"بہت سے بغیر رموزِ اوقاف کے لکھتے ہیں — وقفے سب مل کر نشان لگائیں۔"}],analogy:["A paragraph is like a small house — the first sentence is the door, the rest are the rooms.","پیراگراف چھوٹے گھر جیسا ہے — پہلا جملہ دروازہ ہے، باقی کمرے ہیں۔"]},
+{sub:"social",tips:[{en:"Start from the pupil's own street, then the town, then the country.",ur:"اپنی گلی سے شروع کریں، پھر قصبہ، پھر ملک۔"},{en:"Use a map in every lesson, even a hand-drawn one.",ur:"ہر سبق میں نقشہ استعمال کریں، چاہے ہاتھ سے بنا ہوا ہو۔"},{en:"Ask pupils what they saw in their own area.",ur:"طلبہ سے پوچھیں کہ انہوں نے اپنے علاقے میں کیا دیکھا۔"}],mistakes:[{en:"Pupils memorise dates without the story — always tell what happened first.",ur:"طلبہ تاریخیں یاد کر لیتے ہیں بغیر کہانی کے — ہمیشہ پہلے بتائیں کہ کیا ہوا تھا۔"},{en:"Many mix up map symbols — keep one symbol chart on the wall.",ur:"بہت سے نقشے کی علامتیں ملا دیتے ہیں — ایک علامتوں والا چارٹ دیوار پر لگائیں۔"}],analogy:["A map is like a photo from the sky — small on paper, big in real life.","نقشہ آسمان سے لی گئی تصویر جیسا ہے — کاغذ پر چھوٹا، حقیقت میں بڑا۔"]},
+{sub:"art",tips:[{en:"Let pupils draw first, then talk about what they made.",ur:"پہلے طلبہ کو بنانے دیں، پھر بتائیں کہ کیا بنایا۔"},{en:"Show one example, then let them try their own way.",ur:"ایک مثال دکھائیں، پھر انہیں اپنے طریقے سے آزمانے دیں۔"},{en:"Use things from home — leaves, cloth, old paper.",ur:"گھر کی چیزیں استعمال کریں — پتے، کپڑا، پرانا کاغذ۔"}],mistakes:[{en:"Pupils copy the example exactly — praise the different idea, not the copy.",ur:"طلبہ مثال کو بالکل نقل کر لیتے ہیں — مختلف خیال کی تعریف کریں، نقل کی نہیں۔"},{en:"Many rush to finish — give time to look again and add one detail.",ur:"بہت سے جلدی ختم کرتے ہیں — دوبارہ دیکھنے اور ایک تفصیل شامل کرنے کا وقت دیں۔"}],analogy:["A drawing is like a story — first the idea, then the lines, then the colours.","ڈرائنگ کہانی جیسی ہے — پہلے خیال، پھر لکیریں، پھر رنگ۔"]}
+];
+
+/* ================= Round 69: visual explanations — SVG diagram library + comparison tables ================= */
+const TB_VIS_OPTIONS=[
+{id:"water",en:"Water cycle",ur:"آبی چکر"},{id:"plant",en:"Plant parts",ur:"پودے کے حصے"},
+{id:"circuit",en:"Simple circuit",ur:"سادہ سرکٹ"},{id:"pythag",en:"Pythagoras triangle",ur:"فیثاغورث مثلث"},
+{id:"frac",en:"Fraction bars",ur:"کسر کی سلاخیں"},{id:"angles",en:"Angles",ur:"زاویے"},
+{id:"numberline",en:"Number line",ur:"عدد کی لکیر"},{id:"body",en:"Human body",ur:"انسانی جسم"},
+{id:"magnet",en:"Magnet",ur:"مقناطیس"},{id:"rect",en:"Rectangle",ur:"مستطیل"}];
+function svgWaterCycle(){
+  const L=function(e,u){return esc(toolsL(e,u));};
+  return '<svg viewBox="0 0 300 180" width="100%" role="img" aria-label="'+L("Water cycle","آبی چکر")+'" style="max-width:320px;display:block;margin:.4rem auto">'
+  +'<circle cx="42" cy="30" r="15" fill="#fbbf24"/><text x="42" y="56" font-size="11" text-anchor="middle">'+L("Sun","سورج")+'</text>'
+  +'<ellipse cx="205" cy="32" rx="44" ry="15" fill="#e2e8f0" stroke="#94a3b8"/><text x="205" y="60" font-size="11" text-anchor="middle">'+L("Cloud","بادل")+'</text>'
+  +'<path d="M185 62 l-5 11 M205 62 l-5 11 M225 62 l-5 11" stroke="#3b82f6" stroke-width="2"/>'
+  +'<text x="255" y="76" font-size="11" text-anchor="middle">'+L("Rain","بارش")+'</text>'
+  +'<path d="M95 148 L95 112 M115 148 L115 112" stroke="#f59e0b" stroke-width="2"/><path d="M89 112 L95 100 L101 112 Z M109 112 L115 100 L121 112 Z" fill="#f59e0b"/>'
+  +'<text x="105" y="92" font-size="11" text-anchor="middle">'+L("Evaporation","بخارات")+'</text>'
+  +'<path d="M0 152 Q20 144 40 152 T80 152 T120 152 T160 152 T200 152 T240 152 T280 152 T300 152 L300 180 L0 180 Z" fill="#bfdbfe"/>'
+  +'<text x="215" y="172" font-size="11" text-anchor="middle">'+L("Sea","سمندر")+'</text></svg>';
+}
+function svgPlant(){
+  const L=function(e,u){return esc(toolsL(e,u));};
+  return '<svg viewBox="0 0 300 180" width="100%" role="img" aria-label="'+L("Plant parts","پودے کے حصے")+'" style="max-width:320px;display:block;margin:.4rem auto">'
+  +'<circle cx="258" cy="28" r="14" fill="#fbbf24"/><text x="258" y="54" font-size="11" text-anchor="middle">'+L("Sun","سورج")+'</text>'
+  +'<path d="M150 130 L150 60" stroke="#16a34a" stroke-width="4"/>'
+  +'<ellipse cx="128" cy="88" rx="24" ry="10" fill="#4ade80" stroke="#16a34a" transform="rotate(-30 128 88)"/>'
+  +'<ellipse cx="172" cy="72" rx="24" ry="10" fill="#4ade80" stroke="#16a34a" transform="rotate(30 172 72)"/>'
+  +'<circle cx="150" cy="48" r="12" fill="#f472b6"/><circle cx="150" cy="48" r="4" fill="#fbbf24"/>'
+  +'<path d="M132 130 L168 130 L162 164 L138 164 Z" fill="#f97316"/>'
+  +'<path d="M150 164 L138 178 M150 164 L150 178 M150 164 L162 178" stroke="#92400e" stroke-width="2"/>'
+  +'<text x="196" y="48" font-size="11">'+L("Flower","پھول")+'</text><text x="196" y="76" font-size="11">'+L("Leaf","پتا")+'</text>'
+  +'<text x="196" y="104" font-size="11">'+L("Stem","تنا")+'</text><text x="196" y="146" font-size="11">'+L("Roots","جڑیں")+'</text></svg>';
+}
+function svgCircuit(){
+  const L=function(e,u){return esc(toolsL(e,u));};
+  return '<svg viewBox="0 0 300 180" width="100%" role="img" aria-label="'+L("Simple circuit","سادہ سرکٹ")+'" style="max-width:320px;display:block;margin:.4rem auto">'
+  +'<rect x="50" y="40" width="200" height="100" fill="none" stroke="#334155" stroke-width="2"/>'
+  +'<rect x="44" y="80" width="12" height="20" fill="#ef4444"/><rect x="60" y="85" width="5" height="10" fill="#334155"/>'
+  +'<text x="30" y="130" font-size="11" text-anchor="middle">'+L("Battery","بیٹری")+'</text>'
+  +'<circle cx="250" cy="90" r="16" fill="#fef9c3" stroke="#334155" stroke-width="2"/>'
+  +'<path d="M242 90 L247 84 L250 94 L255 84 L258 90" fill="none" stroke="#334155" stroke-width="1.5"/>'
+  +'<text x="250" y="130" font-size="11" text-anchor="middle">'+L("Bulb","بلب")+'</text>'
+  +'<path d="M120 40 L150 40" stroke="#f59e0b" stroke-width="2"/><path d="M144 34 L156 40 L144 46 Z" fill="#f59e0b"/>'
+  +'<text x="150" y="30" font-size="11" text-anchor="middle">'+L("Current","کرنٹ")+'</text>'
+  +'<text x="150" y="170" font-size="11" text-anchor="middle">'+L("Wire","تار")+'</text></svg>';
+}
+function svgPythag(){
+  return '<svg viewBox="0 0 300 180" width="100%" role="img" aria-label="Pythagoras" style="max-width:320px;display:block;margin:.4rem auto">'
+  +'<polygon points="60,130 240,130 60,40" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>'
+  +'<rect x="60" y="118" width="12" height="12" fill="none" stroke="#1d4ed8"/>'
+  +'<rect x="60" y="130" width="90" height="34" fill="none" stroke="#64748b" transform="rotate(0 60 130)"/>'
+  +'<text x="150" y="120" font-size="12" text-anchor="middle">a</text>'
+  +'<text x="48" y="90" font-size="12" text-anchor="middle">b</text>'
+  +'<text x="160" y="80" font-size="12" text-anchor="middle">c</text>'
+  +'<text x="150" y="172" font-size="12" text-anchor="middle">a² + b² = c²</text></svg>';
+}
+function svgFrac(){
+  return '<svg viewBox="0 0 300 180" width="100%" role="img" aria-label="Fractions" style="max-width:320px;display:block;margin:.4rem auto">'
+  +'<rect x="30" y="40" width="240" height="34" fill="none" stroke="#334155" stroke-width="2"/>'
+  +'<rect x="30" y="40" width="60" height="34" fill="#93c5fd"/><rect x="90" y="40" width="60" height="34" fill="#93c5fd"/><rect x="150" y="40" width="60" height="34" fill="#93c5fd"/>'
+  +'<path d="M90 40 L90 74 M150 40 L150 74 M210 40 L210 74" stroke="#334155" stroke-width="1.5"/>'
+  +'<text x="150" y="30" font-size="12" text-anchor="middle">3/4</text>'
+  +'<circle cx="110" cy="135" r="26" fill="#fef9c3" stroke="#334155" stroke-width="2"/>'
+  +'<path d="M110 109 L110 135 L136 135 A26 26 0 0 1 110 161 Z" fill="#93c5fd" stroke="#334155"/>'
+  +'<path d="M110 109 L110 161 M84 135 L136 135" stroke="#334155" stroke-width="1.5"/>'
+  +'<text x="190" y="140" font-size="12" text-anchor="middle">1/2</text></svg>';
+}
+function svgAngles(){
+  const L=function(e,u){return esc(toolsL(e,u));};
+  return '<svg viewBox="0 0 300 180" width="100%" role="img" aria-label="'+L("Angles","زاویے")+'" style="max-width:320px;display:block;margin:.4rem auto">'
+  +'<path d="M30 130 L270 130" stroke="#334155" stroke-width="2"/>'
+  +'<path d="M150 130 L230 50" stroke="#334155" stroke-width="2"/>'
+  +'<path d="M150 130 L80 60" stroke="#334155" stroke-width="2"/>'
+  +'<path d="M170 130 A20 20 0 0 0 163 112" fill="none" stroke="#dc2626" stroke-width="2"/>'
+  +'<path d="M130 130 A20 20 0 0 1 137 112" fill="none" stroke="#2563eb" stroke-width="2"/>'
+  +'<text x="185" y="120" font-size="12">70°</text><text x="105" y="120" font-size="12">110°</text>'
+  +'<text x="150" y="160" font-size="12" text-anchor="middle">180° — '+L("Straight line","سیدھی لکیر")+'</text></svg>';
+}
+function svgNumberLine(){
+  const L=function(e,u){return esc(toolsL(e,u));};
+  var h='<svg viewBox="0 0 300 180" width="100%" role="img" aria-label="'+L("Number line","عدد کی لکیر")+'" style="max-width:320px;display:block;margin:.4rem auto">'
+  +'<path d="M20 90 L280 90" stroke="#334155" stroke-width="2"/><path d="M274 84 L286 90 L274 96 Z" fill="#334155"/>';
+  var i,x;for(i=-5;i<=5;i++){x=40+i*24;h+='<path d="M'+x+' 82 L'+x+' 98" stroke="#334155" stroke-width="1.5"/><text x="'+x+'" y="112" font-size="11" text-anchor="middle">'+i+'</text>';}
+  h+='<circle cx="88" cy="90" r="6" fill="#dc2626"/><circle cx="208" cy="90" r="6" fill="#16a34a"/>'
+  +'<text x="88" y="70" font-size="12" text-anchor="middle" fill="#dc2626">-2</text>'
+  +'<text x="208" y="70" font-size="12" text-anchor="middle" fill="#16a34a">3</text></svg>';
+  return h;
+}
+function svgBody(){
+  const L=function(e,u){return esc(toolsL(e,u));};
+  return '<svg viewBox="0 0 300 180" width="100%" role="img" aria-label="'+L("Human body","انسانی جسم")+'" style="max-width:320px;display:block;margin:.4rem auto">'
+  +'<circle cx="150" cy="30" r="18" fill="#fde68a" stroke="#92400e" stroke-width="2"/>'
+  +'<rect x="128" y="52" width="44" height="70" rx="12" fill="#bfdbfe" stroke="#1d4ed8" stroke-width="2"/>'
+  +'<path d="M128 60 L100 100 M172 60 L200 100" stroke="#1d4ed8" stroke-width="3"/>'
+  +'<path d="M138 122 L132 168 M162 122 L168 168" stroke="#1d4ed8" stroke-width="3"/>'
+  +'<circle cx="150" cy="76" r="8" fill="#ef4444"/><text x="196" y="80" font-size="11">'+L("Heart","دل")+'</text>'
+  +'<ellipse cx="150" cy="100" rx="10" ry="7" fill="#fca5a5" stroke="#991b1b"/>'
+  +'<text x="196" y="104" font-size="11">'+L("Stomach","معدہ")+'</text>'
+  +'<text x="196" y="30" font-size="11">'+L("Head","سر")+'</text>'
+  +'<text x="60" y="80" font-size="11">'+L("Lungs","پھیپھڑے")+'</text>'
+  +'<ellipse cx="138" cy="70" rx="7" ry="12" fill="#fca5a5" stroke="#991b1b"/><ellipse cx="162" cy="70" rx="7" ry="12" fill="#fca5a5" stroke="#991b1b"/></svg>';
+}
+function svgMagnet(){
+  const L=function(e,u){return esc(toolsL(e,u));};
+  return '<svg viewBox="0 0 300 180" width="100%" role="img" aria-label="'+L("Magnet","مقناطیس")+'" style="max-width:320px;display:block;margin:.4rem auto">'
+  +'<path d="M110 50 L110 110 A40 40 0 0 0 190 110 L190 50" fill="none" stroke="#dc2626" stroke-width="22"/>'
+  +'<path d="M110 50 L110 78" stroke="#e2e8f0" stroke-width="22"/>'
+  +'<path d="M190 50 L190 78" stroke="#e2e8f0" stroke-width="22"/>'
+  +'<text x="110" y="34" font-size="12" text-anchor="middle">N</text><text x="190" y="34" font-size="12" text-anchor="middle">S</text>'
+  +'<rect x="92" y="76" width="36" height="10" rx="3" fill="#64748b" stroke="#334155"/>'
+  +'<text x="110" y="108" font-size="11" text-anchor="middle">'+L("Iron nail","لوہے کی کیل")+'</text>'
+  +'<text x="150" y="168" font-size="11" text-anchor="middle">'+L("North","شمالی")+' / '+L("South","جنوبی")+'</text></svg>';
+}
+function svgRect(){
+  const L=function(e,u){return esc(toolsL(e,u));};
+  return '<svg viewBox="0 0 300 180" width="100%" role="img" aria-label="'+L("Rectangle","مستطیل")+'" style="max-width:320px;display:block;margin:.4rem auto">'
+  +'<rect x="60" y="50" width="180" height="80" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>'
+  +'<path d="M60 40 L240 40" stroke="#334155" stroke-width="1.5"/><path d="M60 40 L70 35 M60 40 L70 45 M240 40 L230 35 M240 40 L230 45" stroke="#334155" stroke-width="1.5"/>'
+  +'<text x="150" y="30" font-size="11" text-anchor="middle">'+L("Length","لمبائی")+'</text>'
+  +'<path d="M252 50 L252 130" stroke="#334155" stroke-width="1.5"/><path d="M252 50 L247 60 M252 50 L257 60 M252 130 L247 120 M252 130 L257 120" stroke="#334155" stroke-width="1.5"/>'
+  +'<text x="268" y="94" font-size="11" text-anchor="middle">'+L("Width","چوڑائی")+'</text></svg>';
+}
+function svgDiagram(id){
+  if(id==="water")return svgWaterCycle();
+  if(id==="plant")return svgPlant();
+  if(id==="circuit")return svgCircuit();
+  if(id==="pythag")return svgPythag();
+  if(id==="frac")return svgFrac();
+  if(id==="angles")return svgAngles();
+  if(id==="numberline")return svgNumberLine();
+  if(id==="body")return svgBody();
+  if(id==="magnet")return svgMagnet();
+  if(id==="rect")return svgRect();
+  return "";
+}
+const VISUAL_TABLES={
+"table-pct":{head:[{en:"Percent",ur:"فیصد"},{en:"Fraction",ur:"کسر"},{en:"Decimal",ur:"اعشاریہ"}],rows:[["25%","1/4","0.25"],["50%","1/2","0.5"],["75%","3/4","0.75"],["10%","1/10","0.1"]]},
+"table-tense":{head:[{en:"Past",ur:"ماضی"},{en:"Present",ur:"حال"},{en:"Future",ur:"مستقبل"}],rows:[[{en:"played",ur:"کھیلا"},{en:"play",ur:"کھیلتا ہے"},{en:"will play",ur:"کھیلے گا"}],[{en:"ate",ur:"کھایا"},{en:"eat",ur:"کھاتا ہے"},{en:"will eat",ur:"کھائے گا"}]]},
+"table-colour":{head:[{en:"Mix",ur:"ملائیں"},{en:"You get",ur:"بنے گا"}],rows:[[{en:"Red + Yellow",ur:"سرخ + پیلا"},{en:"Orange",ur:"نارنجی"}],[{en:"Blue + Yellow",ur:"نیلا + پیلا"},{en:"Green",ur:"سبز"}],[{en:"Red + Blue",ur:"سرخ + نیلا"},{en:"Purple",ur:"جامنی"}]]}
+};
+const TOPIC_VISUALS={"s-water":"water","s-plants":"plant","s-photo":"plant","s-elec":"circuit","s-mag":"magnet","s-digest":"body","m-frac":"frac","m-pct":"table-pct","e-tense":"table-tense","a-colour":"table-colour"};
+const THEOREM_VISUALS={"pyth":"pythag","anglesum":"angles","straight":"angles","point":"angles"};
+const PRACTICAL_VISUALS={"p-water":"water","p-circuit":"circuit","p-plant":"plant"};
+function visualTableHTML(spec){
+  var h='<table class="grid" style="margin:.4rem 0"><thead><tr>'+spec.head.map(function(c){return "<th>"+esc(toolsL(c.en,c.ur))+"</th>";}).join("")+'</tr></thead><tbody>';
+  spec.rows.forEach(function(r){h+="<tr>"+r.map(function(c){return "<td>"+esc(typeof c==="string"?c:toolsL(c.en,c.ur))+"</td>";}).join("")+"</tr>";});
+  return h+"</tbody></table>";
+}
+function visualHTML(spec){
+  if(!spec)return "";
+  if(spec==="table-pct"||spec==="table-tense"||spec==="table-colour")return visualTableHTML(VISUAL_TABLES[spec]);
+  return svgDiagram(spec);
+}
+function topicVisualHTML(tp){return visualHTML(TOPIC_VISUALS[tp.id]||"");}
+function theoremVisualHTML(th){return visualHTML(THEOREM_VISUALS[th.id]||"");}
+function practicalVisualHTML(p){return visualHTML(PRACTICAL_VISUALS[p.id]||"");}
+
+/* ================= Round 69 functions: daily question + textbook helper ================= */
+function escBr(s){return esc(s).replace(/\n/g,"<br>");}
+function qotdDayOfYear(iso){
+  const p=String(iso||"").split("-");if(p.length!==3)return 1;
+  const d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));const jan=new Date(Date.UTC(+p[0],0,1));
+  if(isNaN(d.getTime()))return 1;
+  return Math.floor((d-jan)/86400000)+1;
+}
+function qotdFor(iso){return DAILY_QUESTIONS[(qotdDayOfYear(iso)-1)%DAILY_QUESTIONS.length];}
+function qotdToday(){return qotdFor(todayISO());}
+function qotdShareText(q){return t("qotd_title")+": "+toolsL(q.q[0],q.q[1]);}
+function toolsShareNative(){return (typeof navigator!=="undefined")&&!!(navigator.share);}
+function toolsShareText(text){
+  if(toolsShareNative()){
+    return navigator.share({text:text}).then(function(){return {ok:true};}).catch(function(){return {ok:false,error:"share_fail"};});
+  }
+  return Promise.resolve({ok:false,error:"share_unsupported"});
+}
+var qotdOpen={};
+function qotdCardHTML(pfx){
+  const q=qotdToday();
+  var h='<div class="card"><h2>'+esc(t("qotd_title"))+'</h2>';
+  h+='<p><b>'+esc(toolsL(q.q[0],q.q[1]))+'</b></p>';
+  h+='<div id="'+pfx+'ans" style="display:'+(qotdOpen[pfx]?"block":"none")+'"><p><b>'+esc(t("tools_answer"))+':</b> '+esc(toolsL(q.a[0],q.a[1]))+'</p><p>'+esc(toolsL(q.why[0],q.why[1]))+'</p></div>';
+  h+='<button type="button" class="btn btn-primary" id="'+pfx+'tog">'+esc(t(qotdOpen[pfx]?"qotd_hide":"qotd_show"))+'</button> ';
+  h+='<button type="button" class="btn" id="'+pfx+'share">'+esc(t("qotd_share"))+'</button>';
+  if(!toolsShareNative()){
+    h+='<div style="margin-top:.4rem"><a class="btn btn-sm" href="https://wa.me/?text='+encodeURIComponent(qotdShareText(q))+'" target="_blank" rel="noopener">WhatsApp</a> <a class="btn btn-sm" href="mailto:?subject='+encodeURIComponent(t("qotd_title"))+'&body='+encodeURIComponent(qotdShareText(q))+'">Email</a></div>';
+  }
+  h+='<div id="'+pfx+'msg"></div></div>';
+  return h;
+}
+function bindQotd(pfx){
+  const tg=$(pfx+"tog"),sh=$(pfx+"share"),an=$(pfx+"ans"),mg=$(pfx+"msg");
+  if(tg)tg.onclick=function(){
+    qotdOpen[pfx]=!qotdOpen[pfx];
+    if(an)an.style.display=qotdOpen[pfx]?"block":"none";
+    tg.textContent=t(qotdOpen[pfx]?"qotd_hide":"qotd_show");
+  };
+  if(sh)sh.onclick=function(){
+    toolsShareText(qotdShareText(qotdToday())).then(function(r){
+      if(mg)mg.textContent=r.ok?"":t("qotd_share_fail");
+    });
+  };
+}
+function qotdToolsHTML(){return qotdCardHTML("tl-qotd-");}
+function teachStrategyFor(sub){return TEACH_STRATEGIES.find(function(s){return s.sub===sub;})||null;}
+function teachStrategiesHTML(sub){
+  const s=teachStrategyFor(sub);if(!s)return "";
+  var h='<div class="card" style="margin-top:.6rem"><h3>'+esc(t("tb_strat_title"))+' — '+esc(t("tools_sub_"+sub))+'</h3>';
+  h+='<ul>'+s.tips.map(function(x){return "<li>"+esc(toolsL(x.en,x.ur))+"</li>";}).join("")+'</ul>';
+  h+='<p><b>'+esc(t("tb_watch"))+':</b></p><ul>'+s.mistakes.map(function(x){return "<li>"+esc(toolsL(x.en,x.ur))+"</li>";}).join("")+'</ul>';
+  h+='<p><b>'+esc(t("tb_like"))+':</b> '+esc(toolsL(s.analogy[0],s.analogy[1]))+'</p></div>';
+  return h;
+}
+function tbPrompt(subject,chapter,text){
+  return "You are helping a primary/middle school teacher in Pakistan. Read the textbook text below and answer in SIMPLE English, short sentences.\nSubject: "+subject+"\nChapter: "+chapter+"\nText:\n"+text+"\n\nWrite exactly three sections with these headings:\nSUMMARY: 4-6 short sentences covering what the chapter teaches.\nTEACH: 3 short tips on how to teach this chapter, plus 1 common pupil mistake.\nANSWERS: worked answers for the exercises in the text, step by step, in simple words. If an exercise has no clear answer in the text, say so instead of guessing.";
+}
+function tbParseGuide(text){
+  const out={summary:"",teach:"",answers:""};
+  const src=String(text||"");
+  const heads=(src.match(/SUMMARY\s*:|TEACH\s*:|ANSWERS\s*:/gi)||[]).map(function(x){return x.replace(/[:\s]/g,"").toLowerCase();});
+  const parts=src.split(/SUMMARY\s*:|TEACH\s*:|ANSWERS\s*:/i);
+  heads.forEach(function(hd,i){const body=(parts[i+1]||"").trim();if(hd==="summary")out.summary=body;else if(hd==="teach")out.teach=body;else if(hd==="answers")out.answers=body;});
+  return out;
+}
+function tbExtract(subject,chapter,text,part){
+  const key=geminiKey();
+  if(!key)return Promise.resolve({ok:false,error:"gemini_no_key"});
+  const prompt=tbPrompt(subject,chapter,text||"See the attached page.");
+  const parts=[{text:prompt}];if(part)parts.push(part);
+  return geminiCall(key,{contents:[{parts:parts}],generationConfig:{temperature:0.2}}).then(function(r){
+    if(r.status!==200){const rs=geminiReason(r.status,r.body);return {ok:false,error:rs==="invalid_key"||rs==="not_allowed"?"gemini_key_bad":rs==="model"?"gemini_model":rs==="busy"?"gemini_busy":"gemini_offline"};}
+    const data=r.body||{};const cand=(data.candidates||[])[0];
+    const txt=((cand&&cand.content&&cand.content.parts)||[]).map(function(p){return p.text||"";}).join("");
+    if(!txt.trim())return {ok:false,error:"gemini_empty"};
+    return {ok:true,guide:tbParseGuide(txt)};
+  }).catch(function(){return {ok:false,error:"gemini_offline"};});
+}
+function addTextbookGuide(g){
+  g=g||{};
+  if(!g.subject||!g.chapter)return {ok:false,error:"tb_need"};
+  const text=String(g.text||"").slice(0,8000);
+  if(!text&&!g.summary&&!g.teach&&!g.answers)return {ok:false,error:"tb_need"};
+  const rec={id:uid("tb"),at:tsNow(),subject:g.subject,chapter:String(g.chapter).slice(0,200),text:text,summary:String(g.summary||"").slice(0,8000),teach:String(g.teach||"").slice(0,8000),answers:String(g.answers||"").slice(0,12000),vis:g.vis||""};
+  dbArr("textbookGuides").push(rec);Store.save();return {ok:true,guide:rec};
+}
+function getTextbookGuide(id){return dbArr("textbookGuides").find(function(x){return x.id===id;})||null;}
+function deleteTextbookGuide(id){
+  const arr=dbArr("textbookGuides");const i=arr.findIndex(function(x){return x.id===id;});
+  if(i<0)return {ok:false};arr.splice(i,1);Store.save();return {ok:true};
+}
+function tbShareText(g){return t("tb_title")+": "+g.chapter+"\n"+String(g.summary||"").slice(0,500);}
+function textbookGuideHTML(g){
+  var h='<div class="card"><h3>'+esc(g.chapter)+' <span class="chip">'+esc(t("tools_sub_"+g.subject))+'</span></h3>';
+  if(g.summary)h+='<h4>'+esc(t("tb_summary"))+'</h4><p>'+escBr(g.summary)+'</p>';
+  if(g.teach)h+='<h4>'+esc(t("tb_strat"))+'</h4><p>'+escBr(g.teach)+'</p>';
+  if(g.answers)h+='<h4>'+esc(t("tb_solved"))+'</h4><p>'+escBr(g.answers)+'</p>';
+  if(!g.summary&&!g.teach&&!g.answers)h+=teachStrategiesHTML(g.subject);
+  var vis=svgDiagram(g.vis||"");
+  if(vis)h+=vis;
+  if(g.text)h+='<details><summary>'+esc(t("tb_paste"))+'</summary><p>'+escBr(g.text.slice(0,2000))+'</p></details>';
+  h+='<button type="button" class="btn" id="tb-print">'+esc(t("print"))+'</button> <button type="button" class="btn" id="tb-share">'+esc(t("qotd_share"))+'</button></div>';
+  return h;
+}
+function tbPrintHTML(g){
+  var h=schoolHead(t("tb_title"))+'<h3>'+esc(g.chapter)+' — '+esc(t("tools_sub_"+g.subject))+'</h3>';
+  if(g.summary)h+='<h4>'+esc(t("tb_summary"))+'</h4><p>'+escBr(g.summary)+'</p>';
+  if(g.teach)h+='<h4>'+esc(t("tb_strat"))+'</h4><p>'+escBr(g.teach)+'</p>';
+  if(g.answers)h+='<h4>'+esc(t("tb_solved"))+'</h4><p>'+escBr(g.answers)+'</p>';
+  return h;
+}
+var tbPendingPart=null,tbPendingName="",tbLastGuide="";
+function textbookHTML(){
+  var h='<div class="card"><h2>'+esc(t("tb_title"))+'</h2><p>'+esc(t("tb_sub"))+'</p>';
+  h+='<div><b>'+esc(t("subject_name"))+'</b><br><select id="tb-sub" class="search">'+["maths","english","science","islamiat","urdu","social","art"].map(function(s){return '<option value="'+s+'">'+esc(t("tools_sub_"+s))+'</option>';}).join("")+'</select></div>';
+  h+='<div><b>'+esc(t("tb_chapter"))+'</b><br><input class="search" id="tb-ch" placeholder=""></div>';
+  h+='<div><b>'+esc(t("tb_paste"))+'</b><br><textarea class="search" id="tb-text" rows="4"></textarea></div>';
+  h+='<div><b>'+esc(t("tb_upload"))+'</b><br><input type="file" id="tb-file" accept="image/*,application/pdf"> <span id="tb-file-lbl"></span></div>';
+  h+='<div><b>'+esc(t("tb_visual"))+'</b><br><select id="tb-vis" class="search"><option value="">'+esc(t("tb_none_vis"))+'</option>'+TB_VIS_OPTIONS.map(function(o){return '<option value="'+o.id+'">'+esc(toolsL(o.en,o.ur))+'</option>';}).join("")+'</select></div>';
+  h+='<button type="button" class="btn btn-primary" id="tb-go">'+esc(t("tb_get"))+'</button> <span id="tb-msg"></span>';
+  h+='<div id="tb-out"></div>';
+  const gs=dbArr("textbookGuides");
+  h+='<h3 style="margin-top:.8rem">'+esc(t("tb_mine"))+'</h3>';
+  h+=gs.length?gs.map(function(g){return '<div class="card" style="margin-bottom:.4rem"><b>'+esc(g.chapter)+'</b> <span class="chip">'+esc(t("tools_sub_"+g.subject))+'</span> <button type="button" class="btn btn-sm" data-tb-open="'+g.id+'">'+esc(t("tb_open"))+'</button> <button type="button" class="btn btn-sm" data-tb-del="'+g.id+'">'+esc(t("del"))+'</button></div>';}).join(""):'<p>'+esc(t("no_records"))+'</p>';
+  const lg=tbLastGuide?getTextbookGuide(tbLastGuide):null;
+  h+='<div id="tb-view">'+(lg?textbookGuideHTML(lg):"")+'</div></div>';
+  return h;
+}
+function bindTextbook(){
+  const go=$("tb-go");if(!go)return;
+  const file=$("tb-file");
+  if(file)file.onchange=function(){
+    const f=file.files&&file.files[0];if(!f)return;
+    docImpFileParts(f).then(function(p){
+      if(p.ok){tbPendingPart=p.part;tbPendingName=f.name||"";const l=$("tb-file-lbl");if(l)l.textContent=tbPendingName;}
+      else{tbPendingPart=null;const m=$("tb-msg");if(m)m.textContent=t("docimp_badfile");}
+    });
+  };
+  go.onclick=function(){
+    const sub=($("tb-sub")||{}).value||"science";
+    const ch=(($("tb-ch")||{}).value||"").trim();
+    const tx=(($("tb-text")||{}).value||"").trim();
+    const vis=($("tb-vis")||{}).value||"";
+    const msg=$("tb-msg");
+    if(!ch||(!tx&&!tbPendingPart)){if(msg)msg.textContent=t("tb_need");return;}
+    if(msg)msg.textContent=t("gemini_thinking");
+    const part=tbPendingPart;tbPendingPart=null;tbPendingName="";if(file)file.value="";
+    if(!geminiKey()){
+      // No-key path: save the pasted text and show the SEEDED strategies — never a fake solution.
+      const r=addTextbookGuide({subject:sub,chapter:ch,text:tx,vis:vis});
+      if(r.ok){tbLastGuide=r.guide.id;render();}
+      return;
+    }
+    tbExtract(sub,ch,tx,part).then(function(r){
+      if(!r.ok){if(msg)msg.textContent=t(r.error||"gemini_offline");return;}
+      const g2=addTextbookGuide({subject:sub,chapter:ch,text:tx,summary:r.guide.summary,teach:r.guide.teach,answers:r.guide.answers,vis:vis});
+      if(g2.ok){tbLastGuide=g2.guide.id;render();}
+    });
+  };
+  Array.prototype.forEach.call(document.querySelectorAll("[data-tb-open]"),function(b){
+    b.onclick=function(){
+      const g=getTextbookGuide(b.getAttribute("data-tb-open"));if(!g)return;
+      tbLastGuide=g.id;const v=$("tb-view");if(v){v.innerHTML=textbookGuideHTML(g);bindTbViewButtons(g);}
+    };
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-tb-del]"),function(b){
+    b.onclick=function(){if(confirm(t("confirm_del"))){if(tbLastGuide===b.getAttribute("data-tb-del"))tbLastGuide="";deleteTextbookGuide(b.getAttribute("data-tb-del"));render();}};
+  });
+  const lg=tbLastGuide?getTextbookGuide(tbLastGuide):null;
+  if(lg)bindTbViewButtons(lg);
+}
+function bindTbViewButtons(g){
+  const pr=$("tb-print");if(pr)pr.onclick=function(){doPrint(tbPrintHTML(g));};
+  const sh=$("tb-share");if(sh)sh.onclick=function(){toolsShareText(tbShareText(g));};
+}
+
 function viewTools(){
   var h='<div class="card"><h2>'+esc(t("tools_title"))+'</h2><p class="muted">'+esc(t("tools_sub"))+'</p></div>';
-  h+=toolsCalcHTML()+toolsSolversHTML()+toolsTheoremsHTML()+toolsClassHTML()+toolsExplainerHTML()+toolsPracticalsHTML();
+  h+=qotdToolsHTML()+toolsCalcHTML()+toolsSolversHTML()+toolsTheoremsHTML()+toolsClassHTML()+toolsExplainerHTML()+toolsPracticalsHTML()+textbookHTML();
   return h;
 }
 function afterTools(){
@@ -20784,6 +21219,7 @@ function afterTools(){
   var q=$("tl-exp-q");
   if(q)q.oninput=function(){toolsExpQuery=q.value;$("tl-exp-list").innerHTML=toolsExpListHTML();toolsBindExpMore();};
   toolsBindExpChips();toolsBindExpMore();
+  bindQotd("tl-qotd-");bindTextbook();
 }
 
 const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,LANGS:LANGS,langDir:langDir,langOrder:langOrder,
@@ -20831,7 +21267,7 @@ const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,LAN
   captureStudentPhoto:captureStudentPhoto,storageBytes:storageBytes,storageMeterHTML:storageMeterHTML,
   scanFromText:scanFromText,docImpPrompt:docImpPrompt,docImpParseResponse:docImpParseResponse,docImpNormDate:docImpNormDate,docImpNormAdm:docImpNormAdm,docImpNormMarks:docImpNormMarks,docImpNormAtt:docImpNormAtt,findStudentByName:findStudentByName,docImpFlagRows:docImpFlagRows,docImpCommit:docImpCommit,docImpUndo:docImpUndo,docImpLastBatch:docImpLastBatch,docImpFileParts:docImpFileParts,docImpExtract:docImpExtract,docImpExtractFromParts:docImpExtractFromParts,docImpCardHTML:docImpCardHTML,docImpPaint:docImpPaint,bindDocImp:bindDocImp,docImpUndoClick:docImpUndoClick,
   viewDossier:viewDossier,
-  toolsCalcEval:toolsCalcEval,toolsFmtNum:toolsFmtNum,solveArith:solveArith,solveFraction:solveFraction,solvePercent:solvePercent,solveHcfLcm:solveHcfLcm,solveLinear:solveLinear,solveQuad:solveQuad,solveInterest:solveInterest,solveShape:solveShape,convertUnits:convertUnits,tablesData:tablesData,tablesAllData:tablesAllData,countWorkingDays:countWorkingDays,calcAgeYMD:calcAgeYMD,toolsPickNext:toolsPickNext,makeGroups:makeGroups,solvePythagoras:solvePythagoras,solveAngleSum:solveAngleSum,solveStraightLine:solveStraightLine,solveAroundPoint:solveAroundPoint,solveTriangleArea:solveTriangleArea,solveCircleTh:solveCircleTh,solveParallel:solveParallel,checkCongSim:checkCongSim,EXPLAIN_TOPICS:EXPLAIN_TOPICS,PRACTICALS:PRACTICALS,THEOREMS:THEOREMS,CONV_UNITS:CONV_UNITS,viewTools:viewTools};
+  toolsCalcEval:toolsCalcEval,toolsFmtNum:toolsFmtNum,solveArith:solveArith,solveFraction:solveFraction,solvePercent:solvePercent,solveHcfLcm:solveHcfLcm,solveLinear:solveLinear,solveQuad:solveQuad,solveInterest:solveInterest,solveShape:solveShape,convertUnits:convertUnits,tablesData:tablesData,tablesAllData:tablesAllData,countWorkingDays:countWorkingDays,calcAgeYMD:calcAgeYMD,toolsPickNext:toolsPickNext,makeGroups:makeGroups,solvePythagoras:solvePythagoras,solveAngleSum:solveAngleSum,solveStraightLine:solveStraightLine,solveAroundPoint:solveAroundPoint,solveTriangleArea:solveTriangleArea,solveCircleTh:solveCircleTh,solveParallel:solveParallel,checkCongSim:checkCongSim,EXPLAIN_TOPICS:EXPLAIN_TOPICS,PRACTICALS:PRACTICALS,THEOREMS:THEOREMS,CONV_UNITS:CONV_UNITS,qotdFor:qotdFor,qotdToday:qotdToday,qotdDayOfYear:qotdDayOfYear,DAILY_QUESTIONS:DAILY_QUESTIONS,TEACH_STRATEGIES:TEACH_STRATEGIES,teachStrategyFor:teachStrategyFor,tbParseGuide:tbParseGuide,tbPrompt:tbPrompt,addTextbookGuide:addTextbookGuide,getTextbookGuide:getTextbookGuide,deleteTextbookGuide:deleteTextbookGuide,textbookGuideHTML:textbookGuideHTML,tbPrintHTML:tbPrintHTML,topicVisualHTML:topicVisualHTML,theoremVisualHTML:theoremVisualHTML,practicalVisualHTML:practicalVisualHTML,svgDiagram:svgDiagram,svgWaterCycle:svgWaterCycle,visualHTML:visualHTML,teachStrategiesHTML:teachStrategiesHTML,toolsShareText:toolsShareText,qotdShareText:qotdShareText,qotdCardHTML:qotdCardHTML,textbookHTML:textbookHTML,viewTools:viewTools};
 function initApp(){db();takeSnapshot("auto");applyLang();
   if(parentHashFromURL()){parentMode=true;parentSchoolId=parentSchoolFromURL();}
   if(verifyHashFromURL()||verifyCodeFromURL()){verifyMode=true;}
