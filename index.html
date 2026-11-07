@@ -16989,8 +16989,15 @@ function askGeminiSummary(){
    caller goes through this one function — Ask, the key tests, imports, the
    explainer "Tell me more", and the Round 69 textbook helper when it lands
    — so the fix covers all of them. Tests may set GEMINI_TUNING fields
-   (retryDelays, testCooldownMs, minGapMs) for speed; the app never does. */
-var GEMINI_TUNING={retryDelays:[2000,5000,10000],testCooldownMs:45000,minGapMs:1500};
+   (retryDelays, testCooldownMs, minGapMs, requestTimeoutMs) for speed; the app never does.
+   ROUND 74b (2026-11-07): a request can also HANG — the fetch never settles
+   — and no retry or queue can rescue a promise that never settles, so the
+   teacher stared at the loading indicator for 90+ seconds. geminiCallOnce
+   now races every request against requestTimeoutMs (default 20s,
+   AbortController where the browser has one): a timed-out request resolves
+   as a flagged busy result {status:429, timeout:true} and fails fast with
+   the honest busy message — it is NOT retried, and the queue moves on. */
+var GEMINI_TUNING={retryDelays:[2000,5000,10000],testCooldownMs:45000,minGapMs:1500,requestTimeoutMs:20000};
 var geminiQueue=Promise.resolve();
 var geminiLastStart=0;
 var geminiLastTestAt=0;
@@ -16998,11 +17005,29 @@ var askBusy=false;
 function geminiSleep(ms){return new Promise(function(res){setTimeout(res,ms);});}
 function geminiCallOnce(key,body){
   if(typeof fetch==="undefined")return Promise.reject(new Error("no fetch"));
-  return fetch("https://generativelanguage.googleapis.com/v1beta/models/"+GEMINI_MODEL+":generateContent?key="+encodeURIComponent(key),{
-    method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)
-  }).then(function(res){
-    return res.json().then(function(b){return {status:res.status,body:b};}).catch(function(){return {status:res.status,body:null};});
+  var opts={method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)};
+  var ctrl=null;
+  if(typeof AbortController!=="undefined"){ctrl=new AbortController();opts.signal=ctrl.signal;}
+  var fetchP=fetch("https://generativelanguage.googleapis.com/v1beta/models/"+GEMINI_MODEL+":generateContent?key="+encodeURIComponent(key),opts).then(function(res){
+    return res.json().then(function(b){return {status:res.status,body:b};}).catch(function(err){
+      if(err&&err.name==="AbortError")return {status:429,body:null,timeout:true};
+      return {status:res.status,body:null};
+    });
+  }).catch(function(err){
+    if(err&&err.name==="AbortError")return {status:429,body:null,timeout:true};
+    throw err;
   });
+  fetchP.catch(function(){}); /* a late rejection after the race has settled must stay silent */
+  var timeoutMs=GEMINI_TUNING.requestTimeoutMs;
+  if(!timeoutMs||timeoutMs<=0)return fetchP;
+  var timeoutId=null;
+  var timeoutP=new Promise(function(resolve){
+    timeoutId=setTimeout(function(){
+      if(ctrl){try{ctrl.abort();}catch(e){}}
+      resolve({status:429,body:null,timeout:true});
+    },timeoutMs);
+  });
+  return Promise.race([fetchP.then(function(r){if(timeoutId)clearTimeout(timeoutId);return r;},function(e){if(timeoutId)clearTimeout(timeoutId);throw e;}),timeoutP]);
 }
 function geminiCallWithRetry(key,body,onWait){
   var attempt=0;
@@ -17014,6 +17039,7 @@ function geminiCallWithRetry(key,body,onWait){
       geminiLastStart=Date.now();
       return geminiCallOnce(key,body);
     }).then(function(r){
+      if(r.timeout)return r; /* Round 74b: a timed-out request fails fast with the honest busy message — no retry */
       if((r.status===429||r.status===500||r.status===502||r.status===503)&&attempt<1+GEMINI_TUNING.retryDelays.length){
         if(onWait)onWait(attempt);
         var dly=GEMINI_TUNING.retryDelays[attempt-1];
@@ -20681,6 +20707,8 @@ function toolsExpMoreClick(id){
   var tp=null;EXPLAIN_TOPICS.forEach(function(x){if(x.id===id)tp=x;});if(!tp)return;
   var box=$("tl-exp-more-"+id);if(!box)return;
   if(!geminiKey()){box.innerHTML='<div class="muted">'+esc(t("ask_nomatch"))+'</div><p class="muted">✨ '+esc(t("gemini_hint_short"))+'</p>';return;}
+  var moreBtn=document.querySelector('[data-more="'+id+'"]');
+  if(moreBtn)moreBtn.disabled=true; /* Round 74b: one tap at a time — the button cannot pile requests onto the queue while an answer is pending */
   box.innerHTML='<p class="muted">⏳</p>';
   var title=toolsL(tp.en.t,tp.ur.t);
   geminiCall(geminiKey(),{contents:[{parts:[{text:"Explain briefly in simple words for a primary school teacher in Pakistan: "+title+". Keep it short, 4 to 6 short sentences."}]}],generationConfig:{temperature:0.3}},function(){box.innerHTML='<p class="muted">'+esc(t("gemini_waiting"))+'</p>';})
@@ -20690,7 +20718,7 @@ function toolsExpMoreClick(id){
     var txt=parts.map(function(p){return p.text||"";}).join("").trim();
     if(!txt){box.innerHTML='<div class="msg err">'+esc(t("gemini_empty"))+'</div>';return;}
     box.innerHTML='<div style="white-space:pre-wrap">'+esc(txt)+'</div>';
-  }).catch(function(){box.innerHTML='<div class="msg err">'+esc(t("gemini_offline"))+'</div>';});
+  }).catch(function(){box.innerHTML='<div class="msg err">'+esc(t("gemini_offline"))+'</div>';}).then(function(){if(moreBtn)moreBtn.disabled=false;},function(){if(moreBtn)moreBtn.disabled=false;});
 }
 function toolsBindExpMore(){
   Array.prototype.forEach.call(document.querySelectorAll("[data-more]"),function(b){
