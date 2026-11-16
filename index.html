@@ -11649,7 +11649,9 @@ var MIGRATIONS=[
        loads, so the synchronous local-db runner cannot stamp
        it. The stamp executes from onAuth (ensurePriceLocked
        + best-effort merge-set, exactly once per doc: a doc
-       that already has priceLocked is never re-stamped).
+       that already has priceLocked is never re-stamped, and
+       the stamped value is the current matrix price — the
+       single price source; stored locks never move).
        This step records the rollout in meta.migratedTo like
        every other migration, and gives the too-new guard its
        meaning for pricing-aware builds. No local field is
@@ -12041,10 +12043,11 @@ const Cloud = {
         if(self.school.blocked){self.authError="school_blocked";try{self.auth.signOut();}catch(e){}self.authResolved=true;render();return;}
         if(self.school.status==="deleted"){self.authError="school_deleted";try{self.auth.signOut();}catch(e){}self.authResolved=true;render();return;}
         self.readOnly=subLifecycle(self.school).readOnly;
-        /* Round 95: grandfathering migration — a school doc with no
-           priceLocked locks the legacy pack price (never the matrix).
-           Best-effort write; schoolPrice() falls back in memory even
-           if this write fails. */
+        /* Round 95 + Round 140: price-lock migration — a school doc
+           with no priceLocked locks the CURRENT MATRIX price (the
+           single price source). Stored locks never move. Best-effort
+           write; schoolPrice() falls back in memory even if this
+           write fails. */
         const pl95=ensurePriceLocked(self.school);
         if(pl95){self.school.priceLocked=pl95;try{self.fs.collection("schools").doc(sid).set({priceLocked:pl95},{merge:true}).catch(function(){});}catch(e){}}
         if(self.school.name){db().settings.schoolName=self.school.name;Store.trySave();}
@@ -18810,6 +18813,9 @@ function schoolCountry(){
 }
 function countryPriceText(code){
   const p=countryPack(code);
+  const tier=countryTier(code);
+  const pr=tier?priceFor(tier,"school","monthly"):null;
+  if(pr)return pr.currency+" "+fmtNum(pr.amount)+" "+t("pricing_per_month")+(p.note?" ("+p.note+")":"");
   return p.cur+" "+fmtNum(p.price)+" "+t("pricing_per_month")+(p.note?" ("+p.note+")":"");
 }
 
@@ -18823,7 +18829,7 @@ let pricingMode=false;
    - checkoutUrl stays "" until the Phase B backend builds Polar
      checkout. Never invent a Polar URL.
    - A locked price NEVER moves: schoolPrice() returns priceLocked when
-     present, else the legacy pack price (grandfathering).
+     present, else the current matrix price (Round 140 single source).
    - capacityStatus() reports campuses/storage/AI as measured:false —
      this base cannot measure them, so they are never invented. */
 const TIER_TABLE_VERSION="FY27";
@@ -19134,14 +19140,22 @@ function priceLockedFor(tier,type){
   if(!mo||!an)return null;
   return {tier:tier,type:type,monthly:mo.amount,annual:an.amount,currency:mo.currency,lockedAt:todayISO(),checkoutUrl:""};
 }
-/* Grandfathering migration (pure): a school doc with no priceLocked
-   locks the LEGACY pack price for its country — never the matrix.
-   Returns the priceLocked object, or null when one already exists. */
+/* Round 140: price-lock fallback (pure) — a school doc with no
+   priceLocked locks the CURRENT MATRIX price for its country + type
+   (the single price source; platform/pricing overrides flow through
+   priceFor). Returns the priceLocked object, or null when one already
+   exists. A stored lock NEVER moves. A country with no tier (or an
+   unknown type) falls back to the legacy pack price so the function
+   never throws and never returns an empty price. */
 function ensurePriceLocked(school){
   school=school||{};
   if(school.priceLocked)return null;
+  const tier=countryTier(school.country||"PK");
+  const type=school.instType||"school";
+  const mo=priceFor(tier,type,"monthly"),an=priceFor(tier,type,"annual");
+  if(mo&&an)return {tier:tier,type:type,monthly:mo.amount,annual:an.amount,currency:mo.currency,lockedAt:todayISO(),lockedReason:"grandfathered",checkoutUrl:""};
   const pk=countryPack(school.country||"PK");
-  return {tier:countryTier(school.country||"PK"),type:school.instType||"school",monthly:pk.price,annual:annualPrice(pk),currency:pk.cur,lockedAt:todayISO(),lockedReason:"grandfathered",checkoutUrl:""};
+  return {tier:tier,type:type,monthly:pk.price,annual:annualPrice(pk),currency:pk.cur,lockedAt:todayISO(),lockedReason:"grandfathered",checkoutUrl:""};
 }
 function schoolPrice(school){
   school=school||{};
@@ -23304,10 +23318,10 @@ function subStripHTML(){
     /* teacher: one line of state only, no payment action */
     return '<div class="card"><b>'+esc(planTxt)+'</b> • '+esc((due.state==="active"&&until)?t("sub_until")+": "+until:stateTxt)+'</div>';
   }
-  var pk=countryPack(s.country||"PK");
+  var lp=schoolPrice(s);
   var cycle=s.billing==="annual"?"annual":"monthly";
-  var amt=subAmountFor(pk,cycle);
-  return '<div class="card"><h3>'+esc(t("school_sub"))+'</h3><p><b>'+esc(planTxt)+'</b> • '+esc(stateTxt)+(until?' • '+esc(t("sub_until"))+": "+esc(until):"")+' • <b>'+esc(pk.cur+" "+fmtNum(amt))+'</b> '+esc(cycle==="annual"?t("sub_annual"):t("sub_monthly"))+'</p>'+
+  var amt=subAmountFor(lp,cycle);
+  return '<div class="card"><h3>'+esc(t("school_sub"))+'</h3><p><b>'+esc(planTxt)+'</b> • '+esc(stateTxt)+(until?' • '+esc(t("sub_until"))+": "+esc(until):"")+' • <b>'+esc(lp.currency+" "+fmtNum(amt))+'</b> '+esc(cycle==="annual"?t("sub_annual"):t("sub_monthly"))+'</p>'+
     '<div class="toolbar"><button type="button" class="btn btn-sm btn-primary" data-subreport>'+esc(t("sub_report"))+'</button></div></div>';
 }
 function homeTeamHTML(list,readOnly){
