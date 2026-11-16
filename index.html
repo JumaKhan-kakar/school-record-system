@@ -12074,7 +12074,8 @@ const Cloud = {
   },
   signIn: function(email,pass){
     const self=this;
-    return self.auth.signInWithEmailAndPassword(email,pass).then(function(){return {ok:true};}).catch(function(e){
+    if(!self.auth)return Promise.resolve({ok:false,error:t("login_fail")});
+    return self.timed(self.auth.signInWithEmailAndPassword(email,pass)).then(function(){return {ok:true};}).catch(function(e){
       return {ok:false,error:t("login_fail")};
     });
   },
@@ -15916,7 +15917,7 @@ function viewHomework(){
     '<div class="field"><label>'+esc(t("hw_due"))+'</label><input id="hw-due" type="date"></div>'+
     '<div id="hw-msg"></div><div id="hw-draftmsg"></div>'+
     '<button type="button" class="btn btn-primary" id="hw-add">'+esc(t("hw_add"))+"</button></div>"+
-    '<div id="hw-list">'+(list.length?list.map(hwItemHTML).join(""):emptyStateHTML(t("es_hw_t"),t("es_hw_h"),t("es_hw_b"),"hw"))+"</div>"+noticesViewHTML();
+    '<div id="hw-list">'+(list.length?list.map(hwItemHTML).join(""):emptyStateHTML(t("es_hw_t"),t("es_hw_h"),t("es_hw_b"),"hw"))+"</div>";
   return h;
 }
 function afterHomework(){
@@ -15955,7 +15956,6 @@ function afterHomework(){
   document.querySelectorAll("[data-hwdel]").forEach(function(b){
     b.onclick=function(){if(!confirm(t("confirm_del")))return;deleteHomework(b.getAttribute("data-hwdel"));render();};
   });
-  wireNotices();
 }
 
 function viewBroadcast(){
@@ -16626,6 +16626,9 @@ function wireNotices(){
     b.onclick=function(){if(!confirm(t("confirm_del")))return;const r=deleteNotice(b.getAttribute("data-ntdel"));render();const mg=$("nt-msg");if(r.ok&&mg)mg.innerHTML='<div class="msg">\u2705 '+esc(t("nt_deleted"))+'</div>';};
   });
 }
+/* ---- Round 141: Notices get their own tab ---- */
+function viewNotices(){return noticesViewHTML();}
+function afterNotices(){if(!ntPubDone&&publishAllNotices())ntPubDone=true;wireNotices();}
 function noticesParentHTML(doc){
   const items=(doc&&doc.notices)||[];
   let h='<div class="card" style="max-width:480px;margin:1rem auto"><h3>\uD83D\uDCE2 '+esc(t("nt_title"))+'</h3>';
@@ -20302,7 +20305,7 @@ Object.assign(T,{
 tools_days:{en:"days",ur:"دن",bn:"দিন",hi:"दिन",ne:"दिनहरू",sw:"siku",ar:"أيام",zh:"天",es:"días",fr:"jours",pt:"dias",ru:"дней",id:"hari",de:"Tage",ja:"日",pa:"دن",mr:"दिवस",te:"రోజులు",fa:"روز",tr:"gün",ta:"நாட்கள்",vi:"ngày",ko:"일",tl:"araw",ha:"kwanaki",it:"giorni",ps:"ورځې",ms:"hari",yo:"ọjọ́",ig:"ụbọchị"},
 });
 
-const TABS=[["home","nav_home"],["adm","nav_adm"],["dob","nav_dob"],["exam","nav_exam"],["result","nav_result"],["att","nav_att"],["fee","nav_fee"],["staff","nav_staff"],["bc","nav_bc"],["hw","nav_hw"],["tr","nav_transport"],["lib","nav_library"],["cmp","nav_complaints"],["tt","nav_tt"],["he","nav_highered"],["lab","nav_lab"],["cert","nav_cert"],["tools","nav_tools"],["admin","nav_admin"],["settings","nav_settings"]];
+const TABS=[["home","nav_home"],["adm","nav_adm"],["dob","nav_dob"],["exam","nav_exam"],["result","nav_result"],["att","nav_att"],["fee","nav_fee"],["staff","nav_staff"],["bc","nav_bc"],["hw","nav_hw"],["tr","nav_transport"],["lib","nav_library"],["cmp","nav_complaints"],["nt","nt_title"],["tt","nav_tt"],["he","nav_highered"],["lab","nav_lab"],["cert","nav_cert"],["tools","nav_tools"],["admin","nav_admin"],["settings","nav_settings"]];
 /* Which tab each module toggle controls (Round 22). Shared by renderTabs and quickLinksHTML. */
 const TAB_ON={fee:feesOn,att:attOn,staff:staffOn,bc:bcOn,hw:hwOn,tr:transportOn,lib:libOn,cmp:cmpOn,tt:ttOn,lab:labOn,cert:certOn,he:heOn,admin:function(){return typeof Cloud!=="undefined"&&!!Cloud.isSuperAdmin;}};
 /* ================= Round 81: professional SaaS look — nav icons, groups, hero canvas =================
@@ -20312,7 +20315,7 @@ const TAB_ON={fee:feesOn,att:attOn,staff:staffOn,bc:bcOn,hw:hwOn,tr:transportOn,
    — data-group attributes + grp-first gaps only; Round 53 confirms the
    mapping and adds grouped rendering + group labels. Home is the dashboard
    and stays ungrouped, always first. */
-const TAB_ICON={home:"🏠",adm:"👤",dob:"🎂",exam:"📝",result:"📊",att:"✅",fee:"💰",staff:"👥",bc:"📣",hw:"📚",tr:"🚌",lib:"📖",cmp:"💬",tt:"🗓️",he:"🎓",lab:"🧪",cert:"📜",tools:"🛠️",admin:"👑",settings:"⚙️"};
+const TAB_ICON={home:"🏠",adm:"👤",dob:"🎂",exam:"📝",result:"📊",att:"✅",fee:"💰",staff:"👥",bc:"📣",hw:"📚",tr:"🚌",lib:"📖",cmp:"💬",nt:"📢",tt:"🗓️",he:"🎓",lab:"🧪",cert:"📜",tools:"🛠️",admin:"👑",settings:"⚙️"};
 const TAB_GROUPS={students:["adm","dob"],teaching:["exam","result","att","hw","tt","he","lab","tools"],money:["fee","staff","bc"],parents:["cmp","tr","lib","cert"],school:["admin","settings"]};
 function tabGroup(id){for(const g in TAB_GROUPS)if(TAB_GROUPS[g].indexOf(id)>=0)return g;return "";}
 /* Login/signup hero canvas: slow floating shapes, pure JS, no library.
@@ -20368,7 +20371,7 @@ function heroCanvasStart(){
 const NAV_GROUPS=[{id:"students",key:"nav_group_students",tabs:["home","adm","dob"]},
   {id:"teaching",key:"nav_group_teaching",tabs:["exam","result","att","tt","hw","lib","he","tools"]},
   {id:"money",key:"nav_group_money",tabs:["fee","staff","tr"]},
-  {id:"parents",key:"nav_group_parents",tabs:["bc","cmp"]},
+  {id:"parents",key:"nav_group_parents",tabs:["bc","cmp","nt"]},
   {id:"school",key:"nav_group_school",tabs:["lab","cert","admin"]}];
 const NAV_ICONS={
   home:'<path d="M3 11l9-8 9 8"/><path d="M5 9.5V21h14V9.5"/>',
@@ -20384,6 +20387,7 @@ const NAV_ICONS={
   tr:'<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M3 11h18"/><circle cx="7.5" cy="20" r="1.6"/><circle cx="16.5" cy="20" r="1.6"/>',
   lib:'<path d="M4 4h5v16H4zM10 4h5v16h-5zM16 5l4-1 1 16-4 1z"/>',
   cmp:'<path d="M4 4h16v12H8l-4 4V4z"/><path d="M12 8v4M12 16h.01"/>',
+  nt:'<path d="M4 10v4h3l7 4V6l-7 4H4z"/><path d="M17 9a4 4 0 010 6"/>',
   tt:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M9.5 10v11M15 10v11"/>',
   he:'<path d="M2 9l10-5 10 5-10 5L2 9z"/><path d="M6 11.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-4.5"/><path d="M22 9v5"/>',
   lab:'<path d="M9 3h6M10 3v6l-5.2 9.4A2 2 0 006.5 21h11a2 2 0 001.7-2.6L14 9V3"/><path d="M7.5 15h9"/>',
@@ -21936,6 +21940,9 @@ function renderLogin(){
     Cloud.signIn(em,pw).then(function(r){
       $("lg-go").disabled=false;
       if(!r.ok)$("lg-msg").innerHTML='<div class="msg err">'+esc(r.error||t("login_fail"))+'</div>';
+    }).catch(function(){
+      $("lg-go").disabled=false;
+      $("lg-msg").innerHTML='<div class="msg err">'+esc(t("login_fail"))+'</div>';
     });
   };
   const lf=$("lg-forgot");
@@ -22020,8 +22027,8 @@ function render(){
   const demoBanner=demoMode?'<div class="msg warnm" style="margin:.5rem 0">🎓 <b>'+esc(t("demo_school"))+'</b> — '+esc(t("demo_banner"))+' <button type="button" class="btn btn-sm" id="demo-leave" style="margin-left:.4rem">'+esc(t("demo_leave"))+"</button></div>":"";
   v.innerHTML = offlineBannerHTML()+demoBanner+roBanner+(curTab==="home"?viewHome():curTab==="adm"?viewAdm():curTab==="dob"?viewDob():
     curTab==="exam"?viewExam():curTab==="result"?viewResult():curTab==="att"?viewAtt():curTab==="fee"?viewFee():curTab==="staff"?viewStaff():curTab==="bc"?viewBroadcast():curTab==="hw"?viewHomework():curTab==="tr"?viewTransport():curTab==="lib"?viewLibrary():curTab==="cmp"?viewComplaints():curTab==="tt"?viewTimetable():curTab==="he"?viewHigherEd():curTab==="lab"?viewLab():
-    curTab==="tools"?viewTools():curTab==="cert"?viewCert():curTab==="admin"?viewAdmin():viewSettings());
-  const fns={home:afterHome,adm:afterAdm,dob:afterDob,exam:afterExam,result:afterResult,att:afterAtt,fee:afterFee,staff:afterStaff,bc:afterBroadcast,hw:afterHomework,tr:afterTransport,lib:afterLibrary,cmp:afterComplaints,tt:afterTimetable,he:afterHigherEd,lab:afterLab,cert:afterCert,tools:afterTools,admin:afterAdmin,settings:afterSettings};
+    curTab==="tools"?viewTools():curTab==="cert"?viewCert():curTab==="admin"?viewAdmin():curTab==="nt"?viewNotices():viewSettings());
+  const fns={home:afterHome,adm:afterAdm,dob:afterDob,exam:afterExam,result:afterResult,att:afterAtt,fee:afterFee,staff:afterStaff,bc:afterBroadcast,hw:afterHomework,tr:afterTransport,lib:afterLibrary,cmp:afterComplaints,nt:afterNotices,tt:afterTimetable,he:afterHigherEd,lab:afterLab,cert:afterCert,tools:afterTools,admin:afterAdmin,settings:afterSettings};
   if(fns[curTab])fns[curTab]();
   const dl=$("demo-leave");if(dl)dl.onclick=function(){leaveDemo();render();};
   if(ks75){v.scrollTop=ks75.vt;if(typeof window!=="undefined")window.scrollTo(0,ks75.wy);}
@@ -23720,8 +23727,8 @@ function afterHome(){
      head team block (async fill). */
   loadHomeTeam();
   Array.prototype.forEach.call(document.querySelectorAll("[data-subreport]"),function(b){b.onclick=function(){setOpen.sub=true;curTab="settings";render();};});
-  const hlt=$("help-legal-terms");if(hlt)hlt.onclick=function(){termsMode=true;render();};
-  const hlp=$("help-legal-privacy");if(hlp)hlp.onclick=function(){privacyMode=true;render();};
+  const hlt=$("help-legal-terms");if(hlt)hlt.onclick=function(e){if(e&&e.preventDefault)e.preventDefault();termsMode=true;render();};
+  const hlp=$("help-legal-privacy");if(hlp)hlp.onclick=function(e){if(e&&e.preventDefault)e.preventDefault();privacyMode=true;render();};
 }
 /* ---- unified student dossier ---- */
 function feeDossierHTML(st){
@@ -27266,8 +27273,8 @@ function afterSettings(){
   if(ub)ub.onclick=function(){const r=sessionUndoClose();const m=$("ses-msg");if(m)m.innerHTML=r.ok?'<div class="msg okm">'+esc(t("saved_ok"))+"</div>":'<div class="msg err">'+esc(r.error||r.code||t("req"))+"</div>";if(r.ok)render();};
   const lt=$("legal-terms");if(lt)lt.onclick=function(){termsMode=true;render();};
   const lp2=$("legal-privacy");if(lp2)lp2.onclick=function(){privacyMode=true;render();};
-  const hlt=$("help-legal-terms");if(hlt)hlt.onclick=function(){termsMode=true;render();};
-  const hlp=$("help-legal-privacy");if(hlp)hlp.onclick=function(){privacyMode=true;render();};
+  const hlt=$("help-legal-terms");if(hlt)hlt.onclick=function(e){if(e&&e.preventDefault)e.preventDefault();termsMode=true;render();};
+  const hlp=$("help-legal-privacy");if(hlp)hlp.onclick=function(e){if(e&&e.preventDefault)e.preventDefault();privacyMode=true;render();};
   bindSyncTest();
 }
 
@@ -28077,6 +28084,7 @@ const FAB_GEMINI_DEST=[
   {kw:["fee","fees","payment","challan"],tab:"fee",sec:"fee_title"},
   {kw:["salary","salaries","teacher","staff"],tab:"staff",sec:"staff_title"},
   {kw:["broadcast","whatsapp","message to parents"],tab:"bc",sec:"bc_title"},
+  {kw:["notice","notices","announcement","announcements"],tab:"nt",sec:"nt_title"},
   {kw:["homework","assignment"],tab:"hw",sec:"hw_title"},
   {kw:["transport","bus","route","van"],tab:"tr",sec:"tr_title"},
   {kw:["question of the day","daily question"],tab:"tools",sec:"qotd_title"},
