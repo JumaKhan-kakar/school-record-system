@@ -23032,16 +23032,12 @@ function setupSteps(){
      name+phone, students, fees, timetable, first marks) is superseded:
      timetable and first marks are usage, not setup, and the other three
      are items (a), (d) and (f) of the new list.
-     Round 137 carry-forward (composition): the WhatsApp step survives as
-     a 9th row, second after identity (its R137 position). Its condition
-     (schoolPhone set) is also part of the parents item, so completion
-     agrees: 8/8 on the checklist always means 9/9 here, and the card
-     shows the WhatsApp prompt distinctly while the phone is missing. */
+     Round 151: the WhatsApp row was removed so the Home card shows the
+     same 8 items the count describes; the phone prompt survives in the
+     parents item's hint. */
   const items=setupChecklist(db()).items.map(function(it){
     return {key:it.key, done:it.done, tab:it.tab};
   });
-  const d=db();
-  items.splice(1,0,{key:"setup_step_whatsapp",done:!!(d.settings&&String(d.settings.schoolPhone||"").trim()),tab:"settings"});
   return items;
 }
 function setupCardHTML(){
