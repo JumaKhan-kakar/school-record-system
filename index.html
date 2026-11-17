@@ -23784,6 +23784,9 @@ function viewDossier(id){
     '<button type="button" class="btn btn-sm" id="dos-print-prev">'+esc(t("print_preview"))+"</button> "+
     '<button type="button" class="btn btn-sm" id="dos-idcard">'+esc(t("idcard_print"))+"</button> "+
     '<button type="button" class="btn btn-sm" id="dos-idcard-prev">'+esc(t("print_preview"))+"</button> "+
+    /* Round 147: delete button for departed students only — the register
+       never lists them, so the dossier is their only delete path. */
+    (stEnrolled(st)?"":'<button type="button" class="btn btn-sm btn-danger" id="dos-delete">'+esc(t("del"))+"</button> ")+
     '<label class="btn btn-sm">'+esc(st.photo?t("photo_change"):t("capture_photo"))+
     '<input id="dos-photo" type="file" accept="image/*" style="display:none"></label>'+
     '<div class="idrow" style="margin:.5rem 0">'+studentPhotoHTML(st,56)+"<h2 style=\"margin:0\">"+esc(displayName(st))+"</h2></div>"+
@@ -23903,6 +23906,20 @@ function afterDossier(){
   if(dw)dw.onclick=function(){const st=db().students.find(function(s){return s.id===dossierId;});if(!st)return;const reason=prompt(t("att_flag_reason"));if(reason==null||!String(reason).trim())return;if(!confirm(t("ses_withdraw")+" — "+displayName(st)))return;const r=withdrawStudent(dossierId,reason);if(r.ok)render();};
   const ra=$("dos-readmit");
   if(ra)ra.onclick=function(){const r=readmitStudent(dossierId);if(r.ok)render();};
+  /* Round 147: dossier delete — mirrors the Admissions-register delete
+     handler exactly (confirm -> guarded delete -> second confirm with
+     blockers -> force delete); on success the dossier closes. */
+  const dd=$("dos-delete");
+  if(dd)dd.onclick=function(){
+    if(!confirm(t("confirm_del")))return;
+    var _r=deleteStudent(dossierId);
+    if(_r.ok){dossierId=null;render();return;}
+    if(_r.blockers&&_r.blockers.length){
+      var _m=t("del_blocked")+"\n• "+_r.blockers.map(function(x){return t("del_block_"+x);}).join("\n• ");
+      if(confirm(_m+"\n\n"+t("del_blocked_force"))){deleteStudent(dossierId,{force:true});dossierId=null;}
+    }
+    render();
+  };
   bindIncidents();
 }
 function dossierPrintHTML(studentId){
