@@ -25873,6 +25873,9 @@ function viewResult(){
     '<button type="button" class="btn btn-sm btn-primary" id="r-batch">'+esc(t("print_all_cards"))+"</button> "+
     '<button type="button" class="btn btn-sm" id="r-publish">'+esc(t("publish_results"))+"</button> "+
     '<button type="button" class="btn btn-sm" id="r-unpublish">'+esc(t("unpublish_results"))+"</button></div>"+
+    /* Round 146: persistent parent-link card — the school's public parent
+       link, shown on every Results render, not only after a publish. */
+    (parentLink()?'<div class="card" style="margin-top:.5rem"><b>'+esc(t("publish_link"))+'</b><br><span style="word-break:break-all">'+esc(parentLink())+"</span></div>":"")+
     '<div id="r-pubmsg"></div>'+
     '<div id="r-stale"></div>'+
     '<div id="r-sheet"></div><div id="r-awardbox" style="margin-top:1rem"></div></div>';
