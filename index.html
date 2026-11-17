@@ -18078,7 +18078,8 @@ function feeRecon(date){
   const recs=db().feeRecords||[];
   let payments=0,refunds=0,receipts=0,cash=0,digital=0,newBills=0,concessions=0,fines=0;
   recs.forEach(function(rec){
-    if(rec.at===date)newBills+=Number(rec.createdTotal||rec.total||0)-Number(rec.createdDiscount||0)+Number(rec.createdFine||0);
+    /* Round 148: rec.at may carry a full timestamp — compare its calendar date, so a bill created today is not lost from both the opening and the new bills. */
+    if(feePayDate(rec.at)===date)newBills+=Number(rec.createdTotal||rec.total||0)-Number(rec.createdDiscount||0)+Number(rec.createdFine||0);
     (rec.payments||[]).forEach(function(p){
       if(feePayDate(p.at)!==date)return;
       const amt=Number(p.amount||0);
@@ -18086,7 +18087,7 @@ function feeRecon(date){
       if(p.method==="Cash")cash+=amt;else digital+=amt;
     });
     (rec.refunds||[]).forEach(function(r){
-      const d=r.at||feePayDate(r.ts);
+      const d=feePayDate(r.at)||feePayDate(r.ts);
       if(d===date)refunds+=Number(r.amount||0);
     });
   });
@@ -18101,7 +18102,7 @@ function feeRecon(date){
      (created before this round) count as pre-existing. */
   let opening=0;
   recs.forEach(function(rec){
-    if(rec.at&&rec.at>=date)return;
+    const d0=feePayDate(rec.at);if(d0&&d0>=date)return;
     let disc=Number(rec.discount||0),fine=Number(rec.fine||0);
     (db().feeAdjustments||[]).forEach(function(a){
       if(a.studentId===rec.studentId&&a.month===rec.month&&a.date>=date){
@@ -18111,7 +18112,7 @@ function feeRecon(date){
     });
     let paidBefore=0,refBefore=0;
     (rec.payments||[]).forEach(function(p){const d=feePayDate(p.at);if(d!==""&&d<date)paidBefore+=Number(p.amount||0);});
-    (rec.refunds||[]).forEach(function(r){const d=r.at||feePayDate(r.ts);if(d!==""&&d<date)refBefore+=Number(r.amount||0);});
+    (rec.refunds||[]).forEach(function(r){const d=feePayDate(r.at)||feePayDate(r.ts);if(d!==""&&d<date)refBefore+=Number(r.amount||0);});
     opening+=Number(rec.total||0)-disc+fine-paidBefore+refBefore;
   });
   const closing=opening+newBills-concessions-payments+refunds+fines;
