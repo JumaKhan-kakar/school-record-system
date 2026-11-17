@@ -26408,26 +26408,30 @@ function afterCert(){
   };
   $("c-type").onchange=drawCertFields;
   drawCertFields();
+  function certShowMsg(html){
+    $("c-msg").innerHTML=html;
+    try{$("c-msg").scrollIntoView({block:"start"});}catch(e){}
+  }
   $("c-issue").onclick=function(){
     const d={issueDate:$("c-date").value,reason:$("c-reason").value,remarks:$("c-remarks").value,purpose:$("c-purpose").value,conduct:$("c-conduct").value};
     const r=issueCertificate($("c-stu").value,$("c-type").value,d);
     if(!r.ok&&r.dup){
       /* Round 135 (F41): a live leaving certificate already exists — offer
          the override as an explicit second tap, same values, force set. */
-      $("c-msg").innerHTML='<div class="msg warn">'+esc(r.error)+"</div>"+
-        '<button type="button" class="btn btn-sm btn-danger" id="c-force">'+esc(t("cert_issue_anyway"))+"</button>";
+      certShowMsg('<div class="msg warn">'+esc(r.error)+"</div>"+
+        '<button type="button" class="btn btn-sm btn-danger" id="c-force">'+esc(t("cert_issue_anyway"))+"</button>");
       $("c-force").onclick=function(){
         const r2=issueCertificate($("c-stu").value,$("c-type").value,d,{force:true});
-        if(!r2.ok){$("c-msg").innerHTML='<div class="msg err">'+esc(r2.error)+"</div>";return;}
+        if(!r2.ok){certShowMsg('<div class="msg err">'+esc(r2.error)+"</div>");return;}
         certIssueFor=null;
-        $("c-msg").innerHTML='<div class="msg okm">'+esc(t("cert_issued_ok"))+": <b>"+esc(r2.cert.serial)+"</b> • "+esc(t("verify_code"))+": <b>"+esc(r2.cert.verifyCode||"—")+"</b></div>";
+        certShowMsg('<div class="msg okm">'+esc(t("cert_issued_ok"))+": <b>"+esc(r2.cert.serial)+"</b> • "+esc(t("verify_code"))+": <b>"+esc(r2.cert.verifyCode||"—")+"</b></div>");
         drawRows();
       };
       return;
     }
-    if(!r.ok){$("c-msg").innerHTML='<div class="msg err">'+esc(r.error)+"</div>";return;}
+    if(!r.ok){certShowMsg('<div class="msg err">'+esc(r.error)+"</div>");return;}
     certIssueFor=null;draftClear("cert");certDraftVals=null;certRecoveredAt=null;
-    $("c-msg").innerHTML='<div class="msg okm">'+esc(t("cert_issued_ok"))+": <b>"+esc(r.cert.serial)+"</b> • "+esc(t("verify_code"))+": <b>"+esc(r.cert.verifyCode||"—")+"</b></div>";
+    certShowMsg('<div class="msg okm">'+esc(t("cert_issued_ok"))+": <b>"+esc(r.cert.serial)+"</b> • "+esc(t("verify_code"))+": <b>"+esc(r.cert.verifyCode||"—")+"</b></div>");
     drawRows();
   };
   const drawRows=function(){
