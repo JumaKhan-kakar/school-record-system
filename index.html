@@ -19554,16 +19554,19 @@ function sectionClasses(){
   out.sort(function(a,b){const ra=secRank(a),rb=secRank(b);if(ra!==rb)return ra-rb;return a<b?-1:a>b?1:0;});
   return out;
 }
+/* ---- Round 145: section lists are LIVE surfaces — departed students
+   (left/transferred) are excluded, so the list, printout, CSV export and
+   share text agree with the Admission Register and the enrolled counts. ---- */
 function studentsInScope(scope){
   if(!scope)return [];
-  if(scope==="all")return studentsOfAll();
+  if(scope==="all")return studentsOfAll().filter(stEnrolled);
   if(scope==="primary"||scope==="middle"||scope==="high"){
     const set=SECTION_CLASSES[scope];
-    return studentsOfAll().filter(function(s){return set.indexOf(normClassLabel(s.cls))>=0;});
+    return studentsOfAll().filter(function(s){return set.indexOf(normClassLabel(s.cls))>=0&&stEnrolled(s);});
   }
   if(scope.indexOf("cls:")===0){
     const want=scope.slice(4);
-    return studentsOfAll().filter(function(s){return normClassLabel(s.cls)===want;});
+    return studentsOfAll().filter(function(s){return normClassLabel(s.cls)===want&&stEnrolled(s);});
   }
   return [];
 }
