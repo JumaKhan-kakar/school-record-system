@@ -18450,7 +18450,7 @@ function viewFee(){
     '<div class="toolbar"><span class="chip">'+esc(t("fee_billed"))+": <b>"+sum.billed+"</b></span>"+
     '<span class="chip">'+esc(t("fee_collected"))+": <b>"+sum.collected+"</b></span>"+
     '<span class="chip">'+esc(t("fee_outstanding"))+": <b>"+sum.outstanding+"</b></span>"+
-    '<span class="chip">'+esc(t("fee_defaulters"))+": <b>"+sum.defaulters+"</b></span></div>"+
+    '<span class="chip">'+esc(t("fee_defaulters"))+": <b>"+sum.defaulters+"</b></span>"+'<span class="muted">('+esc(t("fee_all_classes"))+')</span>'+"</div>"+
     '<div class="toolbar"><span class="chip">'+esc(t("fee_full"))+": <b>"+sum.full+"</b></span>"+
     '<span class="chip">'+esc(t("fee_half"))+": <b>"+sum.half+"</b></span>"+
     '<span class="chip">'+esc(t("fee_quarter"))+": <b>"+sum.quarter+"</b></span>"+
@@ -18458,7 +18458,7 @@ function viewFee(){
     '<span class="chip">'+esc(t("fee_unpaid"))+": <b>"+sum.unpaid+"</b></span></div>";
   h+='<h3 style="margin:.8rem 0 .3rem">'+esc(t("fee_heads"))+"</h3>"+
     (db().feeHeads||[]).map(function(hd){
-      return '<div class="toolbar"><span>'+esc(hd.name)+" — <b>"+hd.amount+"</b>"+(hd.cls?" ("+esc(hd.cls)+")":"")+"</span>"+
+      return '<div class="toolbar"><span>'+esc(hd.name)+" — <b>"+hd.amount+"</b>"+(hd.cls?" ("+esc(t("cls"))+" "+esc(hd.cls)+")":"")+"</span>"+
         '<button type="button" class="btn btn-sm btn-danger fee-del-head" data-id="'+hd.id+'">✕</button></div>';
     }).join("")+((db().feeHeads||[]).length?"":emptyStateHTML(t("es_fee_t"),t("es_fee_h"),t("es_fee_b"),"fee"))+
     '<div class="toolbar"><input id="fh-name" placeholder="'+esc(t("fee_head_name"))+'" style="min-width:140px">'+
@@ -23441,7 +23441,7 @@ function wizCardHTML(){
     const heads=db().feeHeads||[];
     h+='<h3>'+esc(t("wiz_s3_title"))+'</h3><p class="muted">'+esc(t("wiz_s3_hint"))+'</p>';
     h+='<h3 style="margin:.8rem 0 .3rem">'+esc(t("fee_heads"))+'</h3>';
-    h+=heads.map(function(hd){return '<div class="toolbar"><span>'+esc(hd.name)+" — <b>"+hd.amount+"</b>"+(hd.cls?" ("+esc(hd.cls)+")":"")+"</span></div>";}).join("")||'<p class="muted">'+esc(t("wiz_s3_need"))+'</p>';
+    h+=heads.map(function(hd){return '<div class="toolbar"><span>'+esc(hd.name)+" — <b>"+hd.amount+"</b>"+(hd.cls?" ("+esc(t("cls"))+" "+esc(hd.cls)+")":"")+"</span></div>";}).join("")||'<p class="muted">'+esc(t("wiz_s3_need"))+'</p>';
     h+='<div class="toolbar"><input id="wiz-s3-name" placeholder="'+esc(t("fee_head_name"))+'" style="min-width:140px">'+
       '<input id="wiz-s3-amount" inputmode="numeric" placeholder="'+esc(t("fee_amount"))+'" style="width:100px">'+
       '<input id="wiz-s3-cls" placeholder="'+esc(t("fee_all_classes"))+'" style="width:110px">'+
@@ -24012,17 +24012,14 @@ function viewAdm(){
   admFlash=null;
   if(admPinList&&admPinList.length)h+=impPinListHTML(admPinList);
   admPinList=null;
-  h+=regPhotoHTML();
-  h+=studentPhotoCardHTML(st);
-  h+=guardianIdCardHTML(st);
   h+='<div class="grid2">'+
-    fld("f_name",micField("a-name",'<input id="a-name" value="'+esc(f.name)+'">'))+
-    fld("father_name",micField("a-father",'<input id="a-father" value="'+esc(f.fatherName)+'">'))+
-    fld("dob",'<input id="a-dob" type="date" max="'+todayISO()+'" value="'+esc(f.dob)+'">')+
-    fld("gender",'<select id="a-gender"><option value=""'+(f.gender?"":" selected")+'>—</option><option value="male"'+(f.gender==="male"?" selected":"")+'>'+esc(t("male"))+'</option><option value="female"'+(f.gender==="female"?" selected":"")+'>'+esc(t("female"))+'</option><option value="other"'+(f.gender==="other"?" selected":"")+'>'+esc(t("gender_other"))+'</option></select>')+
-    fld("cls",'<input id="a-cls" value="'+esc(f.cls)+'">')+
+    fld("f_name",micField("a-name",'<input id="a-name" value="'+esc(f.name)+'">'),"req")+
+    fld("father_name",micField("a-father",'<input id="a-father" value="'+esc(f.fatherName)+'">'),"req")+
+    fld("dob",'<input id="a-dob" type="date" max="'+todayISO()+'" value="'+esc(f.dob)+'">',"req")+
+    fld("gender",'<select id="a-gender"><option value=""'+(f.gender?"":" selected")+'>—</option><option value="male"'+(f.gender==="male"?" selected":"")+'>'+esc(t("male"))+'</option><option value="female"'+(f.gender==="female"?" selected":"")+'>'+esc(t("female"))+'</option><option value="other"'+(f.gender==="other"?" selected":"")+'>'+esc(t("gender_other"))+'</option></select>',"req")+
+    fld("cls",'<input id="a-cls" list="a-cls-list" value="'+esc(f.cls)+'"><datalist id="a-cls-list">'+admClsList.map(function(c){return '<option value="'+esc(c)+'"></option>';}).join("")+'</datalist>',"req")+
     fld("section",'<input id="a-sec" value="'+esc(f.section)+'">',1)+
-    fld("adm_date",'<input id="a-admdate" type="date" value="'+esc(f.admDate)+'">')+
+    fld("adm_date",'<input id="a-admdate" type="date" value="'+esc(f.admDate)+'">',"req")+
     fld("contact",'<input id="a-contact" inputmode="tel" value="'+esc(f.contact)+'">')+
     fld("pin",'<input id="a-pin" type="password" inputmode="numeric" value="'+esc(f.pin||"")+'" placeholder="'+esc(t("pin_ph"))+'">')+
     "</div>"+
@@ -24030,8 +24027,11 @@ function viewAdm(){
     fld("address",micField("a-address",'<input id="a-address" value="'+esc(f.address)+'">'))+
     micNoteHTML()+
     '<button type="button" class="btn btn-primary" id="a-save">'+esc(st?t("save"):t("add_student"))+"</button> "+
-    (st?'<button type="button" class="btn" id="a-cancel">'+esc(t("cancel"))+"</button> ":"")+
-    "</div>";
+    (st?'<button type="button" class="btn" id="a-cancel">'+esc(t("cancel"))+"</button> ":"");
+  h+=regPhotoHTML();
+  h+=studentPhotoCardHTML(st);
+  h+=guardianIdCardHTML(st);
+  h+="</div>";
   h+='<div class="card"><h3>'+esc(t("imp_title"))+'</h3><p class="muted">'+esc(t("fast_entry"))+'</p>'+
     '<div class="toolbar"><button type="button" class="btn btn-sm" id="a-template">'+esc(t("dl_template"))+'</button>'+
     '<label class="btn btn-sm">'+esc(t("import_csv"))+'<input id="a-import" type="file" accept=".csv,text/csv" style="display:none"></label></div>'+
@@ -24055,7 +24055,7 @@ function viewAdm(){
   }
   return h;
 }
-function fld(labelKey,inner,opt){return '<div class="field"><label>'+esc(t(labelKey))+(opt?' <span class="muted" style="font-weight:400">('+esc(t("optional"))+')</span>':"")+"</label>"+inner+"</div>";}
+function fld(labelKey,inner,opt){return '<div class="field"><label>'+esc(t(labelKey))+(opt==="req"?' <span style="color:#DC2626" aria-hidden="true">*</span>':(opt?' <span class="muted" style="font-weight:400">('+esc(t("optional"))+')</span>':""))+"</label>"+inner+"</div>";}
 function afterAdm(){
   const q=$("a-q");
   const draw=function(){
@@ -26345,7 +26345,7 @@ function certPrintHTML(certId){
   h+='<p dir="ltr">'+esc(paraEn)+'</p><p dir="rtl" lang="ur">'+esc(paraUr)+"</p>";
   if(c.type==="bon"&&c.purpose)h+="<p><b>"+esc(bl("bl_purpose"))+":</b> "+esc(c.purpose)+"</p>";
   if(c.type==="char"&&c.conduct)h+="<p><b>"+esc(bl("bl_conduct"))+":</b> "+esc(c.conduct)+"</p>";
-  if(c.reason)h+="<p><b>"+esc(bl("bl_reason"))+":</b> "+esc(c.reason)+"</p>";
+  if((c.type==="slc"||c.type==="trf")&&c.reason)h+="<p><b>"+esc(bl("bl_reason"))+":</b> "+esc(c.reason)+"</p>";
   if(c.remarks)h+="<p><b>"+esc(bl("bl_remarks"))+":</b> "+esc(c.remarks)+"</p>";
   if(c.status==="void")h+='<p><b>'+esc(t("cert_voided"))+":</b> "+esc(c.serial)+"</p>";
   if(c.status!=="void"&&c.verifyCode&&c.verifySchool&&c.verifySchool!=="local")h+=verifyBlockHTML(c.verifyCode,verifyURL(c.verifyCode,c.verifySchool));
@@ -26371,7 +26371,7 @@ function viewCert(){
     '</option><option value="char">'+esc(t("cert_char"))+'</option><option value="trf">'+esc(t("cert_trf"))+"</option></select></div>"+
     '<div class="field"><label>'+esc(t("cert_issue_date"))+'</label><input id="c-date" type="date" value="'+todayISO()+'"></div>'+
     "</div>"+
-    '<div class="field"><label>'+esc(t("cert_reason"))+'</label><input id="c-reason" placeholder="'+esc(t("cert_reason_ph"))+'"></div>'+
+    '<div class="field" id="c-reason-row"><label>'+esc(t("cert_reason"))+'</label><input id="c-reason" placeholder="'+esc(t("cert_reason_ph"))+'"></div>'+
     '<div class="field"><label>'+esc(t("cert_remarks"))+'</label><input id="c-remarks"></div>'+
     '<div class="field" id="c-purpose-row"><label>'+esc(t("cert_purpose"))+'</label><input id="c-purpose"></div>'+
     '<div class="field" id="c-conduct-row"><label>'+esc(t("cert_conduct"))+'</label><input id="c-conduct"></div>'+
@@ -26414,6 +26414,7 @@ function afterCert(){
     const ty=$("c-type").value,pr=$("c-purpose-row"),cr=$("c-conduct-row");
     if(pr)pr.style.display=ty==="bon"?"":"none";
     if(cr)cr.style.display=ty==="char"?"":"none";
+    const rr=$("c-reason-row");if(rr)rr.style.display=(ty==="slc"||ty==="trf")?"":"none";
   };
   $("c-type").onchange=drawCertFields;
   drawCertFields();
