@@ -13089,6 +13089,7 @@ function addGuardianId(studentId,rel,side,dataUrl){
   if(!st)return {ok:false,error:t("req")};
   if(GID_RELATIONS.indexOf(rel)<0||(side!=="front"&&side!=="back")||!dataUrl)return {ok:false,error:t("req")};
   if(dataUrl.length>GID_MAX_CHARS)return {ok:false,error:t("photo_big")};
+  if(!storageFits(dataUrl.length,0))return {ok:false,error:storageCapMsg()};
   const arr=guardianIdsOf(st);if(!st.guardianIds)st.guardianIds=arr;
   arr.push({id:uid("gid"),relation:rel,side:side,dataUrl:dataUrl,at:tsNow()});
   if(!Store.trySave()){arr.pop();return {ok:false,error:t("photo_quota")};}
@@ -13176,10 +13177,11 @@ function fmtStorageBytes(b){
 /* Bytes of photos + logo held by THIS school (data-URL strings are
    stored verbatim in Firestore, so string length IS the byte count). */
 function schoolStorageUsage(){
-  const d=db();let photos=0,photoBytes=0;
-  (d.students||[]).forEach(function(st){if(st.photo){photos++;photoBytes+=String(st.photo).length;}});
+  const d=db();let photos=0,photoBytes=0,otherBytes=0;
+  (d.students||[]).forEach(function(st){if(st.photo){photos++;photoBytes+=String(st.photo).length;}guardianIdsOf(st).forEach(function(g){otherBytes+=String((g&&g.dataUrl)||"").length;});});
   const logoBytes=String((d.settings&&d.settings.logoDataUrl)||"").length;
-  return {photos:photos,photoBytes:photoBytes,logoBytes:logoBytes,totalBytes:photoBytes+logoBytes,students:(d.students||[]).length};
+  otherBytes+=String((d.settings&&d.settings.regPhotoDataUrl)||"").length;
+  return {photos:photos,photoBytes:photoBytes,logoBytes:logoBytes,otherBytes:otherBytes,totalBytes:photoBytes+logoBytes+otherBytes,students:(d.students||[]).length};
 }
 /* The school's photo cap in MB: the admin-set value on the school doc,
    else the default. Clamped 1..1024; a missing/zero value means default. */
@@ -24191,7 +24193,7 @@ function afterAdm(){
     const f=apf.files[0];if(!f)return;
     if(f.size>300*1024){alert(t("photo_big"));return;}
     const rd=new FileReader();
-    rd.onload=function(){db().settings.regPhotoDataUrl=rd.result;Store.save();render();};
+    rd.onload=function(){if(!storageFits(rd.result.length,(db().settings.regPhotoDataUrl||"").length)){alert(storageCapMsg());return;}db().settings.regPhotoDataUrl=rd.result;Store.save();render();};
     rd.readAsDataURL(f);
   };
   const apd=$("a-photodel");
