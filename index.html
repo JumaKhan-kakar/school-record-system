@@ -12360,7 +12360,14 @@ const Cloud = {
       return self.fs.collection("schools").doc(schoolId).set({name:r.schoolName,plan:"trial",status:"active",trialEndsAt:trialEnds,billing:"monthly",country:r.country||"PK",contactEmail:r.email||"",blocked:false,instType:instType95,state:String(r.state||""),district:String(r.district||""),tier:tier95,priceLocked:pl95}).then(function(){
         perfCount("write");
         return self.fs.collection("signupRequests").doc(reqId).set({status:"approved",schoolId:schoolId},{merge:true});
-      }).then(function(){return {ok:true,schoolId:schoolId};});
+      }).then(function(){
+        const nm=String(r.contactName||"").trim(),em=String(r.email||"").trim().toLowerCase();
+        if(!nm||!validEmail(em))return {ok:true,schoolId:schoolId,invite:{ok:false,error:"no-contact"}};
+        return self.inviteTeacher(nm,em,{schoolId:schoolId,role:"admin"}).then(function(iv){
+          if(iv&&iv.ok)return {ok:true,schoolId:schoolId,invite:{ok:true}};
+          return {ok:true,schoolId:schoolId,invite:{ok:false,error:(iv&&iv.error)||t("login_fail")}};
+        });
+      });
     }).catch(function(){return {ok:false};});
   },
   rejectSignup: function(reqId,note){
@@ -12534,7 +12541,7 @@ const Cloud = {
       return self._secondaryAuth;
     }catch(e){return null;}
   },
-  inviteTeacher: function(name,email){
+  inviteTeacher: function(name,email,opts){
     const self=this;
     name=String(name||"").trim();email=String(email||"").trim().toLowerCase();
     if(!self.fs||!isSchoolAdmin()||!name||!validEmail(email))return Promise.resolve({ok:false,error:t("req")});
@@ -12544,7 +12551,7 @@ const Cloud = {
       const uid=cred&&cred.user?cred.user.uid:"";
       if(!uid)return {ok:false,error:t("login_fail")};
       perfCount("write");
-      return self.fs.collection("teachers").doc(uid).set({name:name,email:email,role:"teacher",schoolId:self.schoolId,at:tsNow(),disabled:false}).then(function(){
+      return self.fs.collection("teachers").doc(uid).set({name:name,email:email,role:(opts&&self.isSuperAdmin&&(opts.role==="admin"||opts.role==="teacher"))?opts.role:"teacher",schoolId:(opts&&self.isSuperAdmin&&String(opts.schoolId||"").trim())?String(opts.schoolId).trim():self.schoolId,at:tsNow(),disabled:false}).then(function(){
         return self.auth.sendPasswordResetEmail(email).then(function(){
           try{sa.signOut();}catch(e){}
           return {ok:true,uid:uid};
@@ -26761,7 +26768,7 @@ function afterAdmin(){
     el.disabled=true;el.textContent="⏳";
     if(el.hasAttribute("data-sgapprove")){
       Cloud.approveSignup(el.getAttribute("data-sgapprove")).then(function(r){
-        if(r&&r.ok){sgBox.innerHTML='<div class="msg ok">✅ '+esc(t("signup_approved"))+": "+esc(r.schoolId)+"<br>"+esc(t("signup_next"))+"</div>";clearAdmListCache();loadAdminList();}
+        if(r&&r.ok){sgBox.innerHTML='<div class="msg ok">✅ '+esc(t("signup_approved"))+": "+esc(r.schoolId)+"<br>"+esc((r.invite&&r.invite.ok)?t("team_sent"):t("signup_next"))+"</div>";clearAdmListCache();loadAdminList();}
         else{el.disabled=false;el.textContent=t("signup_approve");}
       });
       return;
