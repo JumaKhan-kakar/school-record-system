@@ -12900,7 +12900,7 @@ function sessionCloseReviewHTML(rev){let h='<div class="card"><h3>'+esc(t("ses_c
 function archiveCardHTML(){const sesses=db().sessions||[];let h='<div class="card"><h3>'+esc(t("ses_past"))+"</h3>";h+='<div class="toolbar"><input class="search" id="arc-q" placeholder="'+esc(t("ses_search_past"))+'"><select id="arc-ses" style="min-height:44px"><option value="">'+esc(t("all"))+"</option>"+sesses.map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.label)+"</option>";}).join("")+"</select></div>";h+='<div id="arc-results"></div></div>';return h;}
 function archiveDraw(){const box=$("arc-results");if(!box)return;const q=(($("arc-q")||{}).value||"");const sid=(($("arc-ses")||{}).value||"");if(!q.trim()){box.innerHTML='<p class="muted">—</p>';return;}const res=archiveSearch(q,sid);box.innerHTML=res.length?res.map(function(r){const st=r.st;return "<div>"+esc(st.name)+" — "+esc(st.fatherName)+" • "+esc(st.admNo)+" • "+esc(clsLabel(st.cls,st.section))+" → "+esc(st.finalClass||st.cls)+" • "+esc(sesStatusText(st.finalStatus))+(st.resultPct==null?"":" • "+st.resultPct+"%")+" • "+esc(r.session.label)+"</div>";}).join(""):'<p class="muted">'+esc(t("no_records"))+"</p>";}
 function sessionHistoryHTML(st){const rows=[];Object.keys(db().archive||{}).forEach(function(sid){const a=db().archive[sid];(a.students||[]).forEach(function(fs){if(fs.id===st.id)rows.push({session:a,st:fs});});});let h='<div class="card"><h3>'+esc(t("ses_history"))+"</h3>";if(st.status==="withdrawn")h+="<p>⚠ "+esc(t("ses_withdrawn"))+(st.withdrawnReason?" — "+esc(st.withdrawnReason):"")+(st.withdrawnDate?" • "+fmtDate(st.withdrawnDate):"")+"</p>";if(!rows.length)h+='<p class="muted">—</p>';rows.forEach(function(r){h+="<div>• "+esc(r.session.label)+" — "+esc(clsLabel(r.st.cls,r.st.section))+" → "+esc(r.st.finalClass||"")+" • "+esc(sesStatusText(r.st.finalStatus))+(r.st.resultPct==null?"":" • "+r.st.resultPct+"%")+"</div>";});h+="</div>";return h;}
-function sessionDossierButtonsHTML(st){if(st.status==="withdrawn")return '<div class="toolbar"><button type="button" class="btn btn-primary" id="dos-readmit">'+esc(t("ses_readmit"))+"</button></div>";return '<div class="toolbar"><button type="button" class="btn" id="dos-withdraw">'+esc(t("ses_withdraw"))+"</button></div>";}
+function sessionDossierButtonsHTML(st){if(st.status==="withdrawn")return '<div class="toolbar"><button type="button" class="btn btn-primary" id="dos-readmit">'+esc(t("ses_readmit"))+"</button></div>";return '<div class="toolbar"><button type="button" class="btn" id="dos-withdraw">'+esc(dosWithdrawArm?t("ses_withdraw")+"?":t("ses_withdraw"))+"</button>"+(dosWithdrawArm?' <input id="dos-withdraw-reason" placeholder="'+esc(t("att_flag_reason"))+'">':"")+"</div>";}
 
 function addStudent(d){
   const _wg=subWriteGuard();if(_wg)return {ok:false,error:_wg};
@@ -23832,7 +23832,7 @@ function viewDossier(id){
 }
 function hasAnyMarks(examId,studentId){const m=db().marks[examId];return !!(m&&m[studentId]);}
 function afterDossier(){
-  $("dos-back").onclick=function(){dossierId=null;render();};
+  $("dos-back").onclick=function(){dossierId=null;dosWithdrawArm=false;render();};
   $("dos-print").onclick=function(){doPrint(dossierPrintHTML(dossierId));};
   const dpp=$("dos-print-prev");
   if(dpp)dpp.onclick=function(){showPrintPreview(dossierPrintHTML(dossierId));};
@@ -23886,8 +23886,8 @@ function afterDossier(){
       if(!c)return;
       if(certVoidArm!==id){certVoidArm=id;render();return;}
       certVoidArm=null;
-      const reason=prompt(t("cert_void_prompt"));
-      if(reason===null){render();return;}
+      const inp=$("dcvoid-reason-"+id);
+      const reason=inp?inp.value:"";
       voidCertificate(id,reason);render();
     };});
   Array.prototype.forEach.call(document.querySelectorAll("[data-dcunvoid]"),function(b){
@@ -23900,9 +23900,9 @@ function afterDossier(){
       unvoidCertificate(id);render();
     };});
   const dw=$("dos-withdraw");
-  if(dw)dw.onclick=function(){const st=db().students.find(function(s){return s.id===dossierId;});if(!st)return;const reason=prompt(t("att_flag_reason"));if(reason==null||!String(reason).trim())return;if(!confirm(t("ses_withdraw")+" — "+displayName(st)))return;const r=withdrawStudent(dossierId,reason);if(r.ok)render();};
+  if(dw)dw.onclick=function(){const st=db().students.find(function(s){return s.id===dossierId;});if(!st)return;if(!dosWithdrawArm){dosWithdrawArm=true;render();return;}const inp=$("dos-withdraw-reason");const reason=inp?inp.value:"";if(!String(reason).trim()){if(inp)inp.focus();return;}dosWithdrawArm=false;const r=withdrawStudent(dossierId,reason);if(r.ok)render();};
   const ra=$("dos-readmit");
-  if(ra)ra.onclick=function(){const r=readmitStudent(dossierId);if(r.ok)render();};
+  if(ra)ra.onclick=function(){dosWithdrawArm=false;const r=readmitStudent(dossierId);if(r.ok)render();};
   /* Round 147: dossier delete — mirrors the Admissions-register delete
      handler exactly (confirm -> guarded delete -> second confirm with
      blockers -> force delete); on success the dossier closes. */
@@ -26355,7 +26355,7 @@ function certPrintHTML(certId){
   return h;
 }
 /* ---- certificates register UI ---- */
-let certIssueFor=null,certQ="",certVoidArm=null,certUnvoidArm=null;
+let certIssueFor=null,certQ="",certVoidArm=null,certUnvoidArm=null,dosWithdrawArm=false;
 function viewCert(){
   /* Round 89: restore an unfinished certificate draft once per load.
      A dossier pre-selection (certIssueFor set) wins over the draft: the
@@ -26458,7 +26458,7 @@ function afterCert(){
         '<br><span class="muted">'+esc(c.snapshot.admNo)+"</span></td><td>"+fmtDate(c.issuedAt)+"</td><td>"+
         (c.status==="void"?'<span class="flag">'+esc(t("cert_voided"))+'</span>':'<span class="flag okf">'+esc(t("cert_issued"))+"</span>")+(c.status==="void"&&c.voidReason?'<br><span class="muted">'+esc(t("cert_void_reason"))+": "+esc(c.voidReason)+"</span>":"")+"</td>"+
         '<td><button type="button" class="btn btn-sm" data-cprint="'+c.id+'">'+esc(t("cert_reprint"))+"</button> "+
-        (c.status==="void"?'<button type="button" class="btn btn-sm" data-cunvoid="'+c.id+'">'+esc(certUnvoidArm===c.id?t("cert_unvoid")+"?":t("cert_unvoid"))+"</button>":'<button type="button" class="btn btn-sm btn-danger" data-cvoid="'+c.id+'">'+esc(certVoidArm===c.id?t("cert_void")+"?":t("cert_void"))+"</button>")+
+        (c.status==="void"?'<button type="button" class="btn btn-sm" data-cunvoid="'+c.id+'">'+esc(certUnvoidArm===c.id?t("cert_unvoid")+"?":t("cert_unvoid"))+"</button>":'<button type="button" class="btn btn-sm btn-danger" data-cvoid="'+c.id+'">'+esc(certVoidArm===c.id?t("cert_void")+"?":t("cert_void"))+"</button>"+(certVoidArm===c.id?' <input id="cvoid-reason-'+c.id+'" placeholder="'+esc(t("cert_void_reason"))+'">':""))+
         ' <button type="button" class="btn btn-sm" data-chist="'+c.id+'">'+esc(t("history"))+"</button></td></tr>"+
         '<tr id="chist-'+c.id+'" style="display:none"><td colspan="6"><div class="hist">'+histHTML(c)+"</div></td></tr>";
     }).join("")||'<tr><td colspan="6">'+emptyStateHTML(t("es_cert_t"),t("es_cert_h"),t("es_cert_b"),"cert")+"</td></tr>";
@@ -26471,8 +26471,8 @@ function afterCert(){
         if(!c)return;
         if(certVoidArm!==id){certVoidArm=id;drawRows();return;}
         certVoidArm=null;
-        const reason=prompt(t("cert_void_prompt"));
-        if(reason===null){drawRows();return;}
+        const inp=$("cvoid-reason-"+id);
+        const reason=inp?inp.value:"";
         voidCertificate(id,reason);render();
       };});
     Array.prototype.forEach.call(document.querySelectorAll("[data-cunvoid]"),function(b){
@@ -26500,7 +26500,7 @@ function certDossierHTML(st){
       "</b> • "+esc(certTypeName(c.type))+" • "+fmtDate(c.issuedAt)+'<br><span class="muted">'+esc(t("verify_code"))+": "+esc(c.verifyCode||"—")+"</span></span>"+
       (c.status==="void"?' <span class="flag">'+esc(t("cert_voided"))+"</span>":"")+(c.status==="void"&&c.voidReason?' <span class="muted">'+esc(t("cert_void_reason"))+": "+esc(c.voidReason)+"</span>":"")+
       ' <button type="button" class="btn btn-sm" data-dcprint="'+c.id+'">'+esc(t("cert_reprint"))+"</button>"+
-      (c.status==="void"?' <button type="button" class="btn btn-sm" data-dcunvoid="'+c.id+'">'+esc(certUnvoidArm===c.id?t("cert_unvoid")+"?":t("cert_unvoid"))+"</button>":' <button type="button" class="btn btn-sm btn-danger" data-dcvoid="'+c.id+'">'+esc(certVoidArm===c.id?t("cert_void")+"?":t("cert_void"))+"</button>")+"</div>";
+      (c.status==="void"?' <button type="button" class="btn btn-sm" data-dcunvoid="'+c.id+'">'+esc(certUnvoidArm===c.id?t("cert_unvoid")+"?":t("cert_unvoid"))+"</button>":' <button type="button" class="btn btn-sm btn-danger" data-dcvoid="'+c.id+'">'+esc(certVoidArm===c.id?t("cert_void")+"?":t("cert_void"))+"</button>"+(certVoidArm===c.id?' <input id="dcvoid-reason-'+c.id+'" placeholder="'+esc(t("cert_void_reason"))+'">':""))+"</div>";
   });
   h+='<button type="button" class="btn btn-sm btn-primary" id="dos-issuecert" style="margin-top:.5rem">'+esc(t("cert_issue"))+"</button></div>";
   return h;
