@@ -13065,12 +13065,32 @@ function captureStudentPhoto(file,cb){
   rd.onload=function(){
     const img=new Image();
     img.onload=function(){
-      const MAX=480;let w=img.width,h=img.height;
+      const MAX=320;let w=img.width,h=img.height;
       const sc=Math.min(1,MAX/Math.max(w,h));
       w=Math.max(1,Math.round(w*sc));h=Math.max(1,Math.round(h*sc));
       const cv=document.createElement("canvas");cv.width=w;cv.height=h;
       cv.getContext("2d").drawImage(img,0,0,w,h);
-      cb(cv.toDataURL("image/jpeg",0.7));
+      cb(cv.toDataURL("image/jpeg",0.6));
+    };
+    img.onerror=function(){cb(null);};
+    img.src=rd.result;
+  };
+  rd.onerror=function(){cb(null);};
+  rd.readAsDataURL(file);
+}
+/* browser-only: downscale a logo file, transparency-safe (PNG stays PNG) */
+function compressLogo(file,cb){
+  const rd=new FileReader();
+  rd.onload=function(){
+    const img=new Image();
+    img.onload=function(){
+      const MAX=512;let w=img.width,h=img.height;
+      const sc=Math.min(1,MAX/Math.max(w,h));
+      w=Math.max(1,Math.round(w*sc));h=Math.max(1,Math.round(h*sc));
+      const cv=document.createElement("canvas");cv.width=w;cv.height=h;
+      cv.getContext("2d").drawImage(img,0,0,w,h);
+      if(file.type==="image/png")cb(cv.toDataURL("image/png"));
+      else cb(cv.toDataURL("image/jpeg",0.8));
     };
     img.onerror=function(){cb(null);};
     img.src=rd.result;
@@ -20005,8 +20025,9 @@ function loadImageScan(dataURL){
     img.src=dataURL;
   });
 }
-function fileToDataURLScan(file,maxDim){
+function fileToDataURLScan(file,maxDim,quality){
   maxDim=maxDim||1400;
+  quality=quality||0.82;
   return new Promise(function(res,rej){
     const r=new FileReader();
     r.onload=function(){
@@ -20015,7 +20036,7 @@ function fileToDataURLScan(file,maxDim){
         const c=document.createElement("canvas");
         c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);
         c.getContext("2d").drawImage(img,0,0,c.width,c.height);
-        res(c.toDataURL("image/jpeg",0.82));
+        res(c.toDataURL("image/jpeg",quality));
       },rej);
     };
     r.onerror=rej;r.readAsDataURL(file);
@@ -23872,7 +23893,7 @@ function afterDossier(){
   const gr=$("dos-gidrel"),gs=$("dos-gidside"),gf=$("dos-gidfile");
   if(gf)gf.onchange=function(){
     const f=gf.files[0];if(!f||!dossierId)return;
-    fileToDataURLScan(f,1200).then(function(du){
+    fileToDataURLScan(f,900,0.75).then(function(du){
       const r=addGuardianId(dossierId,gr?gr.value:"guardian",gs?gs.value:"front",du);
       if(!r.ok){alert(r.error);return;}
       render();
@@ -24154,7 +24175,7 @@ function afterAdm(){
   if(gf63)gf63.onchange=function(){
     const f=gf63.files[0];if(!f)return;
     const rel=($("a-gidrel")||{}).value||"guardian",side=($("a-gidside")||{}).value||"front";
-    fileToDataURLScan(f,1200).then(function(du){
+    fileToDataURLScan(f,900,0.75).then(function(du){
       if(admEditId){const r2=addGuardianId(admEditId,rel,side,du);if(!r2.ok){alert(r2.error);return;}}
       else admGuardianIdsPending.push({id:uid("gid"),relation:rel,side:side,dataUrl:du,at:tsNow()});
       render();
@@ -24192,9 +24213,7 @@ function afterAdm(){
   if(apf)apf.onchange=function(){
     const f=apf.files[0];if(!f)return;
     if(f.size>300*1024){alert(t("photo_big"));return;}
-    const rd=new FileReader();
-    rd.onload=function(){if(!storageFits(rd.result.length,(db().settings.regPhotoDataUrl||"").length)){alert(storageCapMsg());return;}db().settings.regPhotoDataUrl=rd.result;Store.save();render();};
-    rd.readAsDataURL(f);
+    fileToDataURLScan(f,900,0.75).then(function(du){if(!storageFits(du.length,(db().settings.regPhotoDataUrl||"").length)){alert(storageCapMsg());return;}db().settings.regPhotoDataUrl=du;Store.save();render();}).catch(function(){alert(t("photo_big"));});
   };
   const apd=$("a-photodel");
   if(apd)apd.onclick=function(){db().settings.regPhotoDataUrl="";Store.save();render();};
@@ -27223,9 +27242,7 @@ function afterSettings(){
   if(lg)lg.onchange=function(){if(!canSaveSettings()){alert(t("set_head_only"));return;}
     const f=lg.files[0];if(!f)return;
     if(f.size>300*1024){alert(t("logo_big"));return;}
-    const rd=new FileReader();
-    rd.onload=function(){if(!storageFits(rd.result.length,(db().settings.logoDataUrl||"").length)){alert(storageCapMsg());return;}db().settings.logoDataUrl=rd.result;Store.save();render();};
-    rd.readAsDataURL(f);
+    compressLogo(f,function(du){if(!du){alert(t("logo_big"));return;}if(!storageFits(du.length,(db().settings.logoDataUrl||"").length)){alert(storageCapMsg());return;}db().settings.logoDataUrl=du;Store.save();render();});
   };
   const ld=$("s-logodel");if(ld)ld.onclick=function(){if(!canSaveSettings()){alert(t("set_head_only"));return;}db().settings.logoDataUrl="";Store.save();render();};
   const ctp=$("s-cert-template");
