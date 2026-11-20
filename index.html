@@ -21004,6 +21004,216 @@ function docImpUndo(batchId){
   audit("import-undo",b.type+" "+removed+" "+t("docimp_undone_short"));
   return {ok:true,removed:removed};
 }
+/* Round 162 — direct Excel/Word import: ZIP reader + vendored DEFLATE.
+   Both .xlsx and .docx are ZIPs of XML. Central-directory parsing is
+   REQUIRED (not streaming local headers): real Excel/Word files use data
+   descriptors, so the local header's sizes can be zero. Method 0 = stored,
+   method 8 = deflate via zipInflate; any other method is refused. */
+function zipReadEntries(buf){
+  // Duck-type the buffer (no instanceof): test harnesses pass an
+  // ArrayBuffer from another realm, where instanceof fails.
+  if(!buf||typeof buf.byteLength!=="number")return {ok:false,error:"docimp_badfile"};
+  const dv=new DataView(buf);
+  const n=dv.byteLength;
+  let eocd=-1;
+  const start=Math.max(0,n-65557);
+  for(let i=n-22;i>=start;i--){
+    if(dv.getUint32(i,true)===0x06054b50){eocd=i;break;}
+  }
+  if(eocd<0)return {ok:false,error:"docimp_badfile"};
+  const total=dv.getUint16(eocd+10,true);
+  const cdOff=dv.getUint32(eocd+16,true);
+  const entries=[];
+  let p=cdOff;
+  for(let k=0;k<total;k++){
+    if(p+46>n||dv.getUint32(p,true)!==0x02014b50)return {ok:false,error:"docimp_badfile"};
+    const method=dv.getUint16(p+10,true);
+    const csize=dv.getUint32(p+20,true);
+    const size=dv.getUint32(p+24,true);
+    const nameLen=dv.getUint16(p+28,true);
+    const extraLen=dv.getUint16(p+30,true);
+    const commentLen=dv.getUint16(p+32,true);
+    const localOff=dv.getUint32(p+42,true);
+    if(p+46+nameLen+extraLen+commentLen>n)return {ok:false,error:"docimp_badfile"};
+    let name="";
+    try{name=new TextDecoder("utf-8").decode(new Uint8Array(buf,p+46,nameLen));}
+    catch(e){return {ok:false,error:"docimp_badfile"};}
+    entries.push({name:name,method:method,size:size,csize:csize,offset:localOff});
+    p+=46+nameLen+extraLen+commentLen;
+  }
+  return {ok:true,entries:entries};
+}
+function zipEntryData(buf,entry){
+  if(!buf||!entry)return null;
+  const dv=new DataView(buf);
+  const off=entry.offset;
+  if(off+30>dv.byteLength)return null;
+  if(dv.getUint32(off,true)!==0x04034b50)return null;
+  const nameLen=dv.getUint16(off+26,true);
+  const extraLen=dv.getUint16(off+28,true);
+  const dataOff=off+30+nameLen+extraLen;
+  if(dataOff+entry.csize>dv.byteLength)return null;
+  return new Uint8Array(buf,dataOff,entry.csize);
+}
+function zipInflate(raw,expectedLen){
+  if(!raw||raw.length===0)return null;
+  const out=[];
+  let pos=0,bitBuf=0,bitCnt=0;
+  function need(n){
+    while(bitCnt<n){
+      if(pos>=raw.length)return false;
+      bitBuf|=(raw[pos++]<<bitCnt);
+      bitCnt+=8;
+    }
+    return true;
+  }
+  function take(n){
+    if(n===0)return 0;
+    if(!need(n))return -1;
+    const v=bitBuf&((1<<n)-1);
+    bitBuf>>=n;
+    bitCnt-=n;
+    return v;
+  }
+  const LEN_BASE=[3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258];
+  const LEN_EXTRA=[0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0];
+  const DIST_BASE=[1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577];
+  const DIST_EXTRA=[0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];
+  function buildTable(lens){
+    let maxLen=0;
+    for(let i=0;i<lens.length;i++)if(lens[i]>maxLen)maxLen=lens[i];
+    const counts=new Array(maxLen+1).fill(0);
+    for(let i=0;i<lens.length;i++)if(lens[i]>0)counts[lens[i]]++;
+    const offs=new Array(maxLen+1).fill(0);
+    for(let i=1;i<=maxLen;i++)offs[i]=offs[i-1]+counts[i-1];
+    const syms=new Array(lens.length);
+    const next=offs.slice();
+    for(let i=0;i<lens.length;i++){
+      if(lens[i]>0)syms[next[lens[i]]++]=i;
+    }
+    return {counts:counts,syms:syms,maxLen:maxLen};
+  }
+  function decode(table){
+    let code=0,first=0,index=0;
+    for(let len=1;len<=table.maxLen;len++){
+      const b=take(1);
+      if(b<0)return -1;
+      code|=b;
+      const count=table.counts[len];
+      if(code>=first&&code-first<count)return table.syms[index+(code-first)];
+      index+=count;
+      first+=count;
+      first<<=1;
+      code<<=1;
+    }
+    return -1;
+  }
+  const FIXED_LIT=(function(){
+    const lens=new Array(288).fill(0);
+    for(let i=0;i<144;i++)lens[i]=8;
+    for(let i=144;i<256;i++)lens[i]=9;
+    for(let i=256;i<280;i++)lens[i]=7;
+    for(let i=280;i<288;i++)lens[i]=8;
+    return buildTable(lens);
+  })();
+  const FIXED_DIST=(function(){
+    const lens=new Array(30).fill(5);
+    return buildTable(lens);
+  })();
+  let finalBlock=false;
+  while(!finalBlock){
+    const bfinal=take(1);
+    if(bfinal<0)return null;
+    finalBlock=(bfinal===1);
+    const btype=take(2);
+    if(btype<0)return null;
+    if(btype===0){
+      bitBuf=0;bitCnt=0;
+      if(pos+4>raw.length)return null;
+      const len=raw[pos]|(raw[pos+1]<<8);
+      const nlen=raw[pos+2]|(raw[pos+3]<<8);
+      if(len!==((~nlen)&0xffff))return null;
+      pos+=4;
+      if(pos+len>raw.length)return null;
+      for(let i=0;i<len;i++)out.push(raw[pos++]);
+    }else if(btype===1||btype===2){
+      let litTable,distTable;
+      if(btype===1){
+        litTable=FIXED_LIT;distTable=FIXED_DIST;
+      }else{
+        const hlit=take(5);if(hlit<0)return null;
+        const hdist=take(5);if(hdist<0)return null;
+        const hclen=take(4);if(hclen<0)return null;
+        const order=[16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];
+        const clLens=new Array(19).fill(0);
+        for(let i=0;i<hclen+4;i++){
+          const v=take(3);if(v<0)return null;
+          clLens[order[i]]=v;
+        }
+        const clTable=buildTable(clLens);
+        const total=hlit+257+hdist+1;
+        const lens=new Array(total).fill(0);
+        let i=0;
+        while(i<total){
+          const sym=decode(clTable);
+          if(sym<0)return null;
+          if(sym<16){lens[i++]=sym;}
+          else if(sym===16){
+            if(i===0)return null;
+            const rep=take(2);if(rep<0)return null;
+            const prev=lens[i-1];
+            for(let k=0;k<rep+3;k++){if(i>=total)return null;lens[i++]=prev;}
+          }else if(sym===17){
+            const rep=take(3);if(rep<0)return null;
+            for(let k=0;k<rep+3;k++){if(i>=total)return null;lens[i++]=0;}
+          }else if(sym===18){
+            const rep=take(7);if(rep<0)return null;
+            for(let k=0;k<rep+11;k++){if(i>=total)return null;lens[i++]=0;}
+          }else return null;
+        }
+        litTable=buildTable(lens.slice(0,hlit+257));
+        distTable=buildTable(lens.slice(hlit+257));
+      }
+      for(;;){
+        const sym=decode(litTable);
+        if(sym<0)return null;
+        if(sym<256){out.push(sym);}
+        else if(sym===256){break;}
+        else{
+          const li=sym-257;
+          if(li<0||li>=29)return null;
+          let len=LEN_BASE[li];
+          const le=LEN_EXTRA[li];
+          if(le>0){const v=take(le);if(v<0)return null;len+=v;}
+          const dsym=decode(distTable);
+          if(dsym<0||dsym>29)return null;
+          let dist=DIST_BASE[dsym];
+          const de=DIST_EXTRA[dsym];
+          if(de>0){const v=take(de);if(v<0)return null;dist+=v;}
+          if(dist<1||dist>out.length)return null;
+          for(let k=0;k<len;k++)out.push(out[out.length-dist]);
+        }
+        if(expectedLen!=null&&out.length>expectedLen)return null;
+      }
+    }else{
+      return null;
+    }
+  }
+  if(expectedLen!=null&&out.length!==expectedLen)return null;
+  return new Uint8Array(out);
+}
+function zipEntryText(buf,entry){
+  const raw=zipEntryData(buf,entry);
+  if(!raw)return null;
+  if(entry.method===0)return new TextDecoder("utf-8").decode(raw);
+  if(entry.method===8){
+    const out=zipInflate(raw,entry.size);
+    if(!out)return null;
+    return new TextDecoder("utf-8").decode(out);
+  }
+  return null;
+}
+
 function docImpFileKind(file){
   if(!file)return "none";
   const mt=String(file.type||"").toLowerCase();
@@ -21016,14 +21226,218 @@ function docImpFileKind(file){
   if(mt.indexOf("image/")===0||/\.(jpe?g|png|webp|gif|bmp)$/i.test(nm))return "image";
   return "none";
 }
+/* Round 162 — .xlsx / .docx row readers. First sheet / first table
+   only; headers map via DOCIMP_HEADERS; the reader emits RAW rows in the
+   normalizers' shape and never validates, flags, or commits. */
+var DOCIMP_HEADERS={
+  adm:{name:["name","student name","student"],fatherName:["father name","father","father's name"],dob:["dob","date of birth","birth date"],gender:["gender","sex"],cls:["class","cls"],section:["section","sec"],contact:["contact","phone","mobile"],address:["address"],admNo:["adm no","admission no","admno","admission number"]},
+  marks:{studentName:["student name","name","student"],fatherName:["father name"],subject:["subject"],marks:["marks","obtained marks","score"],cls:["class"]},
+  att:{studentName:["student name","name"],fatherName:["father name"],date:["date"],status:["status","attendance"],cls:["class"]}
+};
+function docImpXmlText(s){
+  return String(s==null?"":s).replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&#(\d+);/g,function(m,d){return String.fromCharCode(parseInt(d,10));}).replace(/&#x([0-9a-fA-F]+);/g,function(m,h){return String.fromCharCode(parseInt(h,16));}).replace(/&amp;/g,"&");
+}
+function docImpSerialDate(v){
+  if(typeof v!=="number")return v;
+  if(v<20000||v>80000)return String(v);
+  const ms=Date.UTC(1899,11,30)+Math.floor(v)*86400000;
+  const d=new Date(ms);
+  return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0")+"-"+String(d.getUTCDate()).padStart(2,"0");
+}
+function docImpColIndex(ref){
+  const m=String(ref||"").match(/^([A-Z]+)/);
+  if(!m)return -1;
+  let n=0;
+  for(let i=0;i<m[1].length;i++)n=n*26+(m[1].charCodeAt(i)-64);
+  return n-1;
+}
+function docImpMapRows(type,headerRow,dataRows){
+  const map=DOCIMP_HEADERS[type]||DOCIMP_HEADERS.adm;
+  const colToField={};
+  const claimed={};
+  let recognized=0;
+  headerRow.forEach(function(h,idx){
+    const key=String(h==null?"":h).trim().toLowerCase();
+    if(!key)return;
+    for(const f in map){
+      if(map[f].indexOf(key)>=0&&!claimed[f]){
+        colToField[idx]=f;claimed[f]=true;recognized++;break;
+      }
+    }
+  });
+  if(recognized===0)return {ok:false,error:"docimp_noheader"};
+  const rows=[];
+  dataRows.forEach(function(cells){
+    let empty=true;
+    for(let i=0;i<cells.length;i++){if(cells[i]!=null&&String(cells[i]).trim()!==""){empty=false;break;}}
+    if(empty)return;
+    const r={};
+    for(const idx in colToField){
+      const f=colToField[idx];
+      const v=cells[Number(idx)];
+      if(v==null||v==="")continue;
+      if(f==="dob"||f==="date")r[f]=docImpSerialDate(v);
+      else if(f==="marks")r[f]=v;
+      else r[f]=(typeof v==="number")?String(v):v;
+    }
+    rows.push(r);
+  });
+  return {ok:true,rows:rows};
+}
+function xlsxRowsFromZip(buf,entries,type){
+  function find(name){for(let i=0;i<entries.length;i++)if(entries[i].name===name)return entries[i];return null;}
+  const wb=find("xl/workbook.xml");
+  if(!wb)return {ok:false,error:"docimp_badfile"};
+  const wbXml=zipEntryText(buf,wb);
+  if(wbXml==null)return {ok:false,error:"docimp_badfile"};
+  let sheetPath="xl/worksheets/sheet1.xml";
+  const sheetMatch=wbXml.match(/<sheet\b[^>]*>/);
+  if(sheetMatch){
+    const ridMatch=sheetMatch[0].match(/r:id="([^"]+)"/);
+    if(ridMatch){
+      const rels=find("xl/_rels/workbook.xml.rels");
+      if(rels){
+        const relsXml=zipEntryText(buf,rels);
+        if(relsXml!=null){
+          const rid=ridMatch[1].replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+          const tm=relsXml.match(new RegExp('<Relationship\\b[^>]*Id="'+rid+'"[^>]*Target="([^"]+)"'));
+          if(tm)sheetPath="xl/"+tm[1].replace(/^\//,"");
+        }
+      }
+    }
+  }
+  const sheet=find(sheetPath);
+  if(!sheet)return {ok:false,error:"docimp_badfile"};
+  const sheetXml=zipEntryText(buf,sheet);
+  if(sheetXml==null)return {ok:false,error:"docimp_badfile"};
+  let shared=[];
+  const ss=find("xl/sharedStrings.xml");
+  if(ss){
+    const ssXml=zipEntryText(buf,ss);
+    if(ssXml==null)return {ok:false,error:"docimp_badfile"};
+    const siRe=/<si>([\s\S]*?)<\/si>/g;
+    let sm;
+    while((sm=siRe.exec(ssXml))!==null){
+      let txt="";
+      const tRe=/<t[^>]*>([\s\S]*?)<\/t>/g;
+      let tm2;
+      while((tm2=tRe.exec(sm[1]))!==null)txt+=docImpXmlText(tm2[1]);
+      shared.push(txt);
+    }
+  }
+  const rowRe=/<row\b[^>]*>([\s\S]*?)<\/row>/g;
+  const allRows=[];
+  let rm;
+  while((rm=rowRe.exec(sheetXml))!==null){
+    const rowBody=rm[1];
+    const cells=[];
+    const cellRe=/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
+    let cm;
+    while((cm=cellRe.exec(rowBody))!==null){
+      const attrs=cm[1]||"";
+      const inner=cm[2]||"";
+      const refM=attrs.match(/\br="([A-Z]+\d+)"/);
+      const tM=attrs.match(/\bt="([a-zA-Z]+)"/);
+      const t=tM?tM[1]:null;
+      let val=null;
+      if(t==="inlineStr"){
+        const tRe2=/<t[^>]*>([\s\S]*?)<\/t>/g;
+        let tv="",tm3;
+        while((tm3=tRe2.exec(inner))!==null)tv+=docImpXmlText(tm3[1]);
+        val=tv;
+      }else{
+        const vM=inner.match(/<v>([\s\S]*?)<\/v>/);
+        if(vM){
+          const raw=docImpXmlText(vM[1]);
+          if(t==="s"){const idx=parseInt(raw,10);val=(idx>=0&&idx<shared.length)?shared[idx]:"";}
+          else if(t==="str"){val=raw;}
+          else if(t==="b"){val=(raw==="1"||raw.toLowerCase()==="true")?"TRUE":"FALSE";}
+          else if(t==="e"){val=raw;}
+          else{
+            const num=Number(raw);
+            val=(raw!==""&&!isNaN(num))?num:raw;
+          }
+        }else val="";
+      }
+      const col=refM?docImpColIndex(refM[1]):cells.length;
+      if(col<0)continue;
+      while(cells.length<=col)cells.push("");
+      cells[col]=val;
+    }
+    allRows.push(cells);
+  }
+  if(!allRows.length)return {ok:true,rows:[]};
+  let hi=-1;
+  for(let i=0;i<allRows.length;i++){
+    const r=allRows[i];
+    let any=false;
+    for(let j=0;j<r.length;j++){if(r[j]!=null&&String(r[j]).trim()!==""){any=true;break;}}
+    if(any){hi=i;break;}
+  }
+  if(hi<0)return {ok:true,rows:[]};
+  return docImpMapRows(type,allRows[hi],allRows.slice(hi+1));
+}
+function docxRowsFromZip(buf,entries,type){
+  function find(name){for(let i=0;i<entries.length;i++)if(entries[i].name===name)return entries[i];return null;}
+  const doc=find("word/document.xml");
+  if(!doc)return {ok:false,error:"docimp_badfile"};
+  const xml=zipEntryText(buf,doc);
+  if(xml==null)return {ok:false,error:"docimp_badfile"};
+  const tblM=xml.match(/<w:tbl\b[^>]*>([\s\S]*?)<\/w:tbl>/);
+  if(!tblM)return {ok:true,rows:[]};
+  const allRows=[];
+  const trRe=/<w:tr\b[^>]*>([\s\S]*?)<\/w:tr>/g;
+  let tm;
+  while((tm=trRe.exec(tblM[1]))!==null){
+    const cells=[];
+    const tcRe=/<w:tc\b[^>]*>([\s\S]*?)<\/w:tc>/g;
+    let cm;
+    while((cm=tcRe.exec(tm[1]))!==null){
+      let txt="";
+      const tRe=/<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
+      let tx;
+      while((tx=tRe.exec(cm[1]))!==null)txt+=docImpXmlText(tx[1]);
+      cells.push(txt);
+    }
+    allRows.push(cells);
+  }
+  if(!allRows.length)return {ok:true,rows:[]};
+  let hi=-1;
+  for(let i=0;i<allRows.length;i++){
+    const r=allRows[i];
+    let any=false;
+    for(let j=0;j<r.length;j++){if(r[j]!=null&&String(r[j]).trim()!==""){any=true;break;}}
+    if(any){hi=i;break;}
+  }
+  if(hi<0)return {ok:true,rows:[]};
+  return docImpMapRows(type,allRows[hi],allRows.slice(hi+1));
+}
+
 function docImpExtract(type,file){
-  // Round 105: no AI service reads documents any more. The CSV import is
-  // the import path; a document or photo is refused with a pointer to it.
+  // Round 162: .xlsx and .docx are read DIRECTLY in the app (ZIP + XML,
+  // no AI, no network) into the existing review pipeline. PDF and photos
+  // are still refused (no OCR in the app); .doc / .xls stay refused.
   var kind=docImpFileKind(file);
   if(!file||kind==="none")return Promise.resolve({ok:false,error:"docimp_badfile"});
   if(kind==="doc")return Promise.resolve({ok:false,error:"docimp_doc_old"});
   if(kind==="xls")return Promise.resolve({ok:false,error:"docimp_xls_old"});
-  return Promise.resolve({ok:false,error:"docimp_noai"});
+  if(kind==="pdf"||kind==="image")return Promise.resolve({ok:false,error:"docimp_noai"});
+  return new Promise(function(resolve){
+    const rd=new FileReader();
+    rd.onload=function(){
+      try{
+        const buf=rd.result;
+        if(!buf||typeof buf.byteLength!=="number"){resolve({ok:false,error:"docimp_badfile"});return;}
+        const z=zipReadEntries(buf);
+        if(!z.ok){resolve({ok:false,error:"docimp_badfile"});return;}
+        const r=(kind==="xlsx"?xlsxRowsFromZip(buf,z.entries,type):docxRowsFromZip(buf,z.entries,type));
+        if(!r||!r.ok){resolve({ok:false,error:(r&&r.error)||"docimp_badfile"});return;}
+        resolve({ok:true,rows:r.rows});
+      }catch(e){resolve({ok:false,error:"docimp_badfile"});}
+    };
+    rd.onerror=function(){resolve({ok:false,error:"docimp_badfile"});};
+    try{rd.readAsArrayBuffer(file);}catch(e){resolve({ok:false,error:"docimp_badfile"});}
+  });
 }
 /* Round 128 (F47): every non-undone batch gets its own undo button —
    undo is no longer LIFO-only. Admissions batches also offer their
@@ -25627,6 +26041,8 @@ docimp_no_batch:{en:"There is no import to undo.",ur:"واپس لینے کے ل�
 docimp_badjson:{en:"The AI answer could not be read. Try a clearer photo.",ur:"اے آئی کا جواب پڑھا نہیں جا سکا۔ واضح تصویر دوبارہ آزمائیں۔",bn:"এআই-এর উত্তর পড়া যায়নি। আরও পরিষ্কার ছবি দিয়ে আবার চেষ্টা করুন।",hi:"AI का जवाब पढ़ा नहीं जा सका। साफ़ फ़ोटो से फिर कोशिश करें।",ne:"AI को उत्तर पढ्न सकिएन। स्पष्ट फोटोले फेरि प्रयास गर्नुहोस्।",sw:"Jibu la AI halikuweza kusomwa. Jaribu picha iliyo wazi zaidi.",ar:"تعذّرت قراءة إجابة الذكاء الاصطناعي. جرّب صورة أوضح۔",zh:"无法读取 AI 的回答。请拍摄更清晰的照片。",es:"No se pudo leer la respuesta de la IA. Prueba con una foto más clara.",fr:"La réponse de l'IA n'a pas pu être lue. Essayez une photo plus nette.",pt:"Não foi possível ler a resposta da IA. Tenta uma foto mais nítida.",ru:"Ответ ИИ не удалось прочитать. Попробуйте сделать более четкое фото.",id:"Jawaban AI tidak dapat dibaca. Coba foto yang lebih jelas.",de:"Die KI-Antwort konnte nicht gelesen werden. Versuchen Sie es mit einem klareren Foto.",ja:"AIの回答が読み取れませんでした。もっとはっきりした写真をお試しください。",pa:"AI دا جواب پڑھیا نئیں جا سکیا۔ صاف تصویر کوشش کرو۔",mr:"AI उत्तर वाचता आले नाही. स्पष्ट फोटो वापरून पाहा.",te:"AI సమాధానాన్ని చదవడం సాధ్యం కాలేదు. స్పష్టమైన ఫోటోను ప్రయత్నించండి.",fa:"پاسخ هوش مصنوعی خوانده نشد. عکس واضح‌تری را امتحان کنید.",tr:"AI yanıtı okunamadı. Daha net bir fotoğraf deneyin.",ta:"AI பதிலைப் படிக்க முடியவில்லை. தெளிவான புகைப்படத்தை முயற்சிக்கவும்.",vi:"Không đọc được câu trả lời của AI. Hãy thử ảnh rõ hơn.",ko:"AI 답변을 읽을 수 없습니다. 더 선명한 사진을 시도하세요.",tl:"Hindi mabasa ang sagot ng AI. Subukan ang mas malinaw na larawan.",ha:"Ba a iya karanta amsar AI ba. Gwada hoto mai bayyana.",it:"Impossibile leggere la risposta dell'IA. Prova una foto più chiara.",ps:"د AI ځواب ونه لوستل شو. روښانه انځور هڅه وکړئ.",ms:"Jawapan AI tidak dapat dibaca. Cuba foto yang lebih jelas.",yo:"A kò lè ka ìdáhùn AI náà. Gbìyànjú fọ́tò tí ó ṣe kedere jù.",ig:"Enweghị ike ịgụ azịza AI. Nwaa foto doro anya."},
 docimp_badfile:{en:"That file could not be read. Use the CSV import instead.",ur:"وہ فائل پڑھی نہیں جا سکی۔ اس کے بجائے CSV درآمد استعمال کریں۔",bn:"সেই ফাইলটি পড়া যায়নি। পরিবর্তে CSV আমদানি ব্যবহার করুন।",hi:"वह फ़ाइल पढ़ी नहीं जा सकी। इसके बजाय CSV आयात का उपयोग करें।",ne:"त्यो फाइल पढ्न सकिएन। यसको सट्टा CSV आयात प्रयोग गर्नुहोस्।",sw:"Faili hilo halikuweza kusomwa. Tumia uingizaji wa CSV badala yake.",ar:"تعذرت قراءة ذلك الملف. استخدم استيراد CSV بدلاً من ذلك.",zh:"无法读取该文件。请改用 CSV 导入。",es:"No se pudo leer ese archivo. Usa la importación CSV en su lugar.",fr:"Ce fichier n'a pas pu être lu. Utilisez plutôt l'importation CSV.",pt:"Não foi possível ler esse ficheiro. Use a importação CSV.",ru:"Этот файл не читается. Используйте вместо этого импорт CSV.",id:"File itu tidak dapat dibaca. Gunakan impor CSV sebagai gantinya.",de:"Diese Datei konnte nicht gelesen werden. Verwenden Sie stattdessen den CSV-Import.",ja:"そのファイルは読み取れませんでした。代わりにCSVインポートを使ってください。",pa:"اوہ فائل پڑھی نئیں جا سکی۔ اس دی بجائے CSV درآمد ورتو۔",mr:"ती फाइल वाचता आली नाही. त्याऐवजी CSV आयात वापरा.",te:"ఆ ఫైల్‌ను చదవలేకపోయాం. బదులుగా CSV దిగుమతిని ఉపయోగించండి.",fa:"آن پرونده خوانده نشد. به‌جای آن از وارد کردن CSV استفاده کنید.",tr:"Bu dosya okunamadı. Bunun yerine CSV içe aktarmayı kullanın.",ta:"அந்தக் கோப்பைப் படிக்க முடியவில்லை. அதற்குப் பதிலாக CSV இறக்குமதியைப் பயன்படுத்தவும்.",vi:"Không thể đọc tệp đó. Hãy dùng nhập CSV thay thế.",ko:"해당 파일을 읽을 수 없습니다. 대신 CSV 가져오기를 사용하세요.",tl:"Hindi mabasa ang file na iyon. Gamitin na lang ang CSV import.",ha:"Ba za a iya karanta wannan fayil ɗin ba. Yi amfani da shigo da CSV a maimakon haka.",it:"Impossibile leggere quel file. Usa invece l'importazione CSV.",ps:"هغه فایل ونشو لوستل کېدای. پر ځای یې د CSV واردول وکاروئ.",ms:"Fail itu tidak dapat dibaca. Gunakan import CSV sebaliknya.",yo:"A kò lè ka fáìlì náà. Lo ìgbéwọlé CSV dípò.",ig:"Enweghị ike ịgụ faịlụ ahụ. Jiri mbubata CSV kama."},
 docimp_empty:{en:"No rows were found in this document.",ur:"اس دستاویز میں کوئی قطار نہیں ملی۔",bn:"এই নথিতে কোনো সারি পাওয়া যায়নি।",hi:"इस दस्तावेज़ में कोई पंक्ति नहीं मिली।",ne:"यो कागजातमा कुनै पङ्क्ति भेटिएन।",sw:"Hakuna mistari iliyopatikana kwenye hati hii.",ar:"لم يتم العثور على أي صفوف في هذا المستند۔",zh:"此文件中未找到任何行。",es:"No se encontraron filas en este documento.",fr:"Aucune ligne trouvée dans ce document.",pt:"Não foram encontradas linhas neste documento.",ru:"В этом документе не найдено ни одной строки.",id:"Tidak ada baris yang ditemukan dalam dokumen ini.",de:"In diesem Dokument wurden keine Zeilen gefunden.",ja:"この書類に行が見つかりませんでした。",pa:"ایس دستاویز وچ کوئی قطار نئیں ملی۔",mr:"या दस्तऐवजात ओळी सापडल्या नाहीत.",te:"ఈ పత్రంలో అడ్డు వరుసలు ఏవీ కనుగొనబడలేదు.",fa:"هیچ ردیفی در این سند پیدا نشد.",tr:"Bu belgede satır bulunamadı.",ta:"இந்த ஆவணத்தில் வரிசைகள் எதுவும் இல்லை.",vi:"Không tìm thấy hàng nào trong tài liệu này.",ko:"이 문서에서 행을 찾을 수 없습니다.",tl:"Walang hilera na natagpuan sa dokumentong ito.",ha:"Ba a sami layuka a wannan takardar ba.",it:"Nessuna riga trovata in questo documento.",ps:"په دې سند کې هېڅ قطار ونه موندل شو.",ms:"Tiada baris ditemui dalam dokumen ini.",yo:"A kò rí ìlà kan nínú ìwé yìí.",ig:"Ahụghị ahịrị na akwụkwọ a."},
+docimp_noheader:{en:"No table with student columns was found in this file. Check the first row has headings like Name, Father Name, Class.",ur:"اس فائل میں طلبہ کے کالموں والی کوئی جدول نہیں ملی۔ چیک کریں کہ پہلی قطار میں نام، والد کا نام، جماعت جیسی سرخیاں ہوں۔",bn:"এই ফাইলে শিক্ষার্থীর কলামসহ কোনো টেবিল পাওয়া যায়নি। প্রথম সারিতে নাম, বাবার নাম, শ্রেণির মতো শিরোনাম আছে কিনা দেখুন।",hi:"इस फ़ाइल में छात्रों के कॉलम वाली कोई तालिका नहीं मिली। जांचें कि पहली पंक्ति में नाम, पिता का नाम, कक्षा जैसे शीर्षक हों।",ne:"यो फाइलमा विद्यार्थीका स्तम्भ भएको कुनै तालिका भेटिएन। पहिलो पङ्क्तिमा नाम, बुबाको नाम, कक्षा जस्ता शीर्षक छन् कि छैनन् जाँच्नुहोस्।",sw:"Hakuna jedwali lenye safu za wanafunzi lililopatikana katika faili hii. Angalia kama mstari wa kwanza una vichwa kama Jina, Jina la Baba, Darasa.",ar:"لم يتم العثور على جدول بأعمدة الطلاب في هذا الملف. تأكد من أن الصف الأول يحتوي على عناوين مثل الاسم واسم الأب والصف.",zh:"此文件中未找到包含学生列的表格。请检查第一行是否有姓名、父亲姓名、班级等标题。",es:"No se encontró ninguna tabla con columnas de alumnos en este archivo. Comprueba que la primera fila tenga encabezados como Nombre, Nombre del padre, Clase.",fr:"Aucun tableau avec des colonnes d'élèves n'a été trouvé dans ce fichier. Vérifiez que la première ligne contient des titres comme Nom, Nom du père, Classe.",pt:"Não foi encontrada nenhuma tabela com colunas de alunos neste ficheiro. Verifique se a primeira linha tem títulos como Nome, Nome do pai, Turma.",ru:"В этом файле не найдена таблица со столбцами учеников. Проверьте, что в первой строке есть заголовки, например Имя, Имя отца, Класс.",id:"Tidak ada tabel dengan kolom siswa yang ditemukan dalam file ini. Periksa baris pertama memiliki judul seperti Nama, Nama Ayah, Kelas.",de:"In dieser Datei wurde keine Tabelle mit Schülerspalten gefunden. Prüfen Sie, ob die erste Zeile Überschriften wie Name, Name des Vaters, Klasse enthält.",ja:"このファイルに生徒の列がある表が見つかりませんでした。最初の行に名前、父親の名前、クラスなどの見出しがあるか確認してください。",pa:"ایس فائل وچ طالب علماں دے کالم والی کوئی جدول نئیں ملی۔ ویکھو کہ پہلی قطار وچ نام، والد دا نام، جماعت ورگے سرخیاں ہوون۔",mr:"या फाइलमध्ये विद्यार्थ्यांच्या स्तंभांसह कोणतेही तक्ते सापडले नाही. पहिल्या ओळीत नाव, वडिलांचे नाव, वर्ग यांसारखी शीर्षके आहेत का ते तपासा.",te:"ఈ ఫైల్‌లో విద్యార్థి నిలువు వరుసలతో కూడిన పట్టిక ఏదీ కనుగొనబడలేదు. మొదటి అడ్డు వరుసలో పేరు, తండ్రి పేరు, తరగతి వంటి శీర్షికలు ఉన్నాయో లేదో తనిఖీ చేయండి.",fa:"هیچ جدولی با ستون‌های دانش‌آموزان در این پرونده پیدا نشد. بررسی کنید که ردیف اول عنوان‌هایی مانند نام، نام پدر، کلاس داشته باشد.",tr:"Bu dosyada öğrenci sütunları olan bir tablo bulunamadı. İlk satırda Ad, Baba Adı, Sınıf gibi başlıklar olduğundan emin olun.",ta:"இந்த கோப்பில் மாணவர் நெடுவரிசைகளுடன் எந்த அட்டவணையும் கிடைக்கவில்லை. முதல் வரிசையில் பெயர், தந்தையின் பெயர், வகுப்பு போன்ற தலைப்புகள் உள்ளனவா என்று சரிபார்க்கவும்.",vi:"Không tìm thấy bảng nào có cột học sinh trong tệp này. Hãy kiểm tra hàng đầu tiên có các tiêu đề như Tên, Tên cha, Lớp hay không.",ko:"이 파일에서 학생 열이 있는 표를 찾을 수 없습니다. 첫 번째 행에 이름, 아버지 이름, 반과 같은 제목이 있는지 확인하세요.",tl:"Walang talahanayan na may mga hanay ng mag-aaral na natagpuan sa file na ito. Suriin kung ang unang hilera ay may mga pamagat tulad ng Pangalan, Pangalan ng Ama, Klase.",ha:"Ba a sami tebur mai ginshiƙan ɗalibai a cikin wannan fayil ba. Duba ko layin farko yana da taken kamar Suna, Sunan Uba, Aji.",it:"Nessuna tabella con colonne degli studenti trovata in questo file. Controlla che la prima riga abbia intestazioni come Nome, Nome del padre, Classe.",ps:"په دې فایل کې د زده کوونکو د کالمونو سره هېڅ جدول ونه موندل شو. وګورئ چې لومړۍ قطار کې د نوم، د پلار نوم، ټولګي په څېر سرلیکونه شته که نه.",ms:"Tiada jadual dengan lajur murid ditemui dalam fail ini. Semak baris pertama mempunyai tajuk seperti Nama, Nama Bapa, Kelas.",yo:"A kò rí tábìlì kan pẹ̀lú àwọn ọ̀wọ́n akẹ́kọ̀ọ́ nínú fáìlì yìí. Ṣàyẹ̀wò bóyá ìlà àkọ́kọ́ ní àwọn àkọlé bíi Orúkọ, Orúkọ Baba, Kíláàsì.",ig:"Ahụghị tebụl ọ bụla nwere kọlụm ụmụ akwụkwọ na faịlụ a. Lelee ma ahịrị mbụ nwere isiokwu dị ka Aha, Aha Nna, Klas."},
+
 docimp_noexam:{en:"Open an exam first, then import its marks sheet.",ur:"پہلے کوئی امتحان کھولیں، پھر اس کی نمبر شیٹ درآمد کریں۔",bn:"প্রথমে একটি পরীক্ষা খুলুন, তারপর তার নম্বরপত্র আমদানি করুন।",hi:"पहले कोई परीक्षा खोलें, फिर उसकी अंक-पत्रिका आयात करें।",ne:"पहिले परीक्षा खोल्नुहोस्, त्यसपछि त्यसको अङ्क पाना आयात गर्नुहोस्।",sw:"Fungua mtihani kwanza, kisha ingiza karatasi yake ya alama.",ar:"افتح امتحانًا أولًا، ثم استورد ورقة درجاته۔",zh:"请先打开一场考试，然后导入其分数表。",es:"Abre primero un examen y luego importa su hoja de notas.",fr:"Ouvrez d'abord un examen, puis importez sa feuille de notes.",pt:"Abre primeiro um exame e depois importa a sua folha de notas.",ru:"Сначала откройте экзамен, а затем импортируйте его таблицу оценок.",id:"Buka ujian terlebih dahulu, lalu impor lembar nilainya.",de:"Öffnen Sie zunächst eine Prüfung und importieren Sie dann deren Notenblatt.",ja:"まず試験を開いてから、その点数表をインポートしてください。",pa:"پہلے امتحان کھولو، فیر ایس دی نمبر شیٹ درآمد کرو۔",mr:"आधी परीक्षा उघडा, मग त्याचे गुण पत्रक आयात करा.",te:"ముందుగా పరీక్షను తెరవండి, ఆపై దాని మార్కుల షీట్‌ను దిగుమతి చేయండి.",fa:"اول یک امتحان را باز کنید، سپس برگهٔ نمرات آن را وارد کنید.",tr:"Önce bir sınav açın, sonra not tablosunu içe aktarın.",ta:"முதலில் தேர்வைத் திறந்து, அதன் மதிப்பெண் தாளை இறக்குமதி செய்யவும்.",vi:"Mở một kỳ thi trước, rồi nhập bảng điểm của kỳ thi đó.",ko:"먼저 시험을 연 뒤 점수표를 가져오세요.",tl:"Buksan muna ang isang pagsusulit, pagkatapos ay i-import ang marka sheet nito.",ha:"Buɗe jarrabawa da farko, sannan ka shigo da teburin makinta.",it:"Apri prima un esame, quindi importa il relativo foglio dei voti.",ps:"لومړی یوه ازموینه خلاصه کړئ، بیا د هغې د نمرو پاڼه وارد کړئ.",ms:"Buka peperiksaan dahulu, kemudian import helaian markahnya.",yo:"Ṣí ìdánwò kan ní àkọ́kọ́, lẹ́yìn náà gbé tábìlì àmì rẹ̀ wọlé.",ig:"Mepee ule mbụ, wee bubata mpempe akara ya."},
 docimp_f_name:{en:"Name missing",ur:"نام غائب ہے",bn:"নাম নেই",hi:"नाम नहीं है",ne:"नाम छैन",sw:"Jina halipo",ar:"الاسم مفقود",zh:"缺少姓名",es:"Falta el nombre",fr:"Nom manquant",pt:"Falta o nome",ru:"Имя отсутствует",id:"Nama tidak ada",de:"Name fehlt",ja:"名前がありません",pa:"ناں گم اے",mr:"नाव नाही",te:"పేరు లేదు",fa:"نام نیست",tr:"Ad eksik",ta:"பெயர் இல்லை",vi:"Thiếu tên",ko:"이름이 없습니다",tl:"Nawawala ang pangalan",ha:"Suna ya ɓace",it:"Nome mancante",ps:"نوم نشته",ms:"Nama tiada",yo:"Orúkọ kò sí",ig:"Aha adịghị"},
 docimp_f_father:{en:"Father's name missing",ur:"والد کا نام غائب ہے",bn:"বাবার নাম নেই",hi:"पिता का नाम नहीं है",ne:"बुवाको नाम छैन",sw:"Jina la baba halipo",ar:"اسم الأب مفقود",zh:"缺少父亲姓名",es:"Falta el nombre del padre",fr:"Nom du père manquant",pt:"Falta o nome do pai",ru:"Имя отца отсутствует",id:"Nama ayah tidak ada",de:"Der Name des Vaters fehlt",ja:"父親の名前がありません",pa:"پیو دا ناں گم اے",mr:"वडिलांचे नाव नाही",te:"తండ్రి పేరు లేదు",fa:"نام پدر نیست",tr:"Baba adı eksik",ta:"தந்தையின் பெயர் காணவில்லை",vi:"Thiếu tên cha",ko:"아버지 이름이 없습니다",tl:"Nawawala ang pangalan ng ama",ha:"Sunan uba ya ɓace",it:"Manca il nome del padre",ps:"د پلار نوم نشته",ms:"Nama bapa tiada",yo:"Orúkọ bàbá kò sí",ig:"Aha nna adịghị"},
@@ -28434,7 +28850,7 @@ const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,LAN
   awardSheetHTML:awardSheetHTML,awardListPrintHTML:awardListPrintHTML,
   studentPhotoHTML:studentPhotoHTML,setStudentPhoto:setStudentPhoto,
   captureStudentPhoto:captureStudentPhoto,storageBytes:storageBytes,storageMeterHTML:storageMeterHTML,schoolStorageUsage:schoolStorageUsage,schoolStorageCapMB:schoolStorageCapMB,storageCapBytes:storageCapBytes,storageFits:storageFits,storageCapMsg:storageCapMsg,fmtStorageBytes:fmtStorageBytes,isQuotaErrorCode:isQuotaErrorCode,isQuotaError:isQuotaError,quotaBannerActive:quotaBannerActive,schoolStorageHTML:schoolStorageHTML,storageAdminRowHTML:storageAdminRowHTML,storageProjectLineHTML:storageProjectLineHTML,storageGuidanceHTML:storageGuidanceHTML,
-  docImpNormDate:docImpNormDate,docImpNormAdm:docImpNormAdm,docImpNormMarks:docImpNormMarks,docImpNormAtt:docImpNormAtt,findStudentByName:findStudentByName,docImpFlagRows:docImpFlagRows,docImpCommit:docImpCommit,docImpUndo:docImpUndo,docImpLastBatch:docImpLastBatch,impAdmStatus:impAdmStatus,impValidateAdmRows:impValidateAdmRows,impCommitAdmRows:impCommitAdmRows,impReconcileBatch:impReconcileBatch,impReconcile:impReconcile,impResolveHeldRow:impResolveHeldRow,impDiscardHeldRow:impDiscardHeldRow,impPreviewCSV:impPreviewCSV,impImportHistory:impImportHistory,impSummariseRows:impSummariseRows,impSourceKind:impSourceKind,impCsvNormRow:impCsvNormRow,docImpExtract:docImpExtract,docImpCardHTML:docImpCardHTML,docImpPaint:docImpPaint,bindDocImp:bindDocImp,docImpUndoClick:docImpUndoClick,docImpNormCls:docImpNormCls,docImpResolveStudent:docImpResolveStudent,docImpPaginate:docImpPaginate,DOCIMP_PAGE_SIZE:DOCIMP_PAGE_SIZE,docImpFileKind:docImpFileKind,docImpPickFormat:docImpPickFormat,docImpRowChanged:docImpRowChanged,docImpSetAllGender:docImpSetAllGender,docImpSetPage:docImpSetPage,docImpReadRowsFromDOM:docImpReadRowsFromDOM,docImpOnFile:docImpOnFile,
+  docImpNormDate:docImpNormDate,docImpNormAdm:docImpNormAdm,docImpNormMarks:docImpNormMarks,docImpNormAtt:docImpNormAtt,findStudentByName:findStudentByName,docImpFlagRows:docImpFlagRows,docImpCommit:docImpCommit,docImpUndo:docImpUndo,docImpLastBatch:docImpLastBatch,impAdmStatus:impAdmStatus,impValidateAdmRows:impValidateAdmRows,impCommitAdmRows:impCommitAdmRows,impReconcileBatch:impReconcileBatch,impReconcile:impReconcile,impResolveHeldRow:impResolveHeldRow,impDiscardHeldRow:impDiscardHeldRow,impPreviewCSV:impPreviewCSV,impImportHistory:impImportHistory,impSummariseRows:impSummariseRows,impSourceKind:impSourceKind,impCsvNormRow:impCsvNormRow,docImpExtract:docImpExtract,docImpCardHTML:docImpCardHTML,docImpPaint:docImpPaint,bindDocImp:bindDocImp,docImpUndoClick:docImpUndoClick,docImpNormCls:docImpNormCls,docImpResolveStudent:docImpResolveStudent,docImpPaginate:docImpPaginate,DOCIMP_PAGE_SIZE:DOCIMP_PAGE_SIZE,docImpFileKind:docImpFileKind,zipReadEntries:zipReadEntries,zipInflate:zipInflate,xlsxRowsFromZip:xlsxRowsFromZip,docxRowsFromZip:docxRowsFromZip,docImpPickFormat:docImpPickFormat,docImpRowChanged:docImpRowChanged,docImpSetAllGender:docImpSetAllGender,docImpSetPage:docImpSetPage,docImpReadRowsFromDOM:docImpReadRowsFromDOM,docImpOnFile:docImpOnFile,
   viewDossier:viewDossier,helpCardHTML:helpCardHTML,helpWaLink:helpWaLink,legalPageHTML:legalPageHTML,legalPrintHTML:legalPrintHTML,legalSupportHTML:legalSupportHTML,legalBodyHTML:legalBodyHTML,renderLegal:renderLegal,legalLinksCardHTML:legalLinksCardHTML,
   toolsCalcEval:toolsCalcEval,toolsFmtNum:toolsFmtNum,countWorkingDays:countWorkingDays,calcAgeYMD:calcAgeYMD,toolsPickNext:toolsPickNext,makeGroups:makeGroups,EXPLAIN_TOPICS:EXPLAIN_TOPICS,PRACTICALS:PRACTICALS,qotdFor:qotdFor,qotdToday:qotdToday,qotdDayOfYear:qotdDayOfYear,DAILY_QUESTIONS:DAILY_QUESTIONS,TEACH_STRATEGIES:TEACH_STRATEGIES,teachStrategyFor:teachStrategyFor,addTextbookGuide:addTextbookGuide,getTextbookGuide:getTextbookGuide,deleteTextbookGuide:deleteTextbookGuide,textbookGuideHTML:textbookGuideHTML,tbPrintHTML:tbPrintHTML,topicVisualHTML:topicVisualHTML,practicalVisualHTML:practicalVisualHTML,svgDiagram:svgDiagram,svgWaterCycle:svgWaterCycle,visualHTML:visualHTML,teachStrategiesHTML:teachStrategiesHTML,toolsShareText:toolsShareText,qotdShareText:qotdShareText,qotdCardHTML:qotdCardHTML,textbookHTML:textbookHTML,fabDestFor:fabDestFor,fabGeminiDest:fabGeminiDest,fabMatch:fabMatch,fabScrollToSection:fabScrollToSection,fabPlainText:fabPlainText,fabGoTo:fabGoTo,fabToggle:fabToggle,fabClose:fabClose,fabIsOpen:fabIsOpen,fabLastSpeak:fabLastSpeak,paintFab:paintFab,fabTeacherVisible:fabTeacherVisible,fabCurrentTabName:fabCurrentTabName,FAB_DESTINATIONS:FAB_DESTINATIONS,FAB_GEMINI_DEST:FAB_GEMINI_DEST,FAB_STUDENT_INTENTS:FAB_STUDENT_INTENTS,fabPanelHTML:fabPanelHTML,fabRunAsk:fabRunAsk,fabShowAnswer:fabShowAnswer,TABS:TABS,viewTools:viewTools,stEnrolled:stEnrolled,enrolledStudents:enrolledStudents,enrolledStudentsOf:enrolledStudentsOf,enrolledStudentsOfAll:enrolledStudentsOfAll,stStatusName:stStatusName,attStudents:attStudents,bcClassStudents:bcClassStudents};
 function initApp(){var _t0=perfNowMs();db();takeSnapshot("auto");applyLang();
