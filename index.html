@@ -83,6 +83,15 @@ body{padding-bottom:64px}
   padding:.9rem;margin-bottom:.9rem;box-shadow:0 1px 2px rgba(20,40,60,.05)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
 @media(max-width:640px){.grid2{grid-template-columns:1fr}}
+.pkg-grid{display:grid;grid-template-columns:1fr;gap:.6rem}
+@media(min-width:640px){.pkg-grid{grid-template-columns:1fr 1fr}}
+@media(min-width:1100px){.pkg-grid{grid-template-columns:repeat(5,1fr)}}
+.pkg-card{margin-bottom:0}
+.pkg-popular-card{border:2px solid var(--brand)}
+.pkg-badge{display:inline-block;background:var(--cta);color:var(--ink);font-weight:700;font-size:.8rem;border-radius:999px;padding:.15rem .6rem;margin-bottom:.3rem}
+.pkg-current{border:2px solid var(--brand)}
+.pkg-selected{outline:2px solid var(--brand);outline-offset:2px}
+.pkg-price .big{font-size:1.4rem;font-weight:800;color:var(--brand-d)}
 .field{margin-bottom:.65rem}
 .field label{display:block;font-weight:600;margin-bottom:.25rem;font-size:.92rem}
 .field input,.field select,.field textarea{width:100%;padding:.6rem .65rem;min-height:44px;
@@ -12376,11 +12385,20 @@ const Cloud = {
       const schoolId=slugifySchool(r.schoolName)+"-"+String(reqId).slice(-4);
       const trialEnds=addDaysISO(todayISO(),30);
       const instType95=["school","college","university"].indexOf(r.instType)>=0?r.instType:"school";
+      /* Round 167 (E2.3): the tier group comes from the config; the
+         World Bank tier is still stored for compatibility. A Tier 4 /
+         Special request never reaches approval (submitSignup waitlists
+         it first); if one somehow does, refuse it here. The school
+         locks the config price for its country + package at approval
+         (E1.9) — the lock then never moves. */
+      const grp95=configGroup(r.country||"PK");
+      const cfg95=configCountry(r.country||"PK");
+      if(!grp95||!cfg95||!cfg95.available)return {ok:false};
       const tier95=countryTier(r.country||"PK");
-      if(!tier95)return {ok:false};
-      const pl95=priceLockedFor(tier95,instType95);
+      const pkg95=PKG_IDS.indexOf(r.package)>=0?r.package:(r.package==="custom"?"custom":"standard");
+      const pl95=ensurePriceLocked({country:r.country||"PK",package:pkg95});
       perfCount("write");
-      return self.fs.collection("schools").doc(schoolId).set({name:r.schoolName,plan:"trial",status:"active",trialEndsAt:trialEnds,billing:"monthly",country:r.country||"PK",contactEmail:r.email||"",blocked:false,instType:instType95,state:String(r.state||""),district:String(r.district||""),tier:tier95,priceLocked:pl95}).then(function(){
+      return self.fs.collection("schools").doc(schoolId).set({name:r.schoolName,plan:"trial",status:"active",trialEndsAt:trialEnds,billing:"monthly",country:r.country||"PK",contactEmail:r.email||"",blocked:false,instType:instType95,state:String(r.state||""),district:String(r.district||""),tier:tier95,group:grp95,package:pkg95,priceLocked:pl95}).then(function(){
         perfCount("write");
         return self.fs.collection("signupRequests").doc(reqId).set({status:"approved",schoolId:schoolId},{merge:true});
       }).then(function(){
@@ -12519,14 +12537,37 @@ const Cloud = {
         perfCount("read");
         return schRef.get().then(function(ssnap){
           const sch=ssnap.exists?ssnap.data():{};
+          /* Round 167 (E3.3/E3.4): the payment record carries the package
+             and the kind. A kind "upgrade" changes the package with the
+             SAME end date (paidUntil does not move); a smaller/equal
+             package on a kind "upgrade" record is an error and the
+             payment stays "reported". A kind "subscribe" with a smaller
+             package is a downgrade at renewal (E3.5) — the package
+             applies with the new period. priceLocked is NEVER written
+             here (E3.8). */
+          const curPkg=PKG_IDS.indexOf(sch.package)>=0?sch.package:(sch.package==="custom"?"custom":"standard");
+          const newPkg=PKG_IDS.indexOf(pay.package)>=0?pay.package:(pay.package==="custom"?"custom":curPkg);
+          const kind=["subscribe","renew","upgrade"].indexOf(pay.kind)>=0?pay.kind:"subscribe";
+          if(kind==="upgrade"){
+            const ud=upgradeDiffFor(sch,newPkg);
+            if(!ud)return {ok:false,error:t("req")};
+            perfCount("write");
+            return schRef.set(Object.assign({},sch,{package:newPkg}),{merge:true}).then(function(){
+              perfCount("write");
+              return payRef.set(Object.assign({},pay,{status:"confirmed",confirmedAt:tsNow(),confirmedBy:self.user?self.user.uid:""}),{merge:true}).then(function(){
+                if(schoolId===self.schoolId)self.school=Object.assign({},self.school,{package:newPkg});
+                return {ok:true,until:sch.paidUntil||"",message:t("pkg_upgrade_done").replace("{package}",t("pkg_"+newPkg))};
+              });
+            });
+          }
           const cur=String(sch.paidUntil||"").slice(0,10);
           const base=(cur&&cur>todayISO())?cur:todayISO();
           const until=addMonthsISO(base,pay.months||1);
           perfCount("write");
-          return schRef.set(Object.assign({},sch,{paidUntil:until,plan:"paid",billing:pay.cycle||"monthly",status:"active"}),{merge:true}).then(function(){
+          return schRef.set(Object.assign({},sch,{paidUntil:until,plan:"paid",billing:pay.cycle||"monthly",status:"active",package:newPkg}),{merge:true}).then(function(){
             perfCount("write");
             return payRef.set(Object.assign({},pay,{status:"confirmed",confirmedAt:tsNow(),confirmedBy:self.user?self.user.uid:""}),{merge:true}).then(function(){
-              if(schoolId===self.schoolId)self.school=Object.assign({},self.school,{paidUntil:until,plan:"paid",billing:pay.cycle||"monthly",status:"active"});
+              if(schoolId===self.schoolId)self.school=Object.assign({},self.school,{paidUntil:until,plan:"paid",billing:pay.cycle||"monthly",status:"active",package:newPkg});
               return {ok:true,until:until};
             });
           });
@@ -12666,14 +12707,6 @@ const Cloud = {
       return self.fs.collection("schools").doc(schoolId).set({subDiscount:null},{merge:true}).then(function(){return {ok:true};}).catch(function(){return {ok:false};});
     }catch(e){return Promise.resolve({ok:false});}
   },
-  setPlatformPricing: function(data){
-    const self=this;
-    if(!self.fs||!self.isSuperAdmin)return Promise.resolve({ok:false});
-    try{
-      perfCount("write");
-      return self.fs.collection("platform").doc("pricing").set({matrix:data.matrix,annualDisc:data.annualDisc,discPresets:data.discPresets,updatedAt:tsNow(),updatedBy:(self.user&&self.user.uid)||""}).then(function(){return {ok:true};}).catch(function(){return {ok:false};});
-    }catch(e){return Promise.resolve({ok:false});}
-  },
   /* Round 94: exit procedure — merge-set exit fields on the school doc.
      Allowed by the rules for the school's own head admin (isAdmin() &&
      mySchool()==schoolId) and for the platform admin. Fields use "" to
@@ -12774,6 +12807,55 @@ const Cloud = {
       perfCount("write");
       if(granted)return self.fs.collection("schools").doc(schoolId).set({freeAccess:true,freeAccessBy:"portalmi772@gmail.com",freeAccessAt:tsNow()},{merge:true}).then(function(){return {ok:true};}).catch(function(){return {ok:false};});
       return self.fs.collection("schools").doc(schoolId).set({freeAccess:false},{merge:true}).then(function(){return {ok:true};}).catch(function(){return {ok:false};});
+    }catch(e){return Promise.resolve({ok:false});}
+  },
+  /* Round 167 (E2.4): head-only — the head changes their own school's
+     country in Settings. Merge-sets {country} on the school doc ONLY
+     and updates Cloud.school.country locally on success. */
+  setSchoolCountry: function(country){
+    const self=this;
+    if(!self.fs||!isSchoolAdmin()||!self.schoolId)return Promise.resolve({ok:false});
+    const c=String(country||"").trim().toUpperCase();
+    if(!c)return Promise.resolve({ok:false});
+    try{
+      perfCount("write");
+      return self.fs.collection("schools").doc(self.schoolId).set({country:c},{merge:true}).then(function(){
+        if(self.school)self.school=Object.assign({},self.school,{country:c});
+        return {ok:true};
+      }).catch(function(){return {ok:false};});
+    }catch(e){return Promise.resolve({ok:false});}
+  },
+  /* Round 167 (E3.5): the head switches the TRIAL package (tap a
+     different card, no payment, no admin step). Only while
+     plan==="trial"; merge-sets {package} on the school doc ONLY, and
+     the cap follows it immediately. */
+  setTrialPackage: function(packageId){
+    const self=this;
+    if(!self.fs||!isSchoolAdmin()||!self.schoolId)return Promise.resolve({ok:false});
+    if(PKG_IDS.indexOf(packageId)<0)return Promise.resolve({ok:false});
+    if(!self.school||self.school.plan!=="trial")return Promise.resolve({ok:false});
+    try{
+      perfCount("write");
+      return self.fs.collection("schools").doc(self.schoolId).set({package:packageId},{merge:true}).then(function(){
+        if(self.school)self.school=Object.assign({},self.school,{package:packageId});
+        return {ok:true};
+      }).catch(function(){return {ok:false};});
+    }catch(e){return Promise.resolve({ok:false});}
+  },
+  /* Round 167 (E3.6): platform admin only — change a school's package.
+     Merge-sets {package} on the school doc ONLY — never paidUntil,
+     plan, billing, or priceLocked. Used for Custom packages (priced
+     by hand, outside the table) and for corrections. */
+  setSchoolPackage: function(schoolId,packageId){
+    const self=this;
+    if(!self.fs||!self.isSuperAdmin||!schoolId)return Promise.resolve({ok:false});
+    if(PKG_IDS.indexOf(packageId)<0&&packageId!=="custom")return Promise.resolve({ok:false});
+    try{
+      perfCount("write");
+      return self.fs.collection("schools").doc(schoolId).set({package:packageId},{merge:true}).then(function(){
+        if(schoolId===self.schoolId&&self.school)self.school=Object.assign({},self.school,{package:packageId});
+        return {ok:true};
+      }).catch(function(){return {ok:false};});
     }catch(e){return Promise.resolve({ok:false});}
   },
   getVerifyDoc: function(schoolId,code){
@@ -12982,7 +13064,22 @@ function sessionClose(overrides){if(!sessionAdminOK())return {ok:false,code:"not
 function sessionStart(label,startDate,endDate){if(!sessionAdminOK())return {ok:false,code:"not_admin"};const d=db();if(currentSession())return {ok:false,code:"already_active"};const def=defaultSessionDates();const sess={id:newSessionId(),label:String(label||def.label).trim(),startDate:startDate||def.start,endDate:endDate||def.end,status:"open",createdAt:todayISO()};if(!sess.label)return {ok:false,code:"no_label"};if(!sess.startDate||!sess.endDate||sess.endDate<sess.startDate)return {ok:false,code:"bad_dates"};if(!d.sessions)d.sessions=[];d.sessions.push(sess);d.settings.currentSessionId=sess.id;const month=sess.startDate.slice(0,7);let carriedN=0;activeStudents().forEach(function(st){const ob=st.openingBalance||null;const bal=ob?Number(ob.amount||0):0;if(bal<=0)return;const from=ob.fromSession||sesLastClosedLabel||"";const ex=feeRecord(st.id,month);if(ex){ex.total=Number(ex.total||0)+bal;if(ex.createdTotal!=null)ex.createdTotal=Number(ex.createdTotal||0)+bal;ex.carried=true;ex.carriedAmount=Number(ex.carriedAmount||0)+bal;ex.carriedFrom=from;ex.sessionId=sess.id;delete st.openingBalance;carriedN++;return;}const headsTotal=feeHeadsFor(st.cls).reduce(function(a,h){return a+Number(h.amount||0);},0);const trFee=transportFeeFor(st);const total=bal+headsTotal+trFee;const rec={id:uid("fr"),studentId:st.id,month:month,total:total,transportFee:trFee,items:feeHeadsFor(st.cls).map(function(h){return {name:h.name,amount:h.amount};}),discount:0,fine:0,payments:[],at:todayISO(),carried:true,carriedAmount:bal,carriedFrom:from,sessionId:sess.id};const ca=concAmount(st,total);if(ca>0){rec.discount=ca;rec.discountKind="concession";rec.discountNote=(st.concession.kind||"")+" — "+(st.concession.approver||"");}rec.createdTotal=total;rec.createdDiscount=rec.discount;rec.createdFine=0;d.feeRecords.push(rec);delete st.openingBalance;carriedN++;});audit("session-start",sess.label+" — started; "+carriedN+" carried balances");Store.save();render();return {ok:true,session:sess,carriedCount:carriedN};}
 function sessionUndoClose(){if(!sessionAdminOK())return {ok:false,code:"not_admin"};const list=snapshotsList();let idx=-1;for(let i=list.length-1;i>=0;i--){if(list[i].reason==="before-session-close"){idx=i;break;}}if(idx<0)return {ok:false,code:"no_snapshot"};const r=restoreSnapshot(idx);if(r.ok)render();return r;}
 function withdrawStudent(studentId,reason){const st=db().students.find(function(x){return x.id===studentId;});if(!st)return {ok:false,code:"not_found"};if(st.status==="withdrawn")return {ok:false,code:"already"};st.status="withdrawn";st.withdrawnReason=String(reason||"").trim();st.withdrawnDate=todayISO();logHist(st,"student-withdraw",st.admNo+" — withdrawn"+(st.withdrawnReason?" ("+st.withdrawnReason+")":""));Store.save();return {ok:true};}
-function readmitStudent(studentId){const st=db().students.find(function(x){return x.id===studentId;});if(!st)return {ok:false,code:"not_found"};if(st.status!=="withdrawn")return {ok:false,code:"not_withdrawn"};st.status="active";st.readmittedDate=todayISO();logHist(st,"student-readmit",st.admNo+" — re-admitted");Store.save();return {ok:true};}
+function readmitStudent(studentId){
+  const st=db().students.find(function(x){return x.id===studentId;});
+  if(!st)return {ok:false,code:"not_found"};
+  if(st.status!=="withdrawn")return {ok:false,code:"not_withdrawn"};
+  /* Round 167 (E4.3): a re-admission counts toward the cap. A withdrawn
+     student ALREADY counts as enrolled (stEnrolled: status !== "left"
+     and !== "transferred"), so a re-admission adds zero students — the
+     check counts the OTHERS, not the whole register: it refuses only
+     when the school is already OVER the limit. The literal spec check
+     (enrolledStudents().length >= cap.limit) would block re-admitting
+     a counted student at the cap. (BUILD-REPORT, decision 11.) */
+  const capR167=studentCapFor(Cloud.school||db().settings);
+  const others167=enrolledStudents().filter(function(x){return x.id!==studentId;}).length;
+  if(others167>=capR167.limit)return {ok:false,code:"cap",error:t("cap_over").replace("{what}",t("ho_students")).replace("{have}",String(others167)).replace("{limit}",String(capR167.limit))};
+  st.status="active";st.readmittedDate=todayISO();logHist(st,"student-readmit",st.admNo+" — re-admitted");Store.save();return {ok:true};
+}
 function archiveSearch(q,sessionId){const s=String(q||"").toLowerCase().trim();if(!s)return [];const out=[];Object.keys(db().archive||{}).forEach(function(sid){if(sessionId&&sid!==sessionId)return;const a=db().archive[sid];(a.students||[]).forEach(function(st){if((st.name||"").toLowerCase().indexOf(s)>=0||(st.fatherName||"").toLowerCase().indexOf(s)>=0||(st.admNo||"").toLowerCase().indexOf(s)>=0)out.push({session:a,st:st});});});return out;}
 function sessionCardHTML(){const cur=currentSession();const def=defaultSessionDates();let h="";if(!sessionAdminOK()){return '<p class="muted">'+esc(t("ses_none"))+"</p>";}if(cur){h+="<p><b>"+esc(cur.label)+"</b> • "+fmtDate(cur.startDate)+" – "+fmtDate(cur.endDate)+"</p>";const hasUndo=snapshotsList().some(function(s){return s.reason==="before-session-close";});h+='<div class="toolbar"><button type="button" class="btn" id="ses-close">'+esc(t("ses_close"))+"</button>"+(hasUndo?'<button type="button" class="btn" id="ses-undo">'+esc(t("ses_undo"))+"</button>":"")+'</div><div id="ses-review"></div><div id="ses-msg"></div>';}else{h+='<p class="muted">'+esc(t("ses_none"))+"</p>";h+='<p class="muted">'+esc(t("ses_default_note"))+"</p>";h+=fld("ses_label",'<input id="ses-label" value="'+esc(def.label)+'">')+fld("tools_start",'<input id="ses-start" type="date" value="'+esc(def.start)+'">')+fld("tools_end",'<input id="ses-end" type="date" value="'+esc(def.end)+'">');h+='<div class="toolbar"><button type="button" class="btn btn-primary" id="ses-startbtn">'+esc(t("ses_start_new"))+'</button></div><div id="ses-msg"></div>';}const past=(db().sessions||[]).filter(function(x){return x.status==="closed";});if(past.length){h+="<h3>"+esc(t("ses_past"))+"</h3>"+past.map(function(x){return "<div>• "+esc(x.label)+" — "+esc(t("ses_archived"))+"</div>";}).join("");}return h;}
 function sessionCloseReviewHTML(rev){let h='<div class="card"><h3>'+esc(t("ses_close_title"))+"</h3>";h+='<p class="muted">'+esc(t("ses_close_warn"))+"</p>";h+="<p>"+esc(t("ses_fees_arch"))+": "+rev.feeCount+"</p>";if(rev.unlocked>0)h+="<p>⚠ "+esc(t("ses_warn_unlocked"))+": "+rev.unlocked+"</p>";if(rev.carriedCount>0)h+="<p>"+esc(t("ses_warn_balances"))+": "+rev.carriedCount+" — "+esc(t("ses_carried"))+" ("+rev.carriedTotal+")</p>";if(rev.leftCount>0)h+="<p>⚠ "+esc(t("ses_warn_balances"))+" ("+esc(t("ses_graduated"))+" / "+esc(t("ses_withdrawn"))+"): "+rev.leftCount+" — "+rev.leftTotal+"</p>";if(rev.bigArchive)h+="<p>⚠ "+esc(t("ses_big_archive"))+"</p>";h+='<div class="twrap"><table class="grid"><tr><th>'+esc(t("f_name"))+"</th><th>"+esc(t("cls"))+"</th><th>"+esc(t("result"))+"</th><th>"+esc(t("ses_promote"))+"</th></tr>";rev.rows.forEach(function(r){const m=r.out.mode;const label=m==="promote"?t("ses_promote"):m==="graduate"?t("ses_graduate"):m==="stay"?t("ses_stay"):t("ses_no_result");h+="<tr><td>"+esc(r.st.name)+"</td><td>"+esc(clsLabel(r.st.cls,r.st.section))+"</td><td>"+(r.out.pct==null?"—":r.out.pct+"%")+"</td><td>"+'<select data-ses-mode="'+r.st.id+'"><option value="promote"'+(m==="promote"?" selected":"")+">"+esc(t("ses_promote"))+'</option><option value="stay"'+(m==="stay"||m==="no_result"?" selected":"")+">"+esc(t("ses_stay"))+'</option><option value="graduate"'+(m==="graduate"?" selected":"")+">"+esc(t("ses_graduate"))+"</option></select> "+esc(label)+"</td></tr>";});h+="</table></div>";h+='<div class="toolbar"><button type="button" class="btn btn-primary" id="ses-close-confirm">'+esc(t("ses_close_start"))+'</button> <button type="button" class="btn" id="ses-close-cancel">'+esc(t("cancel"))+"</button></div></div>";return h;}
@@ -13018,6 +13115,13 @@ function addStudent(d){
       if((db().seq.adm[mm[1]]||1)<=n)db().seq.adm[mm[1]]=n+1;
     }
   }
+  /* Round 167 (E4.3): the package cap — checked AFTER the admission
+     number clash and IMMEDIATELY BEFORE the PIN generation, so a
+     capped add never generates or consumes a PIN. The count is
+     enrolledStudents() (a student counts as enrolled unless left or
+     transferred; a withdrawn student still counts, E4.1). */
+  const cap167=studentCapFor(Cloud.school||db().settings);
+  if(enrolledStudents().length>=cap167.limit)return {ok:false,code:"cap",error:t("cap_over").replace("{what}",t("ho_students")).replace("{have}",String(enrolledStudents().length)).replace("{limit}",String(cap167.limit))};
   let pin=String(d.pin||"").trim()||null;
   if(!pin){let tries=0;do{pin=String(100000+Math.floor(Math.random()*900000));tries++;}while(tries<25&&db().students.some(function(s){return s.pin===pin;}));}
   const st={id:uid("st"),admNo:admNoSupplied||nextAdmNo(d.admDate),name:d.name.trim(),fatherName:d.fatherName.trim(),
@@ -17189,10 +17293,18 @@ function submitSignup(d){
   const instType=["school","college","university"].indexOf(d.instType)>=0?d.instType:"school";
   const state=String(d.state||"").trim(),district=String(d.district||"").trim();
   if(!schoolName||!contactName||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return {ok:false,error:t("req")};
+  /* Round 167 (E2.2): the package is validated against the six values;
+     anything else becomes "standard". The tier check is the config
+     group: a Tier 4 country (available:false) or a country outside the
+     config (Special) is a valid signup but becomes a waitlist entry —
+     it can never be refused for its country. The World Bank tier is
+     still stored for compatibility (E1.7). */
+  const pkg=PKG_IDS.indexOf(d.package)>=0?d.package:(d.package==="custom"?"custom":"standard");
+  const grp=configGroup(country);
+  const cfg=configCountry(country);
   const tier=countryTier(country);
-  if(!tier)return {ok:false,error:t("pricing_not_set")};
-  const waitlisted=instType!=="school";
-  const r={id:uid("sr"),schoolName:schoolName,contactName:contactName,email:email,phone:phone,country:country,city:city,students:students,instType:instType,state:state,district:district,tier:tier,status:waitlisted?"waitlist":"pending",at:tsNow(),schoolId:"",note:""};
+  const waitlisted=instType!=="school"||!cfg||!cfg.available;
+  const r={id:uid("sr"),schoolName:schoolName,contactName:contactName,email:email,phone:phone,country:country,city:city,students:students,instType:instType,state:state,district:district,tier:tier,group:grp||"",package:pkg,status:waitlisted?"waitlist":"pending",at:tsNow(),schoolId:"",note:(!cfg||!cfg.available)?t("pricing_not_set"):""};
   if(typeof Cloud!=="undefined"&&Cloud.fs){
     Cloud.pushPublicRoot("signupRequests",r.id,r);
   }else{
@@ -17234,9 +17346,9 @@ function signupReqCardHTML(r,dup){
   let h='<div class="card" style="margin:.5rem 0"><b>'+esc(r.schoolName)+"</b> "+chip+"<br>"+
     '<span class="muted">'+esc(pk.name)+(r.city?" • "+esc(r.city):"")+" • "+esc(r.contactName)+" • "+esc(r.email)+(r.phone?" • "+esc(r.phone):"")+(r.students?" • "+esc(t("signup_students"))+": "+r.students:"")+" • "+esc(fmtDate((r.at||"").slice(0,10)))+"</span>";
   if(dup&&typeof dup==="object")h+='<br><span class="msg warn">⚠️ '+esc(t("signup_dup"))+": "+esc(dup.schoolName||"")+" • "+esc(fmtDate((dup.at||"").slice(0,10)))+" • "+(dup.status==="approved"?"✅ "+esc(t("signup_approved")):dup.status==="rejected"?"❌ "+esc(t("signup_rejected")):"⏳ "+esc(t("signup_pending")))+"</span>";
-  const rTier95=r.tier||countryTier(r.country||"PK");
-  const rPrice95=rTier95?priceFor(rTier95,r.instType||"school","monthly"):null;
-  h+='<br><span class="muted">'+esc(t("inst_"+(r.instType||"school")))+(r.state?" • "+esc(r.state):"")+(r.district?" • "+esc(r.district):"")+(rTier95?" • Tier "+rTier95:"")+(rPrice95?" • "+esc(rPrice95.currency+" "+fmtNum(rPrice95.amount))+" "+esc(t("pricing_per_month")):"")+"</span>";
+  const rPkg95=PKG_IDS.indexOf(r.package)>=0?r.package:(r.package==="custom"?"custom":"standard");
+  const rPrice95=packagePrice(r.country||"PK",rPkg95,"monthly");
+  h+='<br><span class="muted">'+esc(t("inst_"+(r.instType||"school")))+(r.state?" • "+esc(r.state):"")+(r.district?" • "+esc(r.district):"")+" • "+esc(pkgName(rPkg95))+(rPrice95?" • "+esc(rPrice95.currency+" "+fmtNum(rPrice95.amount))+" "+esc(t("pricing_per_month")):"")+"</span>";
   if(r.schoolId)h+='<br><span class="muted">🆔 '+esc(r.schoolId)+"</span>";
   if(r.note)h+='<br><span class="muted">'+esc(r.note)+"</span>";
   if(r.status==="pending"){
@@ -17894,17 +18006,17 @@ function feeDefaulters(month){
    Old data has no feesEnabled field, so it defaults to on. */
 function feesOn(){return (db().settings||{}).feesEnabled!==false;}
 /* ---- subscription billing (Round 23) ----
-   Annual plan = 12 months for the price of 10.8 (10% off the annual total).
-   ANNUAL_DISC is the one number that changes the discount. */
-const ANNUAL_DISC=0.10;
+   Annual plan = 10x the monthly price (2 months free, E1.2). The
+   annual price is an explicit field in PRICING_CONFIG — there is no
+   discount constant any more (the old 10.8x model died with the
+   override model, E1.6). */
 /* Round 95: the same three helpers now ALSO accept a locked-price object
-   {monthly, annual, currency} (see schoolPrice/priceLocked). A legacy pack
-   {price} keeps the old maths exactly — verify.js pins
-   annualPrice({price:1500})===16200. */
-function annualPrice(pack){if(pack&&typeof pack.annual==="number")return pack.annual;return Math.round((pack.price||0)*12*(1-annualDisc()));}
+   {monthly, annual, currency} (see schoolPrice/priceLocked). A legacy
+   pack {price} has no discount any more — the annual is 12x the
+   monthly (the discount lives in the config's annual field). */
+function annualPrice(pack){if(pack&&typeof pack.annual==="number")return pack.annual;return Math.round((pack.price||0)*12);}
 function annualSave(pack){if(pack&&typeof pack.annual==="number"&&typeof pack.monthly==="number")return pack.monthly*12-pack.annual;return (pack.price||0)*12-annualPrice(pack);}
 function subAmountFor(pack,cycle){if(pack&&(typeof pack.monthly==="number"||typeof pack.annual==="number"))return cycle==="annual"?(pack.annual||0):(pack.monthly||0);return cycle==="annual"?annualPrice(pack):(pack.price||0);}
-function annualDisc(){return (pricingOverride&&typeof pricingOverride.annualDisc==="number")?pricingOverride.annualDisc:ANNUAL_DISC;}
 function subCycleMonths(cycle){return cycle==="annual"?12:1;}
 /* Add months to a YYYY-MM-DD date, clamping the day (31 Jan + 1 mo = 28 Feb). */
 function addMonthsISO(iso,months){
@@ -17988,12 +18100,34 @@ function subWriteGuard(){
    platform admin confirms it — only the confirm extends paidUntil. */
 function reportSubPayment(d){
   const _wg92=migWriteGuard();if(_wg92)return {ok:false,error:_wg92};
-
+  d=d||{};
+  /* Round 167 (E3.3): the report form is head-only — the function
+     refuses a non-head caller when the Cloud is enabled (Option A:
+     local/demo mode keeps working, matching canSaveSettings()). */
+  if(typeof Cloud!=="undefined"&&Cloud.enabled&&!isSchoolAdmin())return {ok:false,error:t("set_head_only")};
+  const sch=(typeof Cloud!=="undefined"&&Cloud.school)||{};
+  const cur=PKG_IDS.indexOf(sch.package)>=0?sch.package:(sch.package==="custom"?"custom":"standard");
+  /* The package is validated against the six values; anything else
+     becomes the current package (E3.3). */
+  const pkg=PKG_IDS.indexOf(d.package)>=0?d.package:(d.package==="custom"?"custom":cur);
+  const kind=["subscribe","renew","upgrade"].indexOf(d.kind)>=0?d.kind:"subscribe";
   const cycle=d.cycle==="annual"?"annual":"monthly";
+  /* Round 167 (E3.7): international schools pay once a year — a
+     monthly report from a non-PK school is refused (backstop). */
+  if(cycle==="monthly"&&schoolCountry()!=="PK")return {ok:false,error:t("pkg_annual_only")};
   const amt=Number(d.amount);
   if(!(amt>0))return {ok:false,error:t("req")};
   if(SUB_PAY_METHODS.indexOf(d.method)<0)return {ok:false,error:t("sub_bad_method")};
-  const p={id:uid("sp"),at:tsNow(),amount:amt,method:d.method,txnId:String(d.txnId||"").trim(),cycle:cycle,months:subCycleMonths(cycle),status:"reported",reportedBy:(typeof Cloud!=="undefined"&&Cloud.user?Cloud.user.email:"")};
+  /* Round 167 (E3.4): an upgrade is refused when the difference is
+     zero or negative (the selected package is not actually larger).
+     A subscribe/renew keeps the old behaviour — any amount above zero
+     is reported and the admin's mismatch check (adminSchoolHTML) is
+     the control, so a founder-discounted price is never refused. */
+  if(kind==="upgrade"){
+    const ud=upgradeDiffFor(sch,pkg);
+    if(!ud||ud.amount<=0)return {ok:false,error:t("req")};
+  }
+  const p={id:uid("sp"),at:tsNow(),amount:amt,method:d.method,txnId:String(d.txnId||"").trim(),cycle:cycle,months:subCycleMonths(cycle),package:pkg,kind:kind,status:"reported",reportedBy:(typeof Cloud!=="undefined"&&Cloud.user?Cloud.user.email:"")};
   dbArr("subPayments").push(p);
   audit("sub-report",p.cycle+" "+p.amount+" "+p.method+" "+(p.txnId||"—"));
   Store.save();
@@ -18896,31 +19030,257 @@ function verifyBlockHTML(code,url){
    the UK price is for a primary school (secondary ~£450-490).
    The school's country lives in settings (synced across the school's devices);
    the school document's country, when the admin sets it, wins. */
-const COUNTRY_PACKS=[
-  {code:"PK",name:"Pakistan",cur:"PKR",sym:"Rs",price:1500,rails:"EasyPaisa / NayaPay / SadaPay / JazzCash / bank transfer",board:"BISE",note:""},
-  {code:"BD",name:"Bangladesh",cur:"BDT",sym:"৳",price:1500,rails:"bKash / Nagad + transaction ID",board:"NCTB / Education Boards",note:""},
-  {code:"IN",name:"India",cur:"INR",sym:"₹",price:1000,rails:"UPI / bank transfer / card",board:"CBSE / ICSE / State Boards",note:""},
-  {code:"NP",name:"Nepal",cur:"NPR",sym:"Rs",price:1500,rails:"eSewa / Khalti / FonePay",board:"NEB (SEE +2)",note:""},
-  {code:"LK",name:"Sri Lanka",cur:"LKR",sym:"Rs",price:2500,rails:"bank transfer / LankaQR / card",board:"GCE O/L + A/L",note:""},
-  {code:"KE",name:"Kenya",cur:"KES",sym:"KSh",price:2500,rails:"M-Pesa (STK Push / paybill)",board:"CBC / KNEC",note:""},
-  {code:"NG",name:"Nigeria",cur:"NGN",sym:"₦",price:15000,rails:"bank transfer / Paystack / Flutterwave",board:"WAEC / NECO (BECE / WASSCE)",note:""},
-  {code:"GH",name:"Ghana",cur:"GHS",sym:"₵",price:150,rails:"MTN MoMo / bank transfer",board:"WAEC (BECE / WASSCE)",note:""},
-  {code:"TZ",name:"Tanzania",cur:"TZS",sym:"TSh",price:50000,rails:"M-Pesa / Tigo Pesa / bank transfer",board:"NECTA",note:""},
-  {code:"UG",name:"Uganda",cur:"UGX",sym:"USh",price:25000,rails:"MTN / Airtel MoMo via SchoolPay",board:"UNEB",note:""},
-  {code:"ZM",name:"Zambia",cur:"ZMW",sym:"K",price:500,rails:"MTN / Airtel MoMo or card",board:"ECZ",note:""},
-  {code:"ZW",name:"Zimbabwe",cur:"USD",sym:"$",price:33,rails:"EcoCash / bank transfer (ZiG accepted)",board:"ZIMSEC",note:""},
-  {code:"ZA",name:"South Africa",cur:"ZAR",sym:"R",price:499,rails:"EFT / debit order / PayFast",board:"DBE / Umalusi (NSC)",note:""},
-  {code:"EG",name:"Egypt",cur:"EGP",sym:"E£",price:700,rails:"bank transfer / InstaPay / Fawry",board:"MoE (Thanaweya Amma)",note:"provisional"},
-  {code:"AE",name:"UAE",cur:"AED",sym:"AED",price:500,rails:"bank transfer / card",board:"KHDA / ADEK / SPEA",note:""},
-  {code:"PH",name:"Philippines",cur:"PHP",sym:"₱",price:5000,rails:"GCash / bank transfer / card",board:"DepEd K-12",note:""},
-  {code:"ID",name:"Indonesia",cur:"IDR",sym:"Rp",price:300000,rails:"bank transfer / QRIS",board:"Kurikulum Merdeka",note:""},
-  {code:"MY",name:"Malaysia",cur:"MYR",sym:"RM",price:299,rails:"FPX / bank transfer / card",board:"MOE (KSSR / KSSM / SPM)",note:""},
-  {code:"GB",name:"United Kingdom",cur:"GBP",sym:"£",price:250,rails:"bank transfer / Direct Debit",board:"GCSE / A-level",note:"primary; secondary ~£450-490"},
-  {code:"US",name:"United States",cur:"USD",sym:"$",price:250,rails:"ACH / card / cheque",board:"State standards",note:""}
+/* ================= pricing config (Round 167) =================
+   PRICING_CONFIG is the app's copy of the playbook §3.2 price table
+   (hazrio-pricing-playbook-2026-11-20.md) — the single source of truth.
+   The website pricing page (Phase 3) reads the same table from the
+   playbook. A price change is made here AND in the playbook, by an app
+   round only (E1.10): the config ships inside the app file, so a school
+   cannot be given a different price by editing a server row in v1.
+   Prices are data, never typed into a page, card or message by hand.
+   Notes (E1.3, so a future builder does not "fix" them):
+   (a) the Saudi/UAE gap is REAL — Saudi Starter SAR 100 (~AED 98)
+       vs UAE Starter AED 500; the two prices are anchored on different
+       binding rivals (EduPilotPro flat USD in Saudi, Xrero per-student
+       in UAE). (b) Oman margins are thin (Standard 18 vs ~19.25, Plus
+       45 vs ~46.20) — re-check before Oman activates. (c) US Large
+       $500 is an ESTIMATE — re-check before the US activates. (d)
+       Kuwait and Bahrain are ESTIMATES (no like-for-like rival; UAE
+       anchor via the peg) — re-check before they activate. (e) the
+       Tier 4 default is an ESTIMATE — no rivals were checked; no
+       country activates on it. The group ("Tier 1/2/3/4") is INTERNAL
+       and is NEVER shown publicly (playbook §3.1). */
+const PRICING_CONFIG_VERSION="2026-11-20";
+const PRICING_CONFIG=[
+  {code:"PK",name:"Pakistan",flag:"🇵🇰",cur:"PKR",sym:"Rs",fmt:"en-PK",group:"Tier 3",tiers:{starter:{m:1500,a:15000},standard:{m:2500,a:25000},growth:{m:4000,a:40000},plus:{m:6000,a:60000},large:{m:9000,a:90000}},trialDays:30,manual:true,available:true,rails:"EasyPaisa / NayaPay / SadaPay / JazzCash / bank transfer"},
+  {code:"IN",name:"India",flag:"🇮🇳",cur:"INR",sym:"₹",fmt:"en-IN",group:"Tier 3",tiers:{starter:{m:2000,a:20000},standard:{m:2500,a:25000},growth:{m:3000,a:30000},plus:{m:4500,a:45000},large:{m:5500,a:55000}},trialDays:30,manual:true,available:true,rails:"UPI / bank transfer / card"},
+  {code:"BD",name:"Bangladesh",flag:"🇧🇩",cur:"BDT",sym:"৳",fmt:"en-BD",group:"Tier 3",tiers:{starter:{m:900,a:9000},standard:{m:1400,a:14000},growth:{m:2900,a:29000},plus:{m:4900,a:49000},large:{m:7900,a:79000}},trialDays:30,manual:true,available:true,rails:"bKash / Nagad + transaction ID"},
+  {code:"KE",name:"Kenya",flag:"🇰🇪",cur:"KES",sym:"KSh",fmt:"en-KE",group:"Tier 3",tiers:{starter:{m:700,a:7000},standard:{m:800,a:8000},growth:{m:1500,a:15000},plus:{m:2500,a:25000},large:{m:4000,a:40000}},trialDays:30,manual:true,available:true,rails:"M-Pesa (STK Push / paybill)"},
+  {code:"NG",name:"Nigeria",flag:"🇳🇬",cur:"NGN",sym:"₦",fmt:"en-NG",group:"Tier 3",tiers:{starter:{m:15000,a:150000},standard:{m:20000,a:200000},growth:{m:50000,a:500000},plus:{m:80000,a:800000},large:{m:150000,a:1500000}},trialDays:30,manual:true,available:true,rails:"bank transfer / Paystack / Flutterwave"},
+  {code:"AE",name:"UAE",flag:"🇦🇪",cur:"AED",sym:"AED",fmt:"en-AE",group:"Tier 2",tiers:{starter:{m:500,a:5000},standard:{m:900,a:9000},growth:{m:2000,a:20000},plus:{m:3500,a:35000},large:{m:6000,a:60000}},trialDays:30,manual:true,available:true,rails:"bank transfer / card"},
+  {code:"SA",name:"Saudi Arabia",flag:"🇸🇦",cur:"SAR",sym:"SR",fmt:"en-SA",group:"Tier 2",tiers:{starter:{m:100,a:1000},standard:{m:150,a:1500},growth:{m:300,a:3000},plus:{m:400,a:4000},large:{m:600,a:6000}},trialDays:30,manual:true,available:true,rails:"bank transfer / card"},
+  {code:"QA",name:"Qatar",flag:"🇶🇦",cur:"QAR",sym:"QR",fmt:"en-QA",group:"Tier 2",tiers:{starter:{m:150,a:1500},standard:{m:200,a:2000},growth:{m:250,a:2500},plus:{m:500,a:5000},large:{m:550,a:5500}},trialDays:30,manual:true,available:true,rails:"bank transfer / card"},
+  {code:"KW",name:"Kuwait",flag:"🇰🇼",cur:"KWD",sym:"KD",fmt:"en-KW",group:"Tier 2",tiers:{starter:{m:40,a:400},standard:{m:75,a:750},growth:{m:170,a:1700},plus:{m:300,a:3000},large:{m:500,a:5000}},trialDays:30,manual:true,available:true,rails:"bank transfer / card"},
+  {code:"OM",name:"Oman",flag:"🇴🇲",cur:"OMR",sym:"RO",fmt:"en-OM",group:"Tier 2",tiers:{starter:{m:15,a:150},standard:{m:18,a:180},growth:{m:35,a:350},plus:{m:45,a:450},large:{m:80,a:800}},trialDays:30,manual:true,available:true,rails:"bank transfer / card"},
+  {code:"BH",name:"Bahrain",flag:"🇧🇭",cur:"BHD",sym:"BD",fmt:"en-BH",group:"Tier 2",tiers:{starter:{m:15,a:150},standard:{m:18,a:180},growth:{m:35,a:350},plus:{m:40,a:400},large:{m:75,a:750}},trialDays:30,manual:true,available:true,rails:"bank transfer / card"},
+  {code:"GB",name:"United Kingdom",flag:"🇬🇧",cur:"GBP",sym:"£",fmt:"en-GB",group:"Tier 1",tiers:{starter:{m:75,a:750},standard:{m:90,a:900},growth:{m:200,a:2000},plus:{m:350,a:3500},large:{m:550,a:5500}},trialDays:30,manual:true,available:true,rails:"bank transfer / Direct Debit"},
+  {code:"US",name:"United States",flag:"🇺🇸",cur:"USD",sym:"$",fmt:"en-US",group:"Tier 1",tiers:{starter:{m:70,a:700},standard:{m:150,a:1500},growth:{m:250,a:2500},plus:{m:300,a:3000},large:{m:500,a:5000}},trialDays:30,manual:true,available:true,rails:"ACH / card / cheque"},
+  {code:"NP",name:"Nepal",flag:"🇳🇵",cur:"NPR",sym:"Rs",fmt:"en-NP",group:"Tier 4",tiers:{starter:{m:10,a:100},standard:{m:15,a:150},growth:{m:25,a:250},plus:{m:40,a:400},large:{m:60,a:600}},trialDays:30,manual:true,available:false,rails:"eSewa / Khalti / FonePay"},
+  {code:"LK",name:"Sri Lanka",flag:"🇱🇰",cur:"LKR",sym:"Rs",fmt:"en-LK",group:"Tier 4",tiers:{starter:{m:10,a:100},standard:{m:15,a:150},growth:{m:25,a:250},plus:{m:40,a:400},large:{m:60,a:600}},trialDays:30,manual:true,available:false,rails:"bank transfer / LankaQR / card"},
+  {code:"GH",name:"Ghana",flag:"🇬🇭",cur:"GHS",sym:"₵",fmt:"en-GH",group:"Tier 4",tiers:{starter:{m:10,a:100},standard:{m:15,a:150},growth:{m:25,a:250},plus:{m:40,a:400},large:{m:60,a:600}},trialDays:30,manual:true,available:false,rails:"MTN MoMo / bank transfer"},
+  {code:"TZ",name:"Tanzania",flag:"🇹🇿",cur:"TZS",sym:"TSh",fmt:"en-TZ",group:"Tier 4",tiers:{starter:{m:10,a:100},standard:{m:15,a:150},growth:{m:25,a:250},plus:{m:40,a:400},large:{m:60,a:600}},trialDays:30,manual:true,available:false,rails:"M-Pesa / Tigo Pesa / bank transfer"},
+  {code:"UG",name:"Uganda",flag:"🇺🇬",cur:"UGX",sym:"USh",fmt:"en-UG",group:"Tier 4",tiers:{starter:{m:10,a:100},standard:{m:15,a:150},growth:{m:25,a:250},plus:{m:40,a:400},large:{m:60,a:600}},trialDays:30,manual:true,available:false,rails:"MTN / Airtel MoMo via SchoolPay"},
+  {code:"ZM",name:"Zambia",flag:"🇿🇲",cur:"ZMW",sym:"K",fmt:"en-ZM",group:"Tier 4",tiers:{starter:{m:10,a:100},standard:{m:15,a:150},growth:{m:25,a:250},plus:{m:40,a:400},large:{m:60,a:600}},trialDays:30,manual:true,available:false,rails:"MTN / Airtel MoMo or card"},
+  {code:"ZW",name:"Zimbabwe",flag:"🇿🇼",cur:"USD",sym:"$",fmt:"en-ZW",group:"Tier 4",tiers:{starter:{m:10,a:100},standard:{m:15,a:150},growth:{m:25,a:250},plus:{m:40,a:400},large:{m:60,a:600}},trialDays:30,manual:true,available:false,rails:"EcoCash / bank transfer (ZiG accepted)"},
+  {code:"ZA",name:"South Africa",flag:"🇿🇦",cur:"ZAR",sym:"R",fmt:"en-ZA",group:"Tier 4",tiers:{starter:{m:10,a:100},standard:{m:15,a:150},growth:{m:25,a:250},plus:{m:40,a:400},large:{m:60,a:600}},trialDays:30,manual:true,available:false,rails:"EFT / debit order / PayFast"},
+  {code:"EG",name:"Egypt",flag:"🇪🇬",cur:"EGP",sym:"E£",fmt:"en-EG",group:"Tier 4",tiers:{starter:{m:10,a:100},standard:{m:15,a:150},growth:{m:25,a:250},plus:{m:40,a:400},large:{m:60,a:600}},trialDays:30,manual:true,available:false,rails:"bank transfer / InstaPay / Fawry"},
+  {code:"PH",name:"Philippines",flag:"🇵🇭",cur:"PHP",sym:"₱",fmt:"en-PH",group:"Tier 4",tiers:{starter:{m:10,a:100},standard:{m:15,a:150},growth:{m:25,a:250},plus:{m:40,a:400},large:{m:60,a:600}},trialDays:30,manual:true,available:false,rails:"GCash / bank transfer / card"},
+  {code:"ID",name:"Indonesia",flag:"🇮🇩",cur:"IDR",sym:"Rp",fmt:"en-ID",group:"Tier 4",tiers:{starter:{m:10,a:100},standard:{m:15,a:150},growth:{m:25,a:250},plus:{m:40,a:400},large:{m:60,a:600}},trialDays:30,manual:true,available:false,rails:"bank transfer / QRIS"},
+  {code:"MY",name:"Malaysia",flag:"🇲🇾",cur:"MYR",sym:"RM",fmt:"en-MY",group:"Tier 4",tiers:{starter:{m:10,a:100},standard:{m:15,a:150},growth:{m:25,a:250},plus:{m:40,a:400},large:{m:60,a:600}},trialDays:30,manual:true,available:false,rails:"FPX / bank transfer / card"}
 ];
+/* Tier 4 default prices (playbook §3.2, ESTIMATE — no rivals checked;
+   no country activates on it). A separate const, NOT a 26th config
+   entry, so the admin pricing table stays at exactly 25 rows; the
+   fallback for an unknown code reads this. */
+const TIER4_DEFAULT={code:"",name:"",flag:"",cur:"USD",sym:"$",fmt:"en-US",group:"Tier 4",tiers:{starter:{m:10,a:100},standard:{m:15,a:150},growth:{m:25,a:250},plus:{m:40,a:400},large:{m:60,a:600}},trialDays:30,manual:true,available:false,rails:"bank transfer / card"};
+const PKG_IDS=["starter","standard","growth","plus","large"];
+const PKG_LIMITS={starter:100,standard:200,growth:500,plus:1000,large:2000};
+/* Round 167 helpers (E1.9) — pure functions beside the config. */
+function configCountry(code){
+  const c=String(code||"").toUpperCase();
+  return PRICING_CONFIG.find(function(e){return e.code===c;})||null;
+}
+function configGroup(code){
+  const e=configCountry(code);
+  return e?e.group:null;
+}
+function configCurrency(code){
+  const e=configCountry(code)||TIER4_DEFAULT;
+  return {cur:e.cur,sym:e.sym,fmt:e.fmt};
+}
+function packagePrice(code,packageId,cycle){
+  const e=configCountry(code);
+  if(!e)return null;
+  if(packageId==="custom")return null;
+  const p=PKG_IDS.indexOf(packageId)>=0?packageId:"standard";
+  const t=e.tiers[p];
+  if(!t)return null;
+  const cyc=cycle==="annual"?"annual":"monthly";
+  return {amount:cyc==="annual"?t.a:t.m,currency:e.cur,monthly:t.m,annual:t.a,checkoutUrl:""};
+}
+function packageLimit(packageId){
+  if(packageId==="custom")return Infinity;
+  return PKG_LIMITS[packageId]||PKG_LIMITS.standard;
+}
+function pkgName(packageId){
+  return t("pkg_"+(PKG_IDS.indexOf(packageId)>=0?packageId:(packageId==="custom"?"custom":"standard")));
+}
+/* Round 167 (E1.9/E4.2): the cap decision — the ONLY place the limit is
+   computed, read in this exact order: (1) freeAccess → Infinity (R165);
+   (2) a local/demo settings object is NOT a school doc (it carries no
+   status and no name — a school doc always carries both) — the cap
+   cannot be enforced offline because there is no subscription data, so
+   no cap; the local app and the demo seed keep working exactly as
+   before; (3) a school doc with no package, no trial, no free access
+   and no active subscription → limit 0 (defensive; subWriteGuard
+   blocks the write first); (4) an expired / grace / cancelled /
+   blocked / pending school cannot add students — limit 0, the second
+   line of defence after the write-guard; (5) otherwise the limit of
+   the school's package (missing package → "standard"). A trial school
+   is capped at the TRIALED tier's limit. */
+function studentCapFor(school){
+  school=school||{};
+  if(school.freeAccess===true)return {limit:Infinity,isFree:true};
+  if(!school.status&&!school.name)return {limit:Infinity,isFree:false};
+  const hasTrial=school.plan==="trial"||!!school.trialEndsAt;
+  const hasPaid=school.plan==="paid"||!!school.paidUntil;
+  if(!school.package&&!hasTrial&&!hasPaid)return {limit:0,isFree:false};
+  const lc=subLifecycle(school);
+  if(lc.state==="expired"||lc.state==="grace"||lc.state==="cancelled"||lc.state==="blocked"||lc.state==="pending")return {limit:0,isFree:false};
+  const pkg=PKG_IDS.indexOf(school.package)>=0?school.package:(school.package==="custom"?"custom":"standard");
+  return {limit:packageLimit(pkg),isFree:false};
+}
+function fmtMoney(amount,code){
+  const e=configCountry(code)||TIER4_DEFAULT;
+  const n=Number(amount)||0;
+  try{return e.sym+" "+n.toLocaleString(e.fmt||"en");}
+  catch(err){return e.sym+" "+fmtNum(n);}
+}
+/* Country picker options (E2.4): the ~200-country COUNTRY_TIERS list,
+   with the flag + name + currency from PRICING_CONFIG where the country
+   has one. Countries outside the config show the name alone. */
+function countryOptionsHTML(selected){
+  const sel=String(selected||"PK").toUpperCase();
+  return COUNTRY_TIERS.map(function(r){
+    const code=r[0],name=r[1];
+    const e=configCountry(code);
+    const flag=e?e.flag:"";
+    const cur=e?e.cur:"";
+    return '<option value="'+code+'"'+(code===sel?" selected":"")+'>'+esc(flag?flag+" "+name:name)+(cur?" ("+esc(cur)+")":"")+"</option>";
+  }).join("");
+}
+/* The five package cards (E5.3), in the fixed order Starter → Standard
+   → Growth → Plus → Large School, Standard carrying the single
+   "Most Popular" badge (border + badge, NEVER reordering). Card
+   contents: name → size description → monthly price → annual
+   equivalent → student limit → CTA. The "what is included" list and
+   the trust note are the SAME on every tier in v1, so they are
+   rendered ONCE below the grid (not repeated five times). The Custom
+   row ("Talk to us") is a line below the cards, not a sixth card.
+   opts: {current, selected, selectable, cta ("trial"|"action"|null),
+   trial (bool — a trial school switches for free), id}. */
+function pkgCardsHTML(code,opts){
+  opts=opts||{};
+  const e=configCountry(code);
+  if(!e)return "";
+  const cur=opts.current||"";
+  const sel=opts.selected||"";
+  const selectable=!!opts.selectable;
+  const cta=opts.cta||null;
+  const trial=!!opts.trial;
+  const idAttr=opts.id?(' id="'+opts.id+'"'):"";
+  let h='<div class="pkg-grid"'+idAttr+">";
+  PKG_IDS.forEach(function(pid){
+    const p=e.tiers[pid];
+    const isCur=cur===pid;
+    const isSel=sel===pid;
+    const isPop=pid==="standard";
+    let btn="";
+    if(cta==="trial")btn='<button type="button" class="btn btn-primary" data-pkgcta="'+pid+'" style="width:100%;margin-top:.5rem">'+esc(t("pkg_trial_cta"))+"</button>";
+    else if(cta==="action"){
+      if(isCur)btn='<button type="button" class="btn" disabled>'+esc(t("pkg_current"))+"</button>";
+      else if(trial)btn='<button type="button" class="btn btn-primary" data-pkgpick="'+pid+'" style="width:100%;margin-top:.5rem">'+esc(t("pkg_change"))+"</button>";
+      else if(PKG_LIMITS[pid]>PKG_LIMITS[cur])btn='<button type="button" class="btn btn-primary" data-pkgpick="'+pid+'" style="width:100%;margin-top:.5rem">'+esc(t("pkg_upgrade_to").replace("{package}",t("pkg_"+pid)))+"</button>";
+      else btn='<button type="button" class="btn" data-pkgpick="'+pid+'" style="width:100%;margin-top:.5rem">'+esc(t("pkg_change"))+"</button>";
+    }
+    h+='<div class="card pkg-card'+(isPop?" pkg-popular-card":"")+(isCur?" pkg-current":"")+(isSel?" pkg-selected":"")+'"'+(selectable?' data-pkgpick="'+pid+'" tabindex="0" role="button"':"")+">"+
+      (isPop?'<div><span class="pkg-badge">'+esc(t("pkg_popular"))+"</span></div>":"")+
+      "<h3>"+esc(t("pkg_"+pid))+"</h3>"+
+      '<p class="muted">'+esc(t("pkg_size_"+pid))+"</p>"+
+      '<div class="pkg-price"><span class="big">'+esc(fmtMoney(p.m,code))+"</span> "+esc(t("pricing_per_month"))+"</div>"+
+      '<div class="muted">'+esc(fmtMoney(p.a,code))+" "+esc(t("pricing_per_year"))+" ("+esc(t("pricing_save"))+" "+esc(fmtMoney(p.m*12-p.a,code))+")</div>"+
+      "<p>"+esc(t("pkg_up_to").replace("{n}",String(PKG_LIMITS[pid])))+"</p>"+
+      btn+"</div>";
+  });
+  h+="</div>";
+  h+='<p class="muted">'+esc(t("pkg_custom"))+" — "+esc(t("pkg_request"))+"</p>";
+  h+='<h3>'+esc(t("pricing_includes"))+"</h3><ul>"+["nav_adm","nav_att","nav_fee","nav_exam","nav_result","nav_cert","parent_title","nav_tt","nav_hw","nav_library","staff_title","hero_offline"].map(function(k){return "<li>"+esc(t(k))+"</li>";}).join("")+"</ul>";
+  h+='<p class="muted">'+esc(t("pkg_trust"))+"</p>";
+  return h;
+}
+/* Round 167 (E3.4): the mid-cycle upgrade difference, in the school's
+   currency, for the CURRENT billing cycle — price(new package) minus
+   price(current package). Returns null when it is not an upgrade
+   (same / smaller / custom / unknown package). A Custom school has no
+   config price, so its upgrade is priced by the admin by hand. */
+function upgradeDiffFor(school,newPackageId){
+  school=school||{};
+  const cur=PKG_IDS.indexOf(school.package)>=0?school.package:(school.package==="custom"?"custom":"standard");
+  const nw=PKG_IDS.indexOf(newPackageId)>=0?newPackageId:null;
+  if(!nw||nw===cur)return null;
+  if(PKG_LIMITS[nw]<=PKG_LIMITS[cur])return null;
+  if(school.package==="custom")return null;
+  const code=school.country||schoolCountry();
+  const cycle=school.billing==="annual"?"annual":"monthly";
+  const a=packagePrice(code,nw,cycle);
+  if(!a)return null;
+  /* The current package's price is the STORED LOCK when one exists and
+     covers the current package (E3.8: the lock never moves); otherwise
+     the config price. */
+  let bAmt=0;
+  const lp=school.priceLocked||null;
+  if(lp&&lp.package===cur)bAmt=cycle==="annual"?lp.annual:lp.monthly;
+  else{const b=packagePrice(code,cur,cycle);if(!b)return null;bAmt=b.amount;}
+  return {amount:a.amount-bAmt,currency:a.currency,from:cur,to:nw,cycle:cycle};
+}
+/* The report form's selected package (module state, reset on render).
+   The head taps a card to pick it; the report amount follows it. */
+let subSelectedPkg="";
+/* Refill the report amount from the selected package + cycle (E3.3).
+   An upgrade shows the DIFFERENCE (E3.4); anything else shows the
+   package price for the cycle. The difference line (pkg_upgrade_diff)
+   is shown only while an upgrade is selected. */
+function refillSubAmount(){
+  const subAmt=$("sub-amount");if(!subAmt)return;
+  const sch=(typeof Cloud!=="undefined"&&Cloud.school)||{};
+  const cur=PKG_IDS.indexOf(sch.package)>=0?sch.package:(sch.package==="custom"?"custom":"standard");
+  const sel=subSelectedPkg||cur;
+  const cyc=(($("sub-cycle")||{}).value||"monthly")==="annual"?"annual":"monthly";
+  const code=schoolCountry();
+  let amt=0;
+  if(PKG_LIMITS[sel]>PKG_LIMITS[cur]){
+    const ud=upgradeDiffFor(sch,sel);
+    amt=ud?ud.amount:((packagePrice(code,sel,cyc)||{amount:0}).amount);
+  }else{
+    const pp=packagePrice(code,sel,cyc);
+    amt=pp?pp.amount:0;
+  }
+  subAmt.value=amt;
+  const dm=$("sub-diff-msg");
+  if(dm){
+    if(PKG_LIMITS[sel]>PKG_LIMITS[cur]){
+      const ud=upgradeDiffFor(sch,sel);
+      dm.textContent=ud?t("pkg_upgrade_diff").replace("{amount}",fmtMoney(ud.amount,code)):"";
+    }else dm.textContent="";
+  }
+}
+/* The report kind for the selected package (E3.3/E3.5): a trial
+   school's first payment is "subscribe"; a larger package mid-cycle
+   is "upgrade"; a smaller package is "subscribe" at renewal (the new
+   package applies when the new period starts); the same package is
+   "renew". */
+function subReportKind(){
+  const sch=(typeof Cloud!=="undefined"&&Cloud.school)||{};
+  const cur=PKG_IDS.indexOf(sch.package)>=0?sch.package:(sch.package==="custom"?"custom":"standard");
+  const sel=subSelectedPkg||cur;
+  if(sch.plan==="trial")return "subscribe";
+  if(PKG_LIMITS[sel]>PKG_LIMITS[cur])return "upgrade";
+  if(PKG_LIMITS[sel]<PKG_LIMITS[cur])return "subscribe";
+  return "renew";
+}
 function countryPack(code){
   const c=String(code||"").toUpperCase();
-  return COUNTRY_PACKS.find(function(p){return p.code===c;})||COUNTRY_PACKS[0];
+  return configCountry(c)||TIER4_DEFAULT;
 }
 function fmtNum(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
 function schoolCountry(){
@@ -18928,27 +19288,25 @@ function schoolCountry(){
   return (db().settings&&db().settings.country)||"PK";
 }
 function countryPriceText(code){
-  const p=countryPack(code);
-  const tier=countryTier(code);
-  const pr=tier?priceFor(tier,"school","monthly"):null;
-  if(pr)return pr.currency+" "+fmtNum(pr.amount)+" "+t("pricing_per_month")+(p.note?" ("+p.note+")":"");
-  return p.cur+" "+fmtNum(p.price)+" "+t("pricing_per_month")+(p.note?" ("+p.note+")":"");
+  const e=configCountry(code);
+  if(!e)return TIER4_DEFAULT.sym+" "+fmtNum(TIER4_DEFAULT.tiers.standard.m)+" "+t("pricing_per_month");
+  const pr=packagePrice(code,"standard","monthly");
+  if(pr)return pr.currency+" "+fmtNum(pr.amount)+" "+t("pricing_per_month");
+  return e.cur+" "+fmtNum(e.tiers.standard.m)+" "+t("pricing_per_month");
 }
 
 let pricingMode=false;
-/* ================= pricing engine (Round 95) =================
-   Country tiers (World Bank FY27) x institution types. Matrix from
-   pricing-architecture-2026-11-09.md section 2 (founder-approved).
-   The old "first 10 paying schools at PKR 1,500" rule is RETIRED — the
-   matrix + grandfathering below replace it.
-   - priceFor() is pure; Tier 3 returns PKR, Tiers 1-2 return USD.
+/* ================= pricing engine (Round 167) =================
+   PRICING_CONFIG is the price table (playbook §3.2). A price change is
+   made in the config AND in the playbook, by an app round only (E1.10).
+   - packagePrice() is pure; it returns the config price for a
+     country + package + cycle, or null for Custom / Special.
    - checkoutUrl stays "" until the Phase B backend builds Polar
      checkout. Never invent a Polar URL.
    - A locked price NEVER moves: schoolPrice() returns priceLocked when
-     present, else the current matrix price (Round 140 single source).
+     present, else the config price for the school's country + package.
    - capacityStatus() reports campuses/storage/AI as measured:false —
      this base cannot measure them, so they are never invented. */
-const TIER_TABLE_VERSION="FY27";
 const COUNTRY_TIERS=[
   ["AD","Andorra",1],
   ["AE","United Arab Emirates",1],
@@ -19175,108 +19533,45 @@ function countryTier(code){
   return row?row[2]:null;
 }
 function countryName(code){
+  /* Round 167: COUNTRY_TIERS covers every country, so the old
+     20-entry pack fallback is gone. */
   const c=String(code||"").toUpperCase();
   const row=COUNTRY_TIERS.find(function(r){return r[0]===c;});
-  if(row)return row[1];
-  const p=COUNTRY_PACKS.find(function(x){return x.code===c;});
-  return p?p.name:c;
+  return row?row[1]:c;
 }
-/* Monthly m / annual a in USD; Tier 3 also carries the PKR amounts
-   (pkrM / pkrA) — the only local-currency prices in the matrix. */
-const PRICE_MATRIX={
-  school:{1:{m:29,a:313},2:{m:19,a:205},3:{m:9,a:97,pkrM:2500,pkrA:27000}},
-  college:{1:{m:59,a:637},2:{m:39,a:421},3:{m:19,a:205,pkrM:5000,pkrA:54000}},
-  university:{1:{m:119,a:1285},2:{m:79,a:853},3:{m:39,a:421,pkrM:10000,pkrA:108000}}
-};
+/* Monthly m / annual a in the country's own currency (E1.2);
+   annual is 10x monthly everywhere (2 months free). The student limit
+   is the PACKAGE limit (E1.9) — PRICING_LIMITS no longer carries one. */
 const PRICING_LIMITS={
-  school:{students:500,staff:25,campuses:1,storageMB:1024,aiPerMonth:200},
-  college:{students:2000,staff:100,campuses:3,storageMB:5120,aiPerMonth:500},
-  university:{students:10000,staff:500,campuses:10,storageMB:20480,aiPerMonth:2000}
+  school:{staff:25,campuses:1,storageMB:1024,aiPerMonth:200},
+  college:{staff:100,campuses:3,storageMB:5120,aiPerMonth:500},
+  university:{staff:500,campuses:10,storageMB:20480,aiPerMonth:2000}
 };
-let pricingOverride=null;
-let pricingOverrideLoaded=false;
-let pricingCountry="PK";
-function activeMatrix(){return pricingOverride||PRICE_MATRIX;}
-function annualDisc(){return (pricingOverride&&typeof pricingOverride.annualDisc==="number")?pricingOverride.annualDisc:ANNUAL_DISC;}
-function discPresets(){return (pricingOverride&&Array.isArray(pricingOverride.discPresets)&&pricingOverride.discPresets.length)?pricingOverride.discPresets.slice():[10,20,30];}
-function validMatrix(m){
-  if(!m||typeof m!=="object")return false;
-  const types=["school","college","university"];
-  for(let i=0;i<types.length;i++){
-    const ty=m[types[i]];if(!ty)return false;
-    for(let tier=1;tier<=3;tier++){
-      const row=ty[tier];
-      if(!row||typeof row.m!=="number"||typeof row.a!=="number"||row.m<=0||row.a<=0)return false;
-      if(tier===3&&(typeof row.pkrM!=="number"||typeof row.pkrA!=="number"||row.pkrM<=0||row.pkrA<=0))return false;
-    }
-  }
-  return true;
-}
-function setPricingOverride(o){
-  if(o===null||o===undefined){pricingOverride=null;return true;}
-  if(!validMatrix(o))return false;
-  pricingOverride=o;
-  return true;
-}
-function getPricingOverride(){return pricingOverride;}
-/* Built-in matrix -> platform/pricing override when readable ->
-   built-in matrix when offline or unreadable. Never throws. */
-function loadPricingOverride(){
-  if(pricingOverrideLoaded)return Promise.resolve(false);
-  pricingOverrideLoaded=true;
-  if(typeof Cloud==="undefined"||!Cloud.fs)return Promise.resolve(false);
-  perfCount("read");
-  try{
-    return Cloud.fs.collection("platform").doc("pricing").get().then(function(d){
-      if(d&&d.exists){
-        const v=d.data()||{};
-        if(v.matrix&&setPricingOverride(v.matrix)){
-          if(typeof v.annualDisc==="number")pricingOverride.annualDisc=v.annualDisc;
-          if(Array.isArray(v.discPresets)&&v.discPresets.length)pricingOverride.discPresets=v.discPresets;
-          return true;
-        }
-      }
-      return false;
-    }).catch(function(){return false;});
-  }catch(e){return Promise.resolve(false);}
-}
-function priceFor(tier,type,cycle,matrix){
-  tier=Number(tier);
-  if(!(tier===1||tier===2||tier===3))return null;
-  if(["school","college","university"].indexOf(type)<0)return null;
-  const m=matrix||activeMatrix();
-  const row=m[type]&&m[type][tier];
-  if(!row)return null;
-  const cyc=cycle==="annual"?"annual":"monthly";
-  if(tier===3)return {amount:cyc==="annual"?row.pkrA:row.pkrM,currency:"PKR",monthly:row.pkrM,annual:row.pkrA,checkoutUrl:""};
-  return {amount:cyc==="annual"?row.a:row.m,currency:"USD",monthly:row.m,annual:row.a,checkoutUrl:""};
-}
-function priceLockedFor(tier,type){
-  const mo=priceFor(tier,type,"monthly"),an=priceFor(tier,type,"annual");
-  if(!mo||!an)return null;
-  return {tier:tier,type:type,monthly:mo.amount,annual:an.amount,currency:mo.currency,lockedAt:todayISO(),checkoutUrl:""};
-}
-/* Round 140: price-lock fallback (pure) — a school doc with no
-   priceLocked locks the CURRENT MATRIX price for its country + type
-   (the single price source; platform/pricing overrides flow through
-   priceFor). Returns the priceLocked object, or null when one already
-   exists. A stored lock NEVER moves. A country with no tier (or an
-   unknown type) falls back to the legacy pack price so the function
-   never throws and never returns an empty price. */
+/* Round 167 (E1.9): a stored lock is returned as-is; otherwise the
+   config price for the school's country + package is locked (Tier 4
+   default for an unconfigured country — defensive, never throws).
+   lockedReason is "config-2026-11-20". Returns null when a lock
+   already exists and never overwrites one. A Custom package has no
+   config price — it returns null and schoolPrice() reports a zero
+   price (the admin sets a Custom price by hand). */
 function ensurePriceLocked(school){
   school=school||{};
   if(school.priceLocked)return null;
-  const tier=countryTier(school.country||"PK");
-  const type=school.instType||"school";
-  const mo=priceFor(tier,type,"monthly"),an=priceFor(tier,type,"annual");
-  if(mo&&an)return {tier:tier,type:type,monthly:mo.amount,annual:an.amount,currency:mo.currency,lockedAt:todayISO(),lockedReason:"grandfathered",checkoutUrl:""};
-  const pk=countryPack(school.country||"PK");
-  return {tier:tier,type:type,monthly:pk.price,annual:annualPrice(pk),currency:pk.cur,lockedAt:todayISO(),lockedReason:"grandfathered",checkoutUrl:""};
+  const code=String(school.country||"PK").toUpperCase();
+  const pkg=PKG_IDS.indexOf(school.package)>=0?school.package:(school.package==="custom"?"custom":"standard");
+  const pr=packagePrice(code,pkg,"monthly");
+  if(pr)return {package:pkg,monthly:pr.monthly,annual:pr.annual,currency:pr.currency,lockedAt:todayISO(),lockedReason:"config-2026-11-20",checkoutUrl:""};
+  const d=TIER4_DEFAULT.tiers[pkg];
+  return {package:pkg,monthly:d.m,annual:d.a,currency:TIER4_DEFAULT.cur,lockedAt:todayISO(),lockedReason:"config-2026-11-20",checkoutUrl:""};
 }
 function schoolPrice(school){
   school=school||{};
   if(school.priceLocked)return school.priceLocked;
-  return ensurePriceLocked(school);
+  const lp=ensurePriceLocked(school);
+  if(lp)return lp;
+  const code=String(school.country||"PK").toUpperCase();
+  const cur=configCurrency(code).cur;
+  return {package:school.package||"standard",monthly:0,annual:0,currency:cur,lockedAt:"",lockedReason:"custom",checkoutUrl:""};
 }
 /* Founder discount: active only inside [effectiveFrom, expiresAt]
    (a missing date is open-ended on that side). */
@@ -19297,23 +19592,27 @@ function effectivePrice(school,cycle,today){
   return {amount:Math.round((lp[cyc]||0)*f),currency:lp.currency,monthly:Math.round(lp.monthly*f),annual:Math.round(lp.annual*f),discountPct:Number(disc.pct),discountReason:disc.reason||"",checkoutUrl:""};
 }
 function pricingForCountry(code){
-  const tier=countryTier(code);
-  if(!tier)return null;
-  return {code:String(code).toUpperCase(),name:countryName(code),tier:tier,
-    school:{monthly:priceFor(tier,"school","monthly"),annual:priceFor(tier,"school","annual")},
-    college:{monthly:priceFor(tier,"college","monthly"),annual:priceFor(tier,"college","annual")},
-    university:{monthly:priceFor(tier,"university","monthly"),annual:priceFor(tier,"university","annual")}};
+  const e=configCountry(code);
+  if(!e)return null;
+  return {code:String(code).toUpperCase(),name:e.name,group:e.group,available:!!e.available,
+    starter:{monthly:packagePrice(code,"starter","monthly"),annual:packagePrice(code,"starter","annual")},
+    standard:{monthly:packagePrice(code,"standard","monthly"),annual:packagePrice(code,"standard","annual")},
+    growth:{monthly:packagePrice(code,"growth","monthly"),annual:packagePrice(code,"growth","annual")},
+    plus:{monthly:packagePrice(code,"plus","monthly"),annual:packagePrice(code,"plus","annual")},
+    large:{monthly:packagePrice(code,"large","monthly"),annual:packagePrice(code,"large","annual")}};
 }
-/* Capacity vs the edition limits. Students/staff are counted from the
-   local register; campuses/storage/AI cannot be measured in this base
-   and are reported measured:false — never invented. DISPLAY ONLY: this
-   function never blocks a write. */
+/* Capacity vs the edition limits. Students are counted from the
+   local register against the PACKAGE limit (E1.9); staff/campuses/
+   storage/AI are reported measured:false where this base cannot
+   measure them — never invented. DISPLAY ONLY: this function never
+   blocks a write. */
 function capacityStatus(school,counts){
   const type=(school&&["school","college","university"].indexOf(school.instType)>=0)?school.instType:"school";
   const lim=PRICING_LIMITS[type];
   const c=counts||{students:(db().students||[]).length,staff:staffActive().length};
   function one(have,limit){return {have:have,limit:limit,over:have>limit,measured:true};}
-  const st=one(Number(c.students)||0,lim.students);
+  const cap=studentCapFor(school||{});
+  const st=cap.limit===Infinity?{have:Number(c.students)||0,limit:Infinity,over:false,measured:true}:one(Number(c.students)||0,cap.limit);
   const sf=one(Number(c.staff)||0,lim.staff);
   return {type:type,limits:lim,students:st,staff:sf,
     campuses:{have:null,limit:lim.campuses,over:false,measured:false},
@@ -19362,35 +19661,36 @@ function legalLinksCardHTML(){
   return '<div class="card"><h3>'+esc(t("terms_title"))+' / '+esc(t("privacy_title"))+'</h3><div class="toolbar"><button type="button" class="btn btn-sm" id="legal-terms">'+esc(t("terms_title"))+'</button> <button type="button" class="btn btn-sm" id="legal-privacy">'+esc(t("privacy_title"))+'</button></div></div>';
 }
 function pricingHTML(code){
-  const code0=String(code||pricingCountry||"PK").toUpperCase();
-  const tier=countryTier(code0);
-  const name=countryName(code0);
-  const opts=COUNTRY_TIERS.map(function(r){return '<option value="'+r[0]+'"'+(r[0]===code0?" selected":"")+'>'+esc(r[1])+"</option>";}).join("");
+  const code0=String(code||schoolCountry()||"PK").toUpperCase();
+  const cfg=configCountry(code0);
+  const name=cfg?cfg.name:countryName(code0);
+  const opts=countryOptionsHTML(code0);
   let h='<div class="card pricing-card" style="max-width:640px;margin:2rem auto"><h2>💰 '+esc(t("pricing_title"))+"</h2>"+
     '<p class="muted">'+esc(t("pricing_regional"))+"</p>"+
     '<div class="field"><label>'+esc(t("pricing_pick_country"))+'</label><select id="pr-country">'+opts+"</select></div>";
-  if(!tier){
+  if(!cfg){
+    /* A Special country (outside the config) shows the request action
+       instead of a price — never an empty grid (E2.5). */
+    h+='<h3>'+esc(t("pricing_your_price"))+" — "+esc(name)+"</h3>";
     h+='<p class="msg err">'+esc(t("pricing_not_set"))+"</p>";
+    h+='<button type="button" class="btn btn-primary" id="pr-signup" style="width:100%;margin-top:.5rem">'+esc(t("pkg_request"))+"</button>";
   }else{
-    const pc=pricingForCountry(code0);
-    h+='<h3>'+esc(t("pricing_your_price"))+" — "+esc(name)+" ("+esc(t("pricing_tier"))+" "+tier+")</h3>";
-    ["school","college","university"].forEach(function(ty){
-      const mo=pc[ty].monthly,an=pc[ty].annual;
-      h+='<div class="plan-feat"><div class="muted">'+esc(t("inst_"+ty))+'</div><div class="big">'+esc(mo.currency+" "+fmtNum(mo.amount))+'</div><div>'+esc(t("pricing_per_month"))+" • "+esc(an.currency+" "+fmtNum(an.amount))+" "+esc(t("pricing_per_year"))+" ("+esc(t("pricing_save"))+" "+esc(an.currency+" "+fmtNum(annualSave({monthly:mo.monthly,annual:an.annual})))+")</div>";
-      if(ty!=="school")h+='<div class="muted">'+esc(t("pricing_not_open"))+"</div>";
-      h+="</div>";
-    });
-    h+='<h3>'+esc(t("pricing_includes"))+'</h3><ul>'+["nav_adm","nav_att","nav_fee","nav_exam","nav_result","nav_cert","parent_title","nav_tt","nav_hw","nav_library","staff_title","hero_offline"].map(function(k){return '<li>'+esc(t(k))+'</li>';}).join("")+'</ul>';
-    h+='<button type="button" class="btn btn-primary" id="pr-signup" style="width:100%;margin-top:.5rem">'+esc(t("signup_title"))+'</button>';
+    h+='<h3>'+esc(t("pricing_your_price"))+" — "+esc(cfg.flag)+" "+esc(name)+"</h3>";
+    if(!cfg.available)h+='<p class="msg warn">'+esc(t("pricing_not_set"))+"</p>";
+    /* A Tier 4 country shows the prices AND a "Request pricing" button
+       instead of the signup CTA (E5.7/decision 17); an available
+       country shows the trial CTAs and the signup button. */
+    h+=pkgCardsHTML(code0,{cta:cfg.available?"trial":null});
+    h+='<button type="button" class="btn btn-primary" id="pr-signup" style="width:100%;margin-top:.5rem">'+esc(cfg.available?t("signup_title"):t("pkg_request"))+"</button>";
   }
   h+='<div style="margin-top:1rem;text-align:center"><button type="button" class="btn btn-sm" id="pr-terms">'+esc(t("terms_title"))+'</button> <button type="button" class="btn btn-sm" id="pr-privacy">'+esc(t("privacy_title"))+'</button></div>'+
     '<div style="margin-top:1rem"><button type="button" class="btn btn-sm" id="pr-back">← '+esc(t("parent_back"))+"</button></div></div>";
   return h;
 }
-function renderPricing(){
+function renderPricing(code){
   applyLang();
   $("tabs").innerHTML="";if($("navgroups"))$("navgroups").innerHTML="";if($("nav-gear"))$("nav-gear").hidden=true;
-  $("view").innerHTML=pricingHTML();
+  $("view").innerHTML=pricingHTML(code);
   const back=$("pr-back");
   if(back)back.onclick=function(){pricingMode=false;render();};
   const prt=$("pr-terms");
@@ -19400,8 +19700,7 @@ function renderPricing(){
   const prs=$("pr-signup");
   if(prs)prs.onclick=function(){pricingMode=false;signupMode=true;render();};
   const sel=$("pr-country");
-  if(sel)sel.onchange=function(){pricingCountry=sel.value;renderPricing();};
-  loadPricingOverride().then(function(changed){if(changed)renderPricing();});
+  if(sel)sel.onchange=function(){renderPricing(sel.value);};
 }
 /* ---- founder discounts (Round 95): platform admin only, audited. ---- */
 function grantSchoolDiscount(row,disc){
@@ -19425,88 +19724,40 @@ function removeSchoolDiscount(schoolId){
   });
 }
 /* ---- admin pricing panel (Round 95): platform admin only. ---- */
+/* ---- admin pricing table (Round 167, E5.7): a READ-ONLY table over
+   PRICING_CONFIG. Prices change only by an app round (E1.10) — there
+   is no price input and no Save button. The old matrix editor is
+   retired; the founder-discount section is untouched. The table uses
+   the app's existing table.grid style; on a phone it scrolls
+   horizontally INSIDE its own card — the page itself never scrolls
+   horizontally. */
 function adminPricingHTML(){
   if(typeof Cloud==="undefined"||!Cloud.isSuperAdmin)return "";
-  const m=activeMatrix();
-  function row(ty){
-    const nm=t("inst_"+ty);
-    let cells="";
-    [1,2,3].forEach(function(tier){
-      cells+='<div class="field"><label>'+esc(nm)+" — "+esc(t("pricing_tier"))+" "+tier+" "+esc(t("sub_monthly"))+'</label><input id="pp-m-'+ty+'-'+tier+'" inputmode="numeric" value="'+m[ty][tier].m+'"></div>'+
-        '<div class="field"><label>'+esc(nm)+" — "+esc(t("pricing_tier"))+" "+tier+" "+esc(t("sub_annual"))+'</label><input id="pp-a-'+ty+'-'+tier+'" inputmode="numeric" value="'+m[ty][tier].a+'"></div>';
-      if(tier===3){
-        cells+='<div class="field"><label>'+esc(nm)+" — PKR "+esc(t("sub_monthly"))+'</label><input id="pp-pkrm-'+ty+'-3" inputmode="numeric" value="'+m[ty][tier].pkrM+'"></div>'+
-          '<div class="field"><label>'+esc(nm)+" — PKR "+esc(t("sub_annual"))+'</label><input id="pp-pkra-'+ty+'-3" inputmode="numeric" value="'+m[ty][tier].pkrA+'"></div>';
-      }
-    });
-    return cells;
-  }
   let h='<div class="card" style="margin:.5rem 0"><h3>💰 '+esc(t("adm_pricing_title"))+"</h3>"+
     '<p class="muted">'+esc(t("adm_pricing_hint"))+"</p>"+
-    '<p class="muted">'+esc(t("adm_tier_version"))+"</p>"+
-    '<div class="grid2">'+row("school")+row("college")+row("university")+"</div>"+
-    '<div class="grid2"><div class="field"><label>ANNUAL_DISC</label><input id="pp-disc" inputmode="decimal" value="'+annualDisc()+'"></div>'+
-    '<div class="field"><label>'+esc(t("disc_title"))+' %</label><input id="pp-presets" value="'+discPresets().join(",")+'"></div></div>'+
-    '<button type="button" class="btn btn-primary" id="pp-save">'+esc(t("adm_pricing_save"))+'</button><div id="pp-msg"></div></div>';
+    '<div style="overflow-x:auto"><table class="grid"><thead><tr><th>'+esc(t("country"))+"</th><th>"+esc(t("pkg_currency"))+"</th>";
+  PKG_IDS.forEach(function(pid){
+    h+="<th>"+esc(t("pkg_"+pid))+"<br>"+esc(t("sub_monthly"))+" / "+esc(t("sub_annual"))+"</th>";
+  });
+  h+="<th>"+esc(t("status"))+"</th></tr></thead><tbody>";
+  PRICING_CONFIG.forEach(function(e){
+    h+="<tr><td>"+esc(e.flag+" "+e.name+" ("+e.code+")")+"</td><td>"+esc(e.cur)+"</td>";
+    PKG_IDS.forEach(function(pid){
+      const p=e.tiers[pid];
+      h+="<td>"+esc(fmtMoney(p.m,e.code))+"<br>"+esc(fmtMoney(p.a,e.code))+"</td>";
+    });
+    h+="<td>"+esc(e.available?t("sub_active"):t("pricing_not_set"))+"</td></tr>";
+  });
+  h+="</tbody></table></div>"+
+    '<p class="muted">'+esc(t("pkg_pricing_note"))+"</p></div>";
   return h;
 }
 function renderAdminPricing(){
   const b=$("adm-pricing");
   if(!b)return;
   b.innerHTML=adminPricingHTML();
-  const sv=$("pp-save");
-  if(sv)sv.onclick=function(){
-    const r=savePricingPanel();
-    const mg=$("pp-msg");
-    if(r&&typeof r.then==="function"){
-      r.then(function(res){
-        if(mg)mg.innerHTML='<div class="msg '+(res.ok?"ok":"err")+'">'+esc(res.ok?t("adm_pricing_saved"):t("req"))+"</div>";
-        if(res.ok)renderAdminPricing();
-      });
-    }else if(mg)mg.innerHTML='<div class="msg err">'+esc(t("req"))+"</div>";
-  };
 }
-function savePricingPanel(){
-  if(typeof Cloud==="undefined"||!Cloud.isSuperAdmin)return {ok:false,error:t("req")};
-  function num(id){
-    const el=document.getElementById(id);
-    if(!el)return null;
-    const v=Number(el.value);
-    return (v>0&&isFinite(v))?v:null;
-  }
-  const m={};
-  let bad=false;
-  ["school","college","university"].forEach(function(ty){
-    m[ty]={};
-    [1,2,3].forEach(function(tier){
-      const mo=num("pp-m-"+ty+"-"+tier),an=num("pp-a-"+ty+"-"+tier);
-      if(mo===null||an===null){bad=true;return;}
-      m[ty][tier]={m:mo,a:an};
-      if(tier===3){
-        const pm=num("pp-pkrm-"+ty+"-3"),pa=num("pp-pkra-"+ty+"-3");
-        if(pm===null||pa===null){bad=true;return;}
-        m[ty][tier].pkrM=pm;m[ty][tier].pkrA=pa;
-      }
-    });
-  });
-  const dEl=document.getElementById("pp-disc");
-  const disc=dEl?Number(dEl.value):NaN;
-  if(!(disc>0&&disc<1))bad=true;
-  const pEl=document.getElementById("pp-presets");
-  const presets=(pEl?pEl.value:"").split(",").map(function(x){return Number(String(x).trim());}).filter(function(x){return x>0&&x<=90;});
-  if(!presets.length)bad=true;
-  if(bad||!validMatrix(m))return {ok:false,error:t("req")};
-  return Cloud.setPlatformPricing({matrix:m,annualDisc:disc,discPresets:presets}).then(function(r){
-    if(r&&r.ok){
-      setPricingOverride(m);
-      pricingOverride.annualDisc=disc;
-      pricingOverride.discPresets=presets;
-      audit("pricing","matrix updated by "+((Cloud.teacher&&Cloud.teacher.name)||"admin")+" (annualDisc "+disc+")");
-      return {ok:true};
-    }
-    return {ok:false};
-  });
-}
+
 /* ================= lab ================= */
 function addLabItem(d){
   if(!String(d.name||"").trim())return {ok:false,error:t("req")};
@@ -20702,10 +20953,23 @@ function impValidateAdmRows(rows,opts){
   opts=opts||{};
   const ctx={seen:{},seenAdmNo:{},skipDbCheck:!!opts.skipDbCheck,requireAdmDate:!!opts.requireAdmDate};
   const out={rows:[],counts:{total:0,ready:0,review:0,rejected:0},perClass:{},sourceCounts:{},
-    reports:{missing:[],invalidDates:[],admCollisions:[],duplicates:[]}};
+    reports:{missing:[],invalidDates:[],admCollisions:[],duplicates:[],cap:[]}};
+  /* Round 167 (E4.4): the package cap, pre-flagged before commit. The
+     count is the live register plus the ready rows in this file so
+     far; row 201 of a 200-limit package is flagged while row 200
+     commits. A cap-rejected row does not claim its identity (the check
+     runs before the identity-claim block below). */
+  const cap167v=studentCapFor(Cloud.school||db().settings);
+  const enrolled167v=enrolledStudents().length;
+  let readySoFar167v=0;
   (rows||[]).forEach(function(raw){
     const d=raw||{};
     const r=impAdmStatus(d,ctx);
+    if(r.status==="ready"){
+      if(enrolled167v+readySoFar167v+1>cap167v.limit){
+        r.flags.push("docimp_f_cap");r.reasons.push(t("docimp_f_cap"));r.status="rejected";
+      }else readySoFar167v++;
+    }
     /* A ready row now owns its identity in the register, so the NEXT row
        with the same name+father+DOB (or admNo) is a duplicate of it. The
        "seen" bookkeeping inside impAdmStatus only covers the identity of
@@ -20728,16 +20992,18 @@ function impValidateAdmRows(rows,opts){
       else if(f==="docimp_f_dob")out.reports.invalidDates.push(who+": "+reason);
       else if(f==="imp_f_admno")out.reports.admCollisions.push(who+": "+reason);
       else if(f==="docimp_f_dup")out.reports.duplicates.push(who+": "+reason);
+      else if(f==="docimp_f_cap")out.reports.cap.push(who+": "+reason);
     });
     out.rows.push({data:d,status:r.status,flags:r.flags,reasons:r.reasons});
   });
   return out;
 }
 function impSummariseRows(flagged){
-  /* Counts + the same four reports, from rows already flagged by
-     docImpFlagRows (the doc/photo review table re-flags on every edit). */
+  /* Counts + the same reports, from rows already flagged by
+     docImpFlagRows (the doc/photo review table re-flags on every edit).
+     Round 167 adds the cap report (docimp_f_cap). */
   const sum={counts:{total:0,ready:0,review:0,rejected:0},
-    reports:{missing:[],invalidDates:[],admCollisions:[],duplicates:[]}};
+    reports:{missing:[],invalidDates:[],admCollisions:[],duplicates:[],cap:[]}};
   (flagged||[]).forEach(function(rw){
     const st=rw.status||(rw.accepted?"ready":"review");
     const d=rw.data||{};
@@ -20749,6 +21015,7 @@ function impSummariseRows(flagged){
       else if(f==="docimp_f_dob")sum.reports.invalidDates.push(who+": "+reason);
       else if(f==="imp_f_admno")sum.reports.admCollisions.push(who+": "+reason);
       else if(f==="docimp_f_dup")sum.reports.duplicates.push(who+": "+reason);
+      else if(f==="docimp_f_cap")sum.reports.cap.push(who+": "+reason);
     });
   });
   return sum;
@@ -20781,7 +21048,7 @@ function impCommitAdmRows(preview,opts){
            (another teacher, or an earlier row in this same file) — the
            row becomes rejected with the real reason, never silently lost. */
         skipped++;if(r&&r.code==="dup")dups++;
-        rejected.push({data:d,status:"rejected",flags:r&&r.code==="admno"?["imp_f_admno"]:(r&&r.code==="dup"?["docimp_f_dup"]:["imp_f_admdate"]),reasons:[(r&&r.error)||""]});
+        rejected.push({data:d,status:"rejected",flags:r&&r.code==="cap"?["docimp_f_cap"]:(r&&r.code==="admno"?["imp_f_admno"]:(r&&r.code==="dup"?["docimp_f_dup"]:["imp_f_admdate"])),reasons:[(r&&r.error)||""]});
       }
     }else if(vr.status==="review"){
       skipped++;held.push({data:d,status:"review",flags:vr.flags,reasons:vr.reasons});
@@ -20867,7 +21134,7 @@ function impResolveHeldRow(batchId,heldIndex,fixedData){
     }
     r.status="rejected";
     r.reasons=[(add&&add.error)||""];
-    r.flags=add&&add.code==="admno"?["imp_f_admno"]:(add&&add.code==="dup"?["docimp_f_dup"]:r.flags);
+    r.flags=add&&add.code==="cap"?["docimp_f_cap"]:(add&&add.code==="admno"?["imp_f_admno"]:(add&&add.code==="dup"?["docimp_f_dup"]:r.flags));
   }
   if(r.status==="rejected"){
     b.held.splice(heldIndex,1);
@@ -22521,7 +22788,7 @@ function renderLogin(){
 function renderSignup(){
   applyLang();
   $("tabs").innerHTML="";if($("navgroups"))$("navgroups").innerHTML="";if($("nav-gear"))$("nav-gear").hidden=true;
-  const opts=COUNTRY_TIERS.map(function(r){return '<option value="'+r[0]+'"'+(r[0]==="PK"?" selected":"")+'>'+esc(r[1])+"</option>";}).join("");
+  const opts=countryOptionsHTML("PK");
   $("view").innerHTML='<div class="hero"><canvas id="hero-canvas" class="hero-canvas" aria-hidden="true"></canvas><div class="card hero-card" style="max-width:480px;margin:2rem auto"><h2>🏫 '+esc(t("signup_title"))+"</h2>"+
     '<p class="muted">'+esc(t("signup_hint"))+"</p>"+
     '<div class="field"><label>'+esc(t("signup_school"))+'</label><input id="sg-name" autocomplete="off"></div>'+
@@ -22534,6 +22801,7 @@ function renderSignup(){
     '<div class="field"><label>'+esc(t("signup_district"))+'</label><input id="sg-district" autocomplete="off"></div>'+
     '<div class="field"><label>'+esc(t("signup_city"))+'</label><input id="sg-city" autocomplete="off"></div>'+
     '<div class="field"><label>'+esc(t("signup_students"))+'</label><input id="sg-students" type="number" min="0" inputmode="numeric"></div>'+
+    '<div id="sg-pkg"><h3>'+esc(t("pkg_pick"))+'</h3><p class="muted">'+esc(t("pkg_pick_hint"))+'</p><div id="sg-pkg-cards"></div></div>'+
     '<div id="sg-msg"></div>'+
     '<button type="button" class="btn btn-primary" id="sg-go" style="width:100%">'+esc(t("signup_send"))+"</button>"+
 '<div style="margin-top:1rem;text-align:center"><button type="button" class="btn btn-sm" id="sg-terms">'+esc(t("terms_title"))+'</button> <button type="button" class="btn btn-sm" id="sg-privacy">'+esc(t("privacy_title"))+'</button></div>'+
@@ -22545,9 +22813,45 @@ function renderSignup(){
   if(sgt)sgt.onclick=function(){termsMode=true;render();};
   const sgp=$("sg-privacy");
   if(sgp)sgp.onclick=function(){privacyMode=true;render();};
+  /* Round 167 (E2.2): the package picker — five small cards for the
+     selected country, Standard pre-selected; the typed student count
+     pre-selects the smallest package whose limit fits it (142 →
+     Standard, 201 → Growth). A Tier 4 country shows the waitlist note
+     above the cards; a Special country (outside the config) shows the
+     note and no cards. */
+  let sgPkg="standard";
+  function sgDrawPkg(){
+    const box=$("sg-pkg-cards");if(!box)return;
+    const code=(($("sg-country")||{}).value||"PK");
+    const cfg=configCountry(code);
+    if(!cfg){
+      box.innerHTML='<p class="msg warn">'+esc(t("pricing_not_set"))+"</p>";
+      return;
+    }
+    box.innerHTML=(cfg.available?"":'<p class="msg warn">'+esc(t("pricing_not_set"))+"</p>")+pkgCardsHTML(code,{selected:sgPkg,selectable:true});
+    Array.prototype.forEach.call(box.querySelectorAll("[data-pkgpick]"),function(c){
+      c.onclick=function(){sgPkg=c.getAttribute("data-pkgpick");sgDrawPkg();};
+    });
+  }
+  function sgPickByStudents(){
+    const n=Math.max(0,parseInt((($("sg-students")||{}).value||"0"),10)||0);
+    let pick="standard";
+    if(n<=100)pick="starter";
+    else if(n<=200)pick="standard";
+    else if(n<=500)pick="growth";
+    else if(n<=1000)pick="plus";
+    else pick="large";
+    if(n>0)sgPkg=pick;
+    sgDrawPkg();
+  }
+  const sgCountry=$("sg-country");
+  if(sgCountry)sgCountry.onchange=function(){sgDrawPkg();};
+  const sgStudents=$("sg-students");
+  if(sgStudents)sgStudents.onchange=function(){sgPickByStudents();};
+  sgDrawPkg();
   const go=$("sg-go");
   if(go)go.onclick=function(){
-    const r=submitSignup({schoolName:$("sg-name").value,contactName:$("sg-contact").value,email:$("sg-email").value,phone:$("sg-phone").value,country:$("sg-country").value,instType:$("sg-insttype").value,state:$("sg-state").value,district:$("sg-district").value,city:$("sg-city").value,students:$("sg-students").value});
+    const r=submitSignup({schoolName:$("sg-name").value,contactName:$("sg-contact").value,email:$("sg-email").value,phone:$("sg-phone").value,country:$("sg-country").value,instType:$("sg-insttype").value,state:$("sg-state").value,district:$("sg-district").value,city:$("sg-city").value,students:$("sg-students").value,package:sgPkg});
     const mg=$("sg-msg");
     if(!r.ok){if(mg)mg.innerHTML='<div class="msg err">'+esc(r.error)+"</div>";return;}
     $("view").innerHTML='<div class="card" style="max-width:480px;margin:2rem auto"><p>✅ '+esc(r.waitlisted?t("signup_waitlisted"):t("signup_sent"))+"</p>"+
@@ -23983,7 +24287,7 @@ function wizCardHTML(){
     h+='<h3>'+esc(t("wiz_s1_title"))+'</h3><p class="muted">'+esc(t("wiz_s1_hint"))+'</p>';
     h+='<div class="grid2">'+
       fld("school_name",'<input id="wiz-name" value="'+esc(s.schoolName||"")+'">')+
-      fld("country",'<select id="wiz-country">'+COUNTRY_PACKS.map(function(p){return '<option value="'+p.code+'"'+(((s.country||"PK")===p.code)?" selected":"")+'>'+esc(p.name)+" ("+esc(p.cur)+")</option>";}).join("")+"</select>")+
+      fld("country",'<select id="wiz-country">'+countryOptionsHTML(s.country||"PK")+"</select>")+
       '</div><div id="wiz-msg"></div>'+
       '<div class="toolbar"><button type="button" class="btn btn-primary" id="wiz-next">'+esc(t("wiz_next"))+'</button> <button type="button" class="btn" id="wiz-skip">'+esc(t("wiz_skip"))+'</button></div>';
   }else if(wizStep===2){
@@ -24661,7 +24965,9 @@ function afterAdm(){
     const d=readAdmForm();
     const isNew=!admEditId;
     const r=admEditId?updateStudent(admEditId,d):addStudent(d);
-    if(!r.ok){$("adm-msg").innerHTML='<div class="msg err">'+esc(r.error)+"</div>";
+    if(!r.ok){$("adm-msg").innerHTML='<div class="msg err">'+esc(r.error)+"</div>"+(r.code==="cap"?'<br><button type="button" class="btn btn-primary" id="adm-cap-upgrade">'+esc(t("pkg_cap_upgrade_btn"))+"</button>":"");
+      const capBtn=$("adm-cap-upgrade");
+      if(capBtn)capBtn.onclick=function(){curTab="settings";if(!setSecIsOpen("sub"))setSecToggle("sub");render();};
       const idmap={name:"a-name",fatherName:"a-father",dob:"a-dob",gender:"a-gender",cls:"a-cls",section:"a-sec",admDate:"a-admdate"};
       (r.missing||[]).forEach(function(k){const el=$(idmap[k]);if(el){el.classList.add("err-input");el.addEventListener("input",function h(){el.classList.remove("err-input");el.removeEventListener("input",h);});}});
       const f0=r.missing&&r.missing[0]&&$(idmap[r.missing[0]]);
@@ -26473,6 +26779,40 @@ adm_free_remove:{en:"Remove free access",ur:"مفت رسائی ہٹائیں",bn:
 adm_free_on:{en:"Free access — this school pays nothing.",ur:"مفت رسائی — یہ اسکول کچھ نہیں دیتا۔",bn:"বিনামূল্যে প্রবেশ — এই স্কুল কিছুই দেয় না।",hi:"मुफ़्त पहुँच — यह स्कूल कुछ नहीं देता।",ne:"नि:शुल्क पहुँच — यो विद्यालयले केही तिर्दैन।",sw:"Ufikiaji wa bure — shule hii hailipi chochote.",ar:"وصول مجاني — هذه المدرسة لا تدفع شيئًا.",zh:"免费使用——本学校无需付费。",es:"Acceso gratuito: esta escuela no paga nada.",fr:"Accès gratuit — cette école ne paie rien.",pt:"Acesso gratuito — esta escola não paga nada.",ru:"Бесплатный доступ — эта школа ничего не платит.",id:"Akses gratis — sekolah ini tidak membayar apa pun.",de:"Kostenloser Zugang — diese Schule zahlt nichts.",ja:"無料アクセス——この学校は料金を払いません。",pa:"مفت رسائی — ایہہ سکول کجھ نہیں دیندا۔",mr:"मोफत प्रवेश — ही शाळा काहीही देत नाही.",te:"ఉచిత ప్రాప్యత — ఈ పాఠశాల ఏమీ చెల్లించదు.",fa:"دسترسی رایگان — این مدرسه چیزی نمی‌پردازد.",tr:"Ücretsiz erişim — bu okul hiçbir şey ödemez.",ta:"இலவச அணுகல் — இந்தப் பள்ளி எதுவும் செலுத்தாது.",vi:"Truy cập miễn phí — trường này không phải trả gì.",ko:"무료 이용 — 이 학교는 아무것도 지불하지 않습니다.",tl:"Libreng access — walang binabayaran ang paaralang ito.",ha:"Shiga kyauta — wannan makaranta ba ta biya komai ba.",it:"Accesso gratuito: questa scuola non paga nulla.",ps:"وړیا لاسرسی — دا ښوونځی هېڅ نه ورکوي.",ms:"Akses percuma — sekolah ini tidak membayar apa-apa.",yo:"Ìwọlé ọ̀fẹ́ — ilé-ìwé yìí kò san nǹkan kan.",ig:"Nweta n'efu — ụlọ akwụkwọ a anaghị akwụ ihe ọ bụla."},
 adm_free_done:{en:"Free access granted.",ur:"مفت رسائی دے دی گئی۔",bn:"বিনামূল্যে প্রবেশ দেওয়া হয়েছে।",hi:"मुफ़्त पहुँच दे दी गई।",ne:"नि:शुल्क पहुँच दिइयो।",sw:"Ufikiaji wa bure umetolewa.",ar:"تم منح الوصول المجاني.",zh:"已授予免费使用。",es:"Acceso gratuito concedido.",fr:"Accès gratuit accordé.",pt:"Acesso gratuito concedido.",ru:"Бесплатный доступ предоставлен.",id:"Akses gratis diberikan.",de:"Kostenloser Zugang gewährt.",ja:"無料アクセスを付与しました。",pa:"مفت رسائی دے دتی گئی۔",mr:"मोफत प्रवेश दिला.",te:"ఉచిత ప్రాప్యత మంజూరు చేయబడింది.",fa:"دسترسی رایگان اعطا شد.",tr:"Ücretsiz erişim verildi.",ta:"இலவச அணுகல் வழங்கப்பட்டது.",vi:"Đã cấp quyền truy cập miễn phí.",ko:"무료 이용 권한이 부여되었습니다.",tl:"Ibinigay ang libreng access.",ha:"An ba da shiga kyauta.",it:"Accesso gratuito concesso.",ps:"وړیا لاسرسی ورکړل شو.",ms:"Akses percuma diberikan.",yo:"A fún ìwọlé ọ̀fẹ́.",ig:"Enyere nweta n'efu."},
 adm_free_removed:{en:"Free access removed. The school returns to its normal price.",ur:"مفت رسائی ہٹا دی گئی۔ اسکول اپنی معمول کی قیمت پر واپس آ گیا۔",bn:"বিনামূল্যে প্রবেশ সরানো হয়েছে। স্কুল তার স্বাভাবিক মূল্যে ফিরে গেছে।",hi:"मुफ़्त पहुँच हटा दी गई। स्कूल अपनी सामान्य कीमत पर लौट गया।",ne:"नि:शुल्क पहुँच हटाइयो। विद्यालय आफ्नो सामान्य मूल्यमा फर्कियो।",sw:"Ufikiaji wa bure umeondolewa. Shule imerudi kwenye bei yake ya kawaida.",ar:"تمت إزالة الوصول المجاني. وعادت المدرسة إلى سعرها العادي.",zh:"已取消免费使用。该学校恢复正常价格。",es:"Acceso gratuito eliminado. La escuela vuelve a su precio normal.",fr:"Accès gratuit retiré. L'école revient à son tarif normal.",pt:"Acesso gratuito removido. A escola volta ao seu preço normal.",ru:"Бесплатный доступ убран. Школа возвращается к своей обычной цене.",id:"Akses gratis dihapus. Sekolah kembali ke harga normalnya.",de:"Kostenloser Zugang entfernt. Die Schule kehrt zu ihrem normalen Preis zurück.",ja:"無料アクセスを解除しました。学校は通常料金に戻ります。",pa:"مفت رسائی ہٹا دتی گئی۔ سکول اپنی معمول دی قیمت تے واپس آ گیا۔",mr:"मोफत प्रवेश काढला. शाळा तिच्या सामान्य किमतीवर परत गेली.",te:"ఉచిత ప్రాప్యత తీసివేయబడింది. పాఠశాల దాని సాధారణ ధరకు తిరిగి వచ్చింది.",fa:"دسترسی رایگان حذف شد. مدرسه به قیمت عادی خود بازگشت.",tr:"Ücretsiz erişim kaldırıldı. Okul normal fiyatına döndü.",ta:"இலவச அணுகல் நீக்கப்பட்டது. பள்ளி அதன் வழக்கமான விலைக்குத் திரும்பியது.",vi:"Đã gỡ quyền truy cập miễn phí. Trường trở lại giá bình thường.",ko:"무료 이용이 해제되었습니다. 학교는 정상 가격으로 돌아갑니다.",tl:"Inalis ang libreng access. Bumalik ang paaralan sa normal nitong presyo.",ha:"An cire shiga kyauta. Makaranta ta koma farashinta na al'ada.",it:"Accesso gratuito rimosso. La scuola torna al suo prezzo normale.",ps:"وړیا لاسرسی لرې شو. ښوونځی خپل عادي قیمت ته راستون شو.",ms:"Akses percuma dibuang. Sekolah kembali kepada harga biasanya.",yo:"A yọ ìwọlé ọ̀fẹ́ kúrò. Ilé-ìwé náà padà sí owó rẹ̀ déédé.",ig:"Ewepụrụ nweta n'efu. Ụlọ akwụkwọ ahụ laghachiri n'ọnụ ahịa ya."},
+pkg_starter:{en:"Starter",ur:"ابتدائی",bn:"শুরুর",hi:"शुरुआती",ne:"सुरुआती",sw:"Mwanzo",ar:"البداية",zh:"入门",es:"Inicial",fr:"Débutant",pt:"Inicial",ru:"Стартовый",id:"Pemula",de:"Starter",ja:"スターター",pa:"شروعاتی",mr:"सुरुवाती",te:"ప్రారంభ",fa:"شروع",tr:"Başlangıç",ta:"தொடக்க",vi:"Khởi đầu",ko:"스타터",tl:"Paninimula",ha:"Farko",it:"Base",ps:"پیل",ms:"Permulaan",yo:"Ìbẹ̀rẹ̀",ig:"Mmalite"},
+pkg_standard:{en:"Standard",ur:"معیاری",bn:"স্ট্যান্ডার্ড",hi:"स्टैंडर्ड",ne:"मानक",sw:"Kawaida",ar:"القياسي",zh:"标准",es:"Estándar",fr:"Standard",pt:"Padrão",ru:"Стандарт",id:"Standar",de:"Standard",ja:"スタンダード",pa:"معیاری",mr:"स्टँडर्ड",te:"స్టాండర్డ్",fa:"استاندارد",tr:"Standart",ta:"ஸ்டாண்டர்ட்",vi:"Tiêu chuẩn",ko:"스탠다드",tl:"Pamantayan",ha:"Daidai",it:"Standard",ps:"معیاري",ms:"Standard",yo:"Ìwọ̀n",ig:"Ọkọlọtọ"},
+pkg_growth:{en:"Growth",ur:"ترقی",bn:"বৃদ্ধি",hi:"विकास",ne:"वृद्धि",sw:"Ukuaji",ar:"النمو",zh:"成长",es:"Crecimiento",fr:"Croissance",pt:"Crescimento",ru:"Рост",id:"Pertumbuhan",de:"Wachstum",ja:"グロース",pa:"ترقی",mr:"वाढ",te:"వృద్ధి",fa:"رشد",tr:"Büyüme",ta:"வளர்ச்சி",vi:"Tăng trưởng",ko:"성장",tl:"Paglago",ha:"Ci gaba",it:"Crescita",ps:"وده",ms:"Pertumbuhan",yo:"Ìdàgbàsókè",ig:"Uto"},
+pkg_plus:{en:"Plus",ur:"پلس",bn:"প্লাস",hi:"प्लस",ne:"प्लस",sw:"Plus",ar:"بلس",zh:"高级",es:"Plus",fr:"Plus",pt:"Plus",ru:"Плюс",id:"Plus",de:"Plus",ja:"プラス",pa:"پلس",mr:"प्लस",te:"ప్లస్",fa:"پلاس",tr:"Plus",ta:"பிளஸ்",vi:"Plus",ko:"플러스",tl:"Plus",ha:"Plus",it:"Plus",ps:"پلس",ms:"Plus",yo:"Plus",ig:"Plus"},
+pkg_large:{en:"Large School",ur:"بڑا اسکول",bn:"বড় স্কুল",hi:"बड़ा स्कूल",ne:"ठूलो विद्यालय",sw:"Shule kubwa",ar:"مدرسة كبيرة",zh:"大型学校",es:"Escuela grande",fr:"Grande école",pt:"Escola grande",ru:"Большая школа",id:"Sekolah besar",de:"Große Schule",ja:"大規模校",pa:"وڈا سکول",mr:"मोठी शाळा",te:"పెద్ద పాఠశాల",fa:"مدرسه بزرگ",tr:"Büyük Okul",ta:"பெரிய பள்ளி",vi:"Trường lớn",ko:"대형 학교",tl:"Malaking paaralan",ha:"Babbar makaranta",it:"Scuola grande",ps:"لوی ښوونځی",ms:"Sekolah besar",yo:"Ilé-ìwé ńlá",ig:"Ụlọ akwụkwọ buru ibu"},
+pkg_custom:{en:"Custom",ur:"حسب ضرورت",bn:"কাস্টম",hi:"कस्टम",ne:"अनुकूलित",sw:"Maalum",ar:"مخصص",zh:"定制",es:"Personalizado",fr:"Sur mesure",pt:"Personalizado",ru:"Индивидуальный",id:"Kustom",de:"Individuell",ja:"カスタム",pa:"حسب ضرورت",mr:"सानुकूल",te:"కస్టమ్",fa:"سفارشی",tr:"Özel",ta:"தனிப்பயன்",vi:"Tùy chỉnh",ko:"맞춤형",tl:"Pasadya",ha:"Na musamman",it:"Personalizzato",ps:"ځانګړی",ms:"Tersuai",yo:"Àṣà",ig:"Pụrụ iche"},
+pkg_size_starter:{en:"Small schools",ur:"چھوٹے اسکول",bn:"ছোট স্কুল",hi:"छोटे स्कूल",ne:"साना विद्यालय",sw:"Shule ndogo",ar:"مدارس صغيرة",zh:"小型学校",es:"Escuelas pequeñas",fr:"Petites écoles",pt:"Escolas pequenas",ru:"Небольшие школы",id:"Sekolah kecil",de:"Kleine Schulen",ja:"小規模校",pa:"چھوٹے سکول",mr:"लहान शाळा",te:"చిన్న పాఠశాలలు",fa:"مدارس کوچک",tr:"Küçük okullar",ta:"சிறிய பள்ளிகள்",vi:"Trường nhỏ",ko:"소규모 학교",tl:"Maliliit na paaralan",ha:"Ƙananan makarantu",it:"Scuole piccole",ps:"وړو ښوونځیو",ms:"Sekolah kecil",yo:"Ilé-ìwé kékeré",ig:"Ụlọ akwụkwọ nta"},
+pkg_size_standard:{en:"Growing schools",ur:"بڑھتے ہوئے اسکول",bn:"বাড়ন্ত স্কুল",hi:"बढ़ते स्कूल",ne:"बढ्दै गरेका विद्यालय",sw:"Shule zinazokua",ar:"مدارس تنمو",zh:"成长中的学校",es:"Escuelas en crecimiento",fr:"Écoles en croissance",pt:"Escolas em crescimento",ru:"Растущие школы",id:"Sekolah berkembang",de:"Wachsende Schulen",ja:"成長中の学校",pa:"ودھدے ہوئے سکول",mr:"वाढती शाळा",te:"పెరుగుతున్న పాఠశాలలు",fa:"مدارس در حال رشد",tr:"Büyüyen okullar",ta:"வளரும் பள்ளிகள்",vi:"Trường đang phát triển",ko:"성장 중인 학교",tl:"Mga paaralang lumalago",ha:"Makarantu masu girma",it:"Scuole in crescita",ps:"وده کوونکي ښوونځي",ms:"Sekolah yang berkembang",yo:"Ilé-ìwé tó ń dàgbà",ig:"Ụlọ akwụkwọ na-eto eto"},
+pkg_size_growth:{en:"Medium-sized schools",ur:"درمیانے اسکول",bn:"মাঝারি স্কুল",hi:"मध्यम स्कूल",ne:"मध्यम विद्यालय",sw:"Shule za kati",ar:"مدارس متوسطة",zh:"中型学校",es:"Escuelas medianas",fr:"Écoles moyennes",pt:"Escolas médias",ru:"Средние школы",id:"Sekolah menengah",de:"Mittlere Schulen",ja:"中規模校",pa:"درمیانے سکول",mr:"मध्यम शाळा",te:"మధ్య తరహా పాఠశాలలు",fa:"مدارس متوسط",tr:"Orta ölçekli okullar",ta:"நடுத்தர பள்ளிகள்",vi:"Trường vừa",ko:"중규모 학교",tl:"Mga paaralang katamtaman",ha:"Makarantu masu matsakaici",it:"Scuole medie",ps:"منځني ښوونځي",ms:"Sekolah bersaiz sederhana",yo:"Ilé-ìwé alábọ̀dẹ́",ig:"Ụlọ akwụkwọ ọkara"},
+pkg_size_plus:{en:"Larger schools",ur:"بڑے اسکول",bn:"বড় স্কুল",hi:"बड़े स्कूल",ne:"ठूला विद्यालय",sw:"Shule kubwa zaidi",ar:"مدارس أكبر",zh:"较大学校",es:"Escuelas más grandes",fr:"Écoles plus grandes",pt:"Escolas maiores",ru:"Большие школы",id:"Sekolah lebih besar",de:"Größere Schulen",ja:"大規模校",pa:"وڈے سکول",mr:"मोठ्या शाळा",te:"పెద్ద పాఠశాలలు",fa:"مدارس بزرگ‌تر",tr:"Daha büyük okullar",ta:"பெரிய பள்ளிகள்",vi:"Trường lớn hơn",ko:"더 큰 학교",tl:"Mas malalaking paaralan",ha:"Makarantu manya",it:"Scuole più grandi",ps:"لوی ښوونځي",ms:"Sekolah lebih besar",yo:"Ilé-ìwé ńlá sí i",ig:"Ụlọ akwụkwọ buru ibu"},
+pkg_size_large:{en:"High-enrollment schools",ur:"زیادہ طلبہ والے اسکول",bn:"বেশি শিক্ষার্থীর স্কুল",hi:"अधिक छात्रों वाले स्कूल",ne:"धेरै विद्यार्थी भएका विद्यालय",sw:"Shule zenye wanafunzi wengi",ar:"مدارس ذات تسجيل عالٍ",zh:"高招生学校",es:"Escuelas con muchos alumnos",fr:"Écoles à fort effectif",pt:"Escolas com muitos alunos",ru:"Школы с большим числом учеников",id:"Sekolah dengan banyak siswa",de:"Schulen mit vielen Schülern",ja:"生徒数の多い学校",pa:"زیادہ طالب علماں والے سکول",mr:"जास्त विद्यार्थी असलेल्या शाळा",te:"ఎక్కువ మంది విద్యార్థులున్న పాఠశాలలు",fa:"مدارس با ثبت‌نام بالا",tr:"Öğrenci sayısı yüksek okullar",ta:"அதிக மாணவர் சேர்க்கை உள்ள பள்ளிகள்",vi:"Trường có nhiều học sinh",ko:"학생 수가 많은 학교",tl:"Mga paaralang maraming mag-aaral",ha:"Makarantu masu ɗalibai da yawa",it:"Scuole con molti iscritti",ps:"د زیاتو زده کوونکو ښوونځي",ms:"Sekolah dengan enrolmen tinggi",yo:"Ilé-ìwé pẹ̀lú ọ̀pọ̀ akẹ́kọ̀ọ́",ig:"Ụlọ akwụkwọ nwere ọtụtụ ụmụ akwụkwọ"},
+pkg_popular:{en:"Most Popular",ur:"سب سے مقبول",bn:"সবচেয়ে জনপ্রিয়",hi:"सबसे लोकप्रिय",ne:"सबैभन्दा लोकप्रिय",sw:"Maarufu zaidi",ar:"الأكثر شيوعًا",zh:"最受欢迎",es:"Más popular",fr:"Le plus populaire",pt:"Mais popular",ru:"Самый популярный",id:"Paling populer",de:"Beliebteste",ja:"最も人気",pa:"سب توں مقبول",mr:"सर्वात लोकप्रिय",te:"అత్యంత ప్రజాదరణ",fa:"محبوب‌ترین",tr:"En Popüler",ta:"மிகவும் பிரபலமானது",vi:"Phổ biến nhất",ko:"가장 인기",tl:"Pinakasikat",ha:"Mafi shahara",it:"Più popolare",ps:"تر ټولو مشهور",ms:"Paling popular",yo:"Ó gbajúmọ̀ jùlọ",ig:"Kacha ewu ewu"},
+pkg_up_to:{en:"Up to {n} students",ur:"{n} طلبہ تک",bn:"{n} জন শিক্ষার্থী পর্যন্ত",hi:"{n} छात्रों तक",ne:"{n} जना विद्यार्थीसम्म",sw:"Hadi wanafunzi {n}",ar:"حتى {n} طالبًا",zh:"最多 {n} 名学生",es:"Hasta {n} alumnos",fr:"Jusqu'à {n} élèves",pt:"Até {n} alunos",ru:"До {n} учеников",id:"Hingga {n} siswa",de:"Bis zu {n} Schüler",ja:"最大 {n} 名の生徒",pa:"{n} طالب علماں تک",mr:"{n} विद्यार्थ्यांपर्यंत",te:"{n} మంది విద్యార్థుల వరకు",fa:"تا {n} دانش‌آموز",tr:"{n} öğrenciye kadar",ta:"{n} மாணவர்கள் வரை",vi:"Tối đa {n} học sinh",ko:"최대 {n}명 학생",tl:"Hanggang {n} mag-aaral",ha:"Har ɗalibai {n}",it:"Fino a {n} studenti",ps:"تر {n} زده کوونکو پورې",ms:"Sehingga {n} pelajar",yo:"Títí di {n} akẹ́kọ̀ọ́",ig:"Ruo ụmụ akwụkwọ {n}"},
+pkg_count:{en:"{have} / {limit} students",ur:"{have} / {limit} طلبہ",bn:"{have} / {limit} জন শিক্ষার্থী",hi:"{have} / {limit} छात्र",ne:"{have} / {limit} विद्यार्थी",sw:"wanafunzi {have} / {limit}",ar:"{have} / {limit} طالبًا",zh:"{have} / {limit} 名学生",es:"{have} / {limit} alumnos",fr:"{have} / {limit} élèves",pt:"{have} / {limit} alunos",ru:"{have} / {limit} учеников",id:"{have} / {limit} siswa",de:"{have} / {limit} Schüler",ja:"{have} / {limit} 名の生徒",pa:"{have} / {limit} طالب علم",mr:"{have} / {limit} विद्यार्थी",te:"{have} / {limit} విద్యార్థులు",fa:"{have} / {limit} دانش‌آموز",tr:"{have} / {limit} öğrenci",ta:"{have} / {limit} மாணவர்கள்",vi:"{have} / {limit} học sinh",ko:"{have} / {limit}명 학생",tl:"{have} / {limit} mag-aaral",ha:"ɗalibai {have} / {limit}",it:"{have} / {limit} studenti",ps:"{have} / {limit} زده کوونکي",ms:"{have} / {limit} pelajar",yo:"{have} / {limit} akẹ́kọ̀ọ́",ig:"ụmụ akwụkwọ {have} / {limit}"},
+pkg_current:{en:"Current package",ur:"موجودہ پیکج",bn:"বর্তমান প্যাকেজ",hi:"वर्तमान पैकेज",ne:"हालको प्याकेज",sw:"Kifurushi cha sasa",ar:"الباقة الحالية",zh:"当前套餐",es:"Paquete actual",fr:"Forfait actuel",pt:"Pacote atual",ru:"Текущий пакет",id:"Paket saat ini",de:"Aktuelles Paket",ja:"現在のプラン",pa:"موجودہ پیکج",mr:"सध्याचे पॅकेज",te:"ప్రస్తుత ప్యాకేజీ",fa:"بسته فعلی",tr:"Mevcut paket",ta:"தற்போதைய தொகுப்பு",vi:"Gói hiện tại",ko:"현재 패키지",tl:"Kasalukuyang pakete",ha:"Fakitin yanzu",it:"Pacchetto attuale",ps:"اوسنی بسته",ms:"Pakej semasa",yo:"Àpò ìṣòwò lọ́wọ́lọ́wọ́",ig:"Ngwugwu dị ugbu a"},
+pkg_pick:{en:"Choose your package",ur:"اپنا پیکج منتخب کریں",bn:"আপনার প্যাকেজ বেছে নিন",hi:"अपना पैकेज चुनें",ne:"आफ्नो प्याकेज छान्नुहोस्",sw:"Chagua kifurushi chako",ar:"اختر باقتك",zh:"选择您的套餐",es:"Elige tu paquete",fr:"Choisissez votre forfait",pt:"Escolha o seu pacote",ru:"Выберите пакет",id:"Pilih paket Anda",de:"Wählen Sie Ihr Paket",ja:"プランを選択",pa:"اپنا پیکج چنو",mr:"तुमचे पॅकेज निवडा",te:"మీ ప్యాకేజీని ఎంచుకోండి",fa:"بسته خود را انتخاب کنید",tr:"Paketinizi seçin",ta:"உங்கள் தொகுப்பைத் தேர்ந்தெடுக்கவும்",vi:"Chọn gói của bạn",ko:"패키지를 선택하세요",tl:"Piliin ang iyong pakete",ha:"Zaɓi fakitinka",it:"Scegli il tuo pacchetto",ps:"خپله بسته وټاکئ",ms:"Pilih pakej anda",yo:"Yan àpò ìṣòwò rẹ",ig:"Họrọ ngwugwu gị"},
+pkg_pick_hint:{en:"Pick the package that fits your school. You can change it later — the admin confirms the payment.",ur:"وہ پیکج منتخب کریں جو آپ کے اسکول کے مطابق ہو۔ آپ اسے بعد میں بدل سکتے ہیں — ادائیگی کی تصدیق ایڈمن کرتا ہے۔",bn:"আপনার স্কুলের উপযুক্ত প্যাকেজটি বেছে নিন। পরে বদলাতে পারবেন — পেমেন্টের বিষয়টি অ্যাডমিন নিশ্চিত করবেন।",hi:"वह पैकेज चुनें जो आपके स्कूल के लिए उपयुक्त हो। आप इसे बाद में बदल सकते हैं — भुगतान की पुष्टि एडमिन करेगा।",ne:"आफ्नो विद्यालयलाई सुहाउने प्याकेज छान्नुहोस्। पछि बदल्न सक्नुहुन्छ — भुक्तानी प्रशासकले पुष्टि गर्नेछ।",sw:"Chagua kifurushi kinachofaa shule yako. Unaweza kukibadilisha baadaye — msimamizi ndiye anayethibitisha malipo.",ar:"اختر الباقة المناسبة لمدرستك. يمكنك تغييرها لاحقًا — المسؤول يؤكد الدفع.",zh:"选择适合您学校的套餐。以后可以更改——付款由管理员确认。",es:"Elige el paquete que se ajuste a tu escuela. Puedes cambiarlo más tarde — el administrador confirma el pago.",fr:"Choisissez le forfait adapté à votre école. Vous pourrez le changer plus tard — l'administrateur confirme le paiement.",pt:"Escolha o pacote adequado à sua escola. Pode mudá-lo mais tarde — o administrador confirma o pagamento.",ru:"Выберите пакет, подходящий вашей школе. Позже его можно изменить — платёж подтверждает администратор.",id:"Pilih paket yang sesuai dengan sekolah Anda. Anda bisa mengubahnya nanti — admin yang mengonfirmasi pembayaran.",de:"Wählen Sie das Paket, das zu Ihrer Schule passt. Sie können es später ändern — der Administrator bestätigt die Zahlung.",ja:"学校に合ったプランを選択してください。後で変更できます——支払いは管理者が確認します。",pa:"اوہ پیکج چنو جو تواڈے سکول لئی ٹھیک ہووے۔ تسیں اینوں بعد وچ بدل سکدے او — ادائیگی دی تصدیق ایڈمن کرے گا۔",mr:"तुमच्या शाळेला योग्य ते पॅकेज निवडा. तुम्ही ते नंतर बदलू शकता — पेमेंटची पुष्टी प्रशासक करेल.",te:"మీ పాఠశాలకు సరిపోయే ప్యాకేజీని ఎంచుకోండి. తర్వాత మార్చుకోవచ్చు — చెల్లింపును అడ్మిన్ నిర్ధారిస్తారు.",fa:"بسته‌ای را انتخاب کنید که مناسب مدرسه شماست. بعداً می‌توانید آن را تغییر دهید — مدیر پرداخت را تأیید می‌کند.",tr:"Okulunuza uyan paketi seçin. Daha sonra değiştirebilirsiniz — ödemeyi yönetici onaylar.",ta:"உங்கள் பள்ளிக்கு பொருந்தும் தொகுப்பைத் தேர்ந்தெடுக்கவும். பின்னர் மாற்றலாம் — கட்டணத்தை நிர்வாகி உறுதிப்படுத்துவார்.",vi:"Chọn gói phù hợp với trường của bạn. Bạn có thể đổi sau — quản trị viên sẽ xác nhận thanh toán.",ko:"학교에 맞는 패키지를 선택하세요. 나중에 변경할 수 있습니다 — 관리자가 결제를 확인합니다.",tl:"Piliin ang pakete na akma sa iyong paaralan. Maaari mo itong baguhin mamaya — kinukumpirma ng admin ang bayad.",ha:"Zaɓi fakitin da ya dace da makarantarka. Za ka iya canza shi daga baya — admin ne ke tabbatar da biyan kuɗi.",it:"Scegli il pacchetto adatto alla tua scuola. Puoi cambiarlo in seguito — l'amministratore conferma il pagamento.",ps:"هغه بسته وټاکئ چې ستاسو ښوونځي ته برابره وي. وروسته یې بدلولی شئ — پیسې اډمین تاییدوي.",ms:"Pilih pakej yang sesuai dengan sekolah anda. Anda boleh menukarnya kemudian — admin mengesahkan pembayaran.",yo:"Yan àpò ìṣòwò tó bá ilé-ìwé rẹ mu. O lè yí i padà lẹ́yìn — adímíìnì ló ń jẹ́rìí owó náà.",ig:"Họrọ ngwugwu dabara ụlọ akwụkwọ gị. Ị nwere ike ịgbanwe ya ma emechaa — onye nchịkwa na-akwado ịkwụ ụgwọ ahụ."},
+pkg_package:{en:"Package",ur:"پیکج",bn:"প্যাকেজ",hi:"पैकेज",ne:"प्याकेज",sw:"Kifurushi",ar:"الباقة",zh:"套餐",es:"Paquete",fr:"Forfait",pt:"Pacote",ru:"Пакет",id:"Paket",de:"Paket",ja:"プラン",pa:"پیکج",mr:"पॅकेज",te:"ప్యాకేజీ",fa:"بسته",tr:"Paket",ta:"தொகுப்பு",vi:"Gói",ko:"패키지",tl:"Pakete",ha:"Fakiti",it:"Pacchetto",ps:"بسته",ms:"Pakej",yo:"Àpò ìṣòwò",ig:"Ngwugwu"},
+pkg_trust:{en:"30-day free trial · No credit card required · Cancel anytime.",ur:"30 دن کا مفت ٹرائل · کریڈٹ کارڈ کی ضرورت نہیں · کسی بھی وقت منسوخ کریں۔",bn:"৩০ দিনের বিনামূল্যে ট্রায়াল · ক্রেডিট কার্ড লাগবে না · যেকোনো সময় বাতিল করুন।",hi:"30 दिन का मुफ़्त ट्रायल · क्रेडिट कार्ड की ज़रूरत नहीं · कभी भी रद्द करें।",ne:"30 दिने नि:शुल्क परीक्षण · क्रेडिट कार्ड चाहिँदैन · जुनसुकै बेला रद्द गर्नुहोस्।",sw:"Jaribio la bure la siku 30 · Hakuna kadi ya mkopo inayohitajika · Ghairi wakati wowote.",ar:"تجربة مجانية لمدة 30 يومًا · لا حاجة لبطاقة ائتمان · ألغِ في أي وقت.",zh:"30 天免费试用 · 无需信用卡 · 随时取消。",es:"Prueba gratuita de 30 días · No se necesita tarjeta de crédito · Cancela cuando quieras.",fr:"Essai gratuit de 30 jours · Aucune carte bancaire requise · Annulez à tout moment.",pt:"Teste gratuito de 30 dias · Sem cartão de crédito · Cancele quando quiser.",ru:"Бесплатная пробная версия на 30 дней · Кредитная карта не нужна · Отмена в любое время.",id:"Uji coba gratis 30 hari · Tanpa kartu kredit · Batalkan kapan saja.",de:"30 Tage kostenlos testen · Keine Kreditkarte erforderlich · Jederzeit kündbar.",ja:"30日間無料トライアル · クレジットカード不要 · いつでもキャンセル可。",pa:"30 دناں دا مفت ٹرائل · کریڈٹ کارڈ دی لوڑ نہیں · کسے وی ویلے منسوخ کرو۔",mr:"30 दिवसांची मोफत चाचणी · क्रेडिट कार्डची गरज नाही · कधीही रद्द करा.",te:"30 రోజుల ఉచిత ట్రయల్ · క్రెడిట్ కార్డు అవసరం లేదు · ఎప్పుడైనా రద్దు చేయండి.",fa:"آزمایش رایگان ۳۰ روزه · بدون نیاز به کارت اعتباری · هر وقت خواستید لغو کنید.",tr:"30 günlük ücretsiz deneme · Kredi kartı gerekmez · İstediğiniz zaman iptal edin.",ta:"30 நாள் இலவச சோதனை · கடன் அட்டை தேவையில்லை · எப்போது வேண்டுமானாலும் ரத்து செய்யலாம்.",vi:"Dùng thử miễn phí 30 ngày · Không cần thẻ tín dụng · Hủy bất cứ lúc nào.",ko:"30일 무료 체험 · 신용카드 불필요 · 언제든지 취소 가능.",tl:"30-araw na libreng pagsubok · Walang kailangan na credit card · Kanselahin anumang oras.",ha:"Gwaji kyauta na kwana 30 · Ba a buƙatar katin bashi · Soke a kowane lokaci.",it:"Prova gratuita di 30 giorni · Nessuna carta di credito richiesta · Annulla quando vuoi.",ps:"۳۰ ورځنۍ وړیا آزموینه · کریډیټ کارډ ته اړتیا نشته · هر وخت لغوه کړئ.",ms:"Percubaan percuma 30 hari · Tiada kad kredit diperlukan · Batalkan bila-bila masa.",yo:"Ìdánwò ọ̀fẹ́ fún ọjọ́ 30 · Kò nílò káàdì kirẹ́dìtì · Fagilé nígbàkigbà.",ig:"Nnwale n'efu ụbọchị 30 · Achọghị kaadị kredit · Kagbuo oge ọ bụla."},
+pkg_change:{en:"Change package",ur:"پیکج تبدیل کریں",bn:"প্যাকেজ বদলান",hi:"पैकेज बदलें",ne:"प्याकेज बदल्नुहोस्",sw:"Badilisha kifurushi",ar:"تغيير الباقة",zh:"更改套餐",es:"Cambiar paquete",fr:"Changer de forfait",pt:"Mudar de pacote",ru:"Сменить пакет",id:"Ubah paket",de:"Paket wechseln",ja:"プランを変更",pa:"پیکج بدلو",mr:"पॅकेज बदला",te:"ప్యాకేజీని మార్చండి",fa:"تغییر بسته",tr:"Paketi değiştir",ta:"தொகுப்பை மாற்று",vi:"Đổi gói",ko:"패키지 변경",tl:"Baguhin ang pakete",ha:"Canza fakiti",it:"Cambia pacchetto",ps:"بسته بدل کړئ",ms:"Tukar pakej",yo:"Yí àpò ìṣòwò padà",ig:"Gbanwee ngwugwu"},
+pkg_upgrade:{en:"Upgrade",ur:"اپ گریڈ کریں",bn:"আপগ্রেড করুন",hi:"अपग्रेड करें",ne:"अपग्रेड गर्नुहोस्",sw:"Panda daraja",ar:"ترقية",zh:"升级",es:"Mejorar",fr:"Passer au niveau supérieur",pt:"Atualizar",ru:"Улучшить",id:"Naik tingkat",de:"Upgraden",ja:"アップグレード",pa:"اپ گریڈ کرو",mr:"अपग्रेड करा",te:"అప్‌గ్రేడ్ చేయండి",fa:"ارتقا دهید",tr:"Yükselt",ta:"மேம்படுத்து",vi:"Nâng cấp",ko:"업그레이드",tl:"Mag-upgrade",ha:"Haɓaka",it:"Passa a un livello superiore",ps:"لوړ کړئ",ms:"Naik taraf",yo:"Ṣe ìgbésẹ̀ sí i",ig:"Melite"},
+pkg_upgrade_to:{en:"Upgrade to {package}",ur:"{package} پر اپ گریڈ کریں",bn:"{package}-এ আপগ্রেড করুন",hi:"{package} पर अपग्रेड करें",ne:"{package} मा अपग्रेड गर्नुहोस्",sw:"Panda hadi {package}",ar:"الترقية إلى {package}",zh:"升级到{package}",es:"Mejorar a {package}",fr:"Passer à {package}",pt:"Atualizar para {package}",ru:"Перейти на {package}",id:"Naik ke {package}",de:"Auf {package} upgraden",ja:"{package}にアップグレード",pa:"{package} تے اپ گریڈ کرو",mr:"{package} वर अपग्रेड करा",te:"{package} కు అప్‌గ్రేడ్ చేయండి",fa:"ارتقا به {package}",tr:"{package} paketine yükselt",ta:"{package} க்கு மேம்படுத்து",vi:"Nâng cấp lên {package}",ko:"{package}(으)로 업그레이드",tl:"Mag-upgrade sa {package}",ha:"Haɓaka zuwa {package}",it:"Passa a {package}",ps:"{package} ته لوړ کړئ",ms:"Naik taraf ke {package}",yo:"Ṣe ìgbésẹ̀ sí {package}",ig:"Melite na {package}"},
+pkg_upgrade_gain:{en:"Room for {n} more students",ur:"{n} مزید طلبہ کے لیے جگہ",bn:"আরও {n} জন শিক্ষার্থীর জায়গা",hi:"{n} और छात्रों के लिए जगह",ne:"{n} जना थप विद्यार्थीका लागि ठाउँ",sw:"Nafasi ya wanafunzi {n} zaidi",ar:"مساحة لـ {n} طلاب إضافيين",zh:"可再容纳 {n} 名学生",es:"Espacio para {n} alumnos más",fr:"Place pour {n} élèves de plus",pt:"Espaço para mais {n} alunos",ru:"Место ещё для {n} учеников",id:"Ruang untuk {n} siswa lagi",de:"Platz für {n} weitere Schüler",ja:"さらに {n} 名分の空き",pa:"{n} ہور طالب علماں لئی جگہ",mr:"आणखी {n} विद्यार्थ्यांसाठी जागा",te:"మరో {n} మంది విద్యార్థులకు స్థలం",fa:"جا برای {n} دانش‌آموز بیشتر",tr:"{n} öğrenci daha için yer",ta:"மேலும் {n} மாணவர்களுக்கு இடம்",vi:"Chỗ cho thêm {n} học sinh",ko:"{n}명 더 수용 가능",tl:"Puwang para sa {n} pang mag-aaral",ha:"Wuri ga ƙarin ɗalibai {n}",it:"Spazio per altri {n} studenti",ps:"د {n} نورو زده کوونکو لپاره ځای",ms:"Ruang untuk {n} pelajar lagi",yo:"Ààyè fún {n} akẹ́kọ̀ọ́ sí i",ig:"Oghere maka ụmụ akwụkwọ {n} ọzọ"},
+pkg_upgrade_diff:{en:"Upgrade difference: {amount}",ur:"اپ گریڈ کا فرق: {amount}",bn:"আপগ্রেডের পার্থক্য: {amount}",hi:"अपग्रेड का अंतर: {amount}",ne:"अपग्रेडको भिन्नता: {amount}",sw:"Tofauti ya kupanda daraja: {amount}",ar:"فرق الترقية: {amount}",zh:"升级差价：{amount}",es:"Diferencia de mejora: {amount}",fr:"Différence de passage: {amount}",pt:"Diferença da atualização: {amount}",ru:"Разница при переходе: {amount}",id:"Selisih naik tingkat: {amount}",de:"Upgrade-Differenz: {amount}",ja:"アップグレード差額：{amount}",pa:"اپ گریڈ دا فرق: {amount}",mr:"अपग्रेडचा फरक: {amount}",te:"అప్‌గ్రేడ్ తేడా: {amount}",fa:"تفاوت ارتقا: {amount}",tr:"Yükseltme farkı: {amount}",ta:"மேம்படுத்தல் வேறுபாடு: {amount}",vi:"Chênh lệch nâng cấp: {amount}",ko:"업그레이드 차액: {amount}",tl:"Pagkakaiba sa pag-upgrade: {amount}",ha:"Bambancin haɓakawa: {amount}",it:"Differenza di passaggio: {amount}",ps:"د لوړولو توپیر: {amount}",ms:"Perbezaan naik taraf: {amount}",yo:"Ìyàtọ̀ ìgbésẹ̀: {amount}",ig:"Ọdịiche nkwalite: {amount}"},
+pkg_upgrade_done:{en:"Package changed to {package}.",ur:"پیکج {package} میں تبدیل کر دیا گیا۔",bn:"প্যাকেজ {package}-এ বদলে দেওয়া হয়েছে।",hi:"पैकेज {package} में बदल दिया गया।",ne:"प्याकेज {package} मा परिवर्तन गरियो।",sw:"Kifurushi kimebadilishwa kuwa {package}.",ar:"تم تغيير الباقة إلى {package}.",zh:"套餐已更改为{package}。",es:"Paquete cambiado a {package}.",fr:"Forfait changé pour {package}.",pt:"Pacote alterado para {package}.",ru:"Пакет изменён на {package}.",id:"Paket diubah menjadi {package}.",de:"Paket zu {package} geändert.",ja:"プランを{package}に変更しました。",pa:"پیکج {package} وچ بدل دتا گیا۔",mr:"पॅकेज {package} मध्ये बदलले.",te:"ప్యాకేజీ {package} కు మార్చబడింది.",fa:"بسته به {package} تغییر کرد.",tr:"Paket {package} olarak değiştirildi.",ta:"தொகுப்பு {package} ஆக மாற்றப்பட்டது.",vi:"Đã đổi gói thành {package}.",ko:"패키지가 {package}(으)로 변경되었습니다.",tl:"Binago ang pakete sa {package}.",ha:"An canza fakiti zuwa {package}.",it:"Pacchetto cambiato in {package}.",ps:"بسته {package} ته بدله شوه.",ms:"Pakej ditukar kepada {package}.",yo:"Àpò ìṣòwò ti yí padà sí {package}.",ig:"Agbanweela ngwugwu na {package}."},
+pkg_annual_only:{en:"International schools pay once a year.",ur:"بین الاقوامی اسکول سال میں ایک بار ادائیگی کرتے ہیں۔",bn:"আন্তর্জাতিক স্কুল বছরে একবার দেয়।",hi:"अंतरराष्ट्रीय स्कूल साल में एक बार भुगतान करते हैं।",ne:"अन्तर्राष्ट्रिय विद्यालयले वर्षमा एक पटक भुक्तानी गर्छन्।",sw:"Shule za kimataifa hulipa mara moja kwa mwaka.",ar:"المدارس الدولية تدفع مرة واحدة في السنة.",zh:"国际学校每年支付一次。",es:"Las escuelas internacionales pagan una vez al año.",fr:"Les écoles internationales paient une fois par an.",pt:"As escolas internacionais pagam uma vez por ano.",ru:"Международные школы платят раз в год.",id:"Sekolah internasional membayar setahun sekali.",de:"Internationale Schulen zahlen einmal im Jahr.",ja:"国際校は年1回支払います。",pa:"بین الاقوامی سکول سال وچ اک واری ادائیگی کردے نیں۔",mr:"आंतरराष्ट्रीय शाळा वर्षातून एकदा पैसे देतात.",te:"అంతర్జాతీయ పాఠశాలలు సంవత్సరానికి ఒకసారి చెల్లిస్తాయి.",fa:"مدارس بین‌المللی سالی یک بار پرداخت می‌کنند.",tr:"Uluslararası okullar yılda bir kez öder.",ta:"சர்வதேச பள்ளிகள் ஆண்டுக்கு ஒரு முறை செலுத்துகின்றன.",vi:"Trường quốc tế trả tiền một lần mỗi năm.",ko:"국제 학교는 연 1회 결제합니다.",tl:"Ang mga internasyonal na paaralan ay nagbabayad minsan sa isang taon.",ha:"Makarantu na ƙasashen waje suna biyan kuɗi sau ɗaya a shekara.",it:"Le scuole internazionali pagano una volta all'anno.",ps:"نړیوال ښوونځي په کال کې یو ځل پیسې ورکوي.",ms:"Sekolah antarabangsa membayar sekali setahun.",yo:"Ilé-ìwé àgbáyé ń san owó lẹ́ẹ̀kan lọ́dún.",ig:"Ụlọ akwụkwọ mba ụwa na-akwụ ụgwọ otu ugboro n'afọ."},
+pkg_request:{en:"Request pricing",ur:"قیمت کی درخواست کریں",bn:"মূল্য জানতে চান",hi:"कीमत के लिए अनुरोध करें",ne:"मूल्य अनुरोध गर्नुहोस्",sw:"Omba bei",ar:"اطلب الأسعار",zh:"索取价格",es:"Solicitar precios",fr:"Demander les tarifs",pt:"Solicitar preços",ru:"Запросить цены",id:"Minta harga",de:"Preise anfragen",ja:"料金を問い合わせる",pa:"قیمت دی درخواست کرو",mr:"किंमत मागवा",te:"ధరను అభ్యర్థించండి",fa:"درخواست قیمت",tr:"Fiyat isteyin",ta:"விலையைக் கோருங்கள்",vi:"Yêu cầu báo giá",ko:"가격 문의",tl:"Humingi ng presyo",ha:"Nemi farashi",it:"Richiedi i prezzi",ps:"بیه وغواړئ",ms:"Minta harga",yo:"Béèrè fún owó",ig:"Rịọ ọnụahịa"},
+pkg_renew_hint:{en:"To renew, pay by {rails} and tell the admin — the subscription is switched on after payment is confirmed.",ur:"تجدید کے لیے {rails} سے ادائیگی کریں اور ایڈمن کو بتائیں — ادائیگی کی تصدیق کے بعد سبسکرپشن آن کر دی جائے گی۔",bn:"নবায়ন করতে {rails}-এ পেমেন্ট করুন এবং অ্যাডমিনকে জানান — পেমেন্ট নিশ্চিত হলে সাবস্ক্রিপশন চালু হবে।",hi:"नवीनीकरण के लिए {rails} से भुगतान करें और एडमिन को बताएं — भुगतान की पुष्टि के बाद सब्सक्रिप्शन चालू होगा।",ne:"नवीकरण गर्न {rails} बाट भुक्तानी गर्नुहोस् र प्रशासकलाई भन्नुहोस् — भुक्तानी पुष्टि भएपछि सदस्यता सुरु हुनेछ।",sw:"Ili kufanya upya, lipa kwa {rails} na umjulishe msimamizi — usajili utawashwa baada ya malipo kuthibitishwa.",ar:"للتجديد، ادفع عبر {rails} وأخبر المسؤول — سيتم تفعيل الاشتراك بعد تأكيد الدفع.",zh:"续费请通过 {rails} 支付并告知管理员——付款确认后订阅即开通。",es:"Para renovar, paga por {rails} y avisa al administrador — la suscripción se activa tras confirmar el pago.",fr:"Pour renouveler, payez par {rails} et prévenez l'administrateur — l'abonnement est activé après confirmation du paiement.",pt:"Para renovar, pague por {rails} e avise o administrador — a subscrição é ativada após a confirmação do pagamento.",ru:"Чтобы продлить, оплатите через {rails} и сообщите администратору — подписка включится после подтверждения платежа.",id:"Untuk memperpanjang, bayar melalui {rails} dan beri tahu admin — langganan diaktifkan setelah pembayaran dikonfirmasi.",de:"Zur Verlängerung per {rails} zahlen und dem Administrator Bescheid geben — das Abonnement wird nach Zahlungsbestätigung aktiviert.",ja:"更新するには {rails} で支払い、管理者に連絡してください——支払い確認後にサブスクリプションが有効になります。",pa:"تجدید لئی {rails} نال ادائیگی کرو تے ایڈمن نوں دسو — ادائیگی دی تصدیق توں بعد سبسکرپشن آن کر دتی جاوے گی۔",mr:"नूतनीकरणासाठी {rails} ने पैसे द्या आणि प्रशासकाला सांगा — पेमेंटची पुष्टी झाल्यावर सदस्यता सुरू होईल.",te:"పునరుద్ధరించడానికి {rails} ద్వారా చెల్లించి అడ్మిన్‌కు చెప్పండి — చెల్లింపు నిర్ధారించిన తర్వాత సబ్‌స్క్రిప్షన్ ఆన్ అవుతుంది.",fa:"برای تمدید، با {rails} پرداخت کنید و به مدیر بگویید — پس از تأیید پرداخت، اشتراک فعال می‌شود.",tr:"Yenilemek için {rails} ile ödeyin ve yöneticiye söyleyin — ödeme onaylandıktan sonra abonelik açılır.",ta:"புதுப்பிக்க, {rails} மூலம் செலுத்தி நிர்வாகிக்கு தெரிவிக்கவும் — கட்டணம் உறுதி செய்யப்பட்ட பிறகு சந்தா இயக்கப்படும்.",vi:"Để gia hạn, hãy trả bằng {rails} và báo cho quản trị viên — gói sẽ được bật sau khi xác nhận thanh toán.",ko:"갱신하려면 {rails}(으)로 결제하고 관리자에게 알리세요 — 결제 확인 후 구독이 활성화됩니다.",tl:"Upang mag-renew, magbayad sa pamamagitan ng {rails} at sabihin sa admin — bubuksan ang subscription pagkatapos makumpirma ang bayad.",ha:"Don sabuntawa, biya ta {rails} ka sanar da admin — za a kunna biyan kuɗi bayan an tabbatar da biyan kuɗi.",it:"Per rinnovare, paga tramite {rails} e avvisa l'amministratore — l'abbonamento si attiva dopo la conferma del pagamento.",ps:"د نوي کولو لپاره د {rails} له لارې پیسې ورکړئ او اډمین ته ووایاست — د پیسو تایید وروسته ګډون فعالېږي.",ms:"Untuk memperbaharui, bayar melalui {rails} dan beritahu admin — langganan diaktifkan selepas pembayaran disahkan.",yo:"Láti túnṣe, san owó nípa {rails} kí o sì sọ fún adímíìnì — ìforúkọsílẹ̀ yóò ṣiṣẹ́ lẹ́yìn ìjẹ́rìí owó.",ig:"Iji megharịa, kwụọ ụgwọ site na {rails} wee gwa onye nchịkwa — a ga-agbanye ndenye aha mgbe akwadoro ịkwụ ụgwọ."},
+pkg_cap_upgrade_btn:{en:"See packages & upgrade",ur:"پیکجز دیکھیں اور اپ گریڈ کریں",bn:"প্যাকেজ দেখুন ও আপগ্রেড করুন",hi:"पैकेज देखें और अपग्रेड करें",ne:"प्याकेज हेर्नुहोस् र अपग्रेड गर्नुहोस्",sw:"Angalia vifurushi na upande daraja",ar:"عرض الباقات والترقية",zh:"查看套餐并升级",es:"Ver paquetes y mejorar",fr:"Voir les forfaits et passer au niveau supérieur",pt:"Ver pacotes e atualizar",ru:"Посмотреть пакеты и улучшить",id:"Lihat paket & naik tingkat",de:"Pakete ansehen & upgraden",ja:"プランを見てアップグレード",pa:"پیکج ویکھو تے اپ گریڈ کرو",mr:"पॅकेज पहा आणि अपग्रेड करा",te:"ప్యాకేజీలను చూడండి & అప్‌గ్రేడ్ చేయండి",fa:"بسته‌ها را ببینید و ارتقا دهید",tr:"Paketleri gör ve yükselt",ta:"தொகுப்புகளைப் பார்த்து மேம்படுத்து",vi:"Xem các gói và nâng cấp",ko:"패키지 보기 및 업그레이드",tl:"Tingnan ang mga pakete at mag-upgrade",ha:"Duba fakiti kuma haɓaka",it:"Vedi i pacchetti e passa a un livello superiore",ps:"بستې وګورئ او لوړ کړئ",ms:"Lihat pakej & naik taraf",yo:"Wo àwọn àpò ìṣòwò kí o sì ṣe ìgbésẹ̀",ig:"Lee ngwugwu wee melite"},
+pkg_admin_done:{en:"Package set to {package}.",ur:"پیکج {package} پر سیٹ کر دیا گیا۔",bn:"প্যাকেজ {package}-এ সেট করা হয়েছে।",hi:"पैकेज {package} पर सेट किया गया।",ne:"प्याकेज {package} मा सेट गरियो।",sw:"Kifurushi kimewekwa kuwa {package}.",ar:"تم تعيين الباقة إلى {package}.",zh:"套餐已设为{package}。",es:"Paquete establecido en {package}.",fr:"Forfait défini sur {package}.",pt:"Pacote definido como {package}.",ru:"Пакет установлен: {package}.",id:"Paket diatur ke {package}.",de:"Paket auf {package} gesetzt.",ja:"プランを{package}に設定しました。",pa:"پیکج {package} تے سیٹ کر دتا گیا۔",mr:"पॅकेज {package} वर सेट केले.",te:"ప్యాకేజీ {package} కు సెట్ చేయబడింది.",fa:"بسته روی {package} تنظیم شد.",tr:"Paket {package} olarak ayarlandı.",ta:"தொகுப்பு {package} ஆக அமைக்கப்பட்டது.",vi:"Đã đặt gói thành {package}.",ko:"패키지가 {package}(으)로 설정되었습니다.",tl:"Itinakda ang pakete sa {package}.",ha:"An saita fakiti zuwa {package}.",it:"Pacchetto impostato su {package}.",ps:"بسته {package} ته وټاکل شوه.",ms:"Pakej ditetapkan kepada {package}.",yo:"Àpò ìṣòwò ti ṣètò sí {package}.",ig:"Edobere ngwugwu na {package}."},
+docimp_f_cap:{en:"Over the package student limit — upgrade to add more students.",ur:"پیکج کی طلبہ کی حد سے زیادہ — مزید طلبہ شامل کرنے کے لیے اپ گریڈ کریں۔",bn:"প্যাকেজের শিক্ষার্থী সীমার বেশি — আরও শিক্ষার্থী যোগ করতে আপগ্রেড করুন।",hi:"पैकेज की छात्र सीमा से अधिक — और छात्र जोड़ने के लिए अपग्रेड करें।",ne:"प्याकेजको विद्यार्थी सीमा नाघ्यो — थप विद्यार्थी थप्न अपग्रेड गर्नुहोस्।",sw:"Zaidi ya kikomo cha wanafunzi cha kifurushi — panda daraja ili kuongeza wanafunzi zaidi.",ar:"تجاوز حد الطلاب في الباقة — قم بالترقية لإضافة المزيد من الطلاب.",zh:"超出套餐学生上限——升级以添加更多学生。",es:"Por encima del límite de alumnos del paquete — mejora para añadir más alumnos.",fr:"Au-delà de la limite d'élèves du forfait — passez au niveau supérieur pour ajouter des élèves.",pt:"Acima do limite de alunos do pacote — atualize para adicionar mais alunos.",ru:"Превышен лимит учеников пакета — улучшите пакет, чтобы добавить учеников.",id:"Melebihi batas siswa paket — naik tingkat untuk menambah siswa.",de:"Über dem Schülerlimit des Pakets — upgraden, um weitere Schüler hinzuzufügen.",ja:"プランの生徒数上限を超えています——生徒を追加するにはアップグレードしてください。",pa:"پیکج دی طالب علماں دی حد توں ودھ — ہور طالب علم شامل کرن لئی اپ گریڈ کرو۔",mr:"पॅकेजच्या विद्यार्थी मर्यादेपेक्षा जास्त — अधिक विद्यार्थी जोडण्यासाठी अपग्रेड करा.",te:"ప్యాకేజీ విద్యార్థి పరిమితిని దాటింది — మరిన్ని విద్యార్థులను జోడించడానికి అప్‌గ్రేడ్ చేయండి.",fa:"بیش از حد دانش‌آموزان بسته — برای افزودن دانش‌آموزان بیشتر ارتقا دهید.",tr:"Paket öğrenci sınırının üzerinde — daha fazla öğrenci eklemek için yükseltin.",ta:"தொகுப்பின் மாணவர் வரம்பை மீறிவிட்டது — மேலும் மாணவர்களைச் சேர்க்க மேம்படுத்தவும்.",vi:"Vượt quá giới hạn học sinh của gói — hãy nâng cấp để thêm học sinh.",ko:"패키지 학생 한도를 초과했습니다 — 학생을 더 추가하려면 업그레이드하세요.",tl:"Lampas sa limitasyon ng mag-aaral ng pakete — mag-upgrade upang magdagdag ng higit pang mag-aaral.",ha:"Ya wuce iyakar ɗaliban fakiti — haɓaka don ƙara ƙarin ɗalibai.",it:"Oltre il limite di studenti del pacchetto — passa a un livello superiore per aggiungere altri studenti.",ps:"د بستې د زده کوونکو له حد څخه زیات — د نورو زده کوونکو د اضافه کولو لپاره لوړ کړئ.",ms:"Melebihi had pelajar pakej — naik taraf untuk menambah lebih ramai pelajar.",yo:"Ó ju ààlà akẹ́kọ̀ọ́ àpò ìṣòwò lọ — ṣe ìgbésẹ̀ láti fi akẹ́kọ̀ọ́ sí i kún.",ig:"Karịa oke ụmụ akwụkwọ ngwugwu — melite ka ịtinye ụmụ akwụkwọ ọzọ."},
+pkg_trial_cta:{en:"Start 30-day free trial",ur:"30 دن کا مفت ٹرائل شروع کریں",bn:"৩০ দিনের বিনামূল্যে ট্রায়াল শুরু করুন",hi:"30 दिन का मुफ़्त ट्रायल शुरू करें",ne:"30 दिने नि:शुल्क परीक्षण सुरु गर्नुहोस्",sw:"Anza jaribio la bure la siku 30",ar:"ابدأ التجربة المجانية لمدة 30 يومًا",zh:"开始 30 天免费试用",es:"Empezar la prueba gratuita de 30 días",fr:"Démarrer l'essai gratuit de 30 jours",pt:"Começar o teste gratuito de 30 dias",ru:"Начать бесплатную пробную версию на 30 дней",id:"Mulai uji coba gratis 30 hari",de:"30-tägige kostenlose Testphase starten",ja:"30日間無料トライアルを開始",pa:"30 دناں دا مفت ٹرائل شروع کرو",mr:"30 दिवसांची मोफत चाचणी सुरू करा",te:"30 రోజుల ఉచిత ట్రయల్‌ను ప్రారంభించండి",fa:"آزمایش رایگان ۳۰ روزه را شروع کنید",tr:"30 günlük ücretsiz denemeyi başlat",ta:"30 நாள் இலவச சோதனையைத் தொடங்குங்கள்",vi:"Bắt đầu dùng thử miễn phí 30 ngày",ko:"30일 무료 체험 시작",tl:"Simulan ang 30-araw na libreng pagsubok",ha:"Fara gwaji kyauta na kwana 30",it:"Inizia la prova gratuita di 30 giorni",ps:"۳۰ ورځنۍ وړیا آزموینه پیل کړئ",ms:"Mula percubaan percuma 30 hari",yo:"Bẹ̀rẹ̀ ìdánwò ọ̀fẹ́ ọjọ́ 30",ig:"Malite nnwale n'efu ụbọchị 30"},
+pkg_currency:{en:"Currency",ur:"کرنسی",bn:"মুদ্রা",hi:"मुद्रा",ne:"मुद्रा",sw:"Sarafu",ar:"العملة",zh:"货币",es:"Moneda",fr:"Devise",pt:"Moeda",ru:"Валюта",id:"Mata uang",de:"Währung",ja:"通貨",pa:"کرنسی",mr:"चलन",te:"కరెన్సీ",fa:"ارز",tr:"Para birimi",ta:"நாணயம்",vi:"Tiền tệ",ko:"통화",tl:"Salapi",ha:"Kuɗi",it:"Valuta",ps:"اسعار",ms:"Mata wang",yo:"Owó",ig:"Ego"},
+pkg_pricing_note:{en:"Prices change only by an app round. A school that already locked a price never moves.",ur:"قیمتیں صرف ایپ کے ایک راؤنڈ سے بدلتی ہیں۔ جس اسکول نے قیمت لاک کر لی ہے وہ کبھی نہیں بدلتی۔",bn:"দাম শুধু অ্যাপের এক রাউন্ডে বদলায়। যে স্কুল দাম লক করেছে তার দাম কখনো বদলায় না।",hi:"कीमतें केवल ऐप के एक राउंड से बदलती हैं। जिस स्कूल ने कीमत लॉक की है वह कभी नहीं बदलती।",ne:"मूल्यहरू एपको एक राउन्डबाट मात्र परिवर्तन हुन्छन्। मूल्य लक गरेको विद्यालयको मूल्य कहिल्यै सर्दैन।",sw:"Bei hubadilika tu kupitia raundi ya programu. Shule iliyofunga bei kamwe haibadiliki.",ar:"تتغير الأسعار فقط عبر جولة من التطبيق. المدرسة التي قفلت سعرًا لا يتحرك سعرها أبدًا.",zh:"价格仅通过应用的一轮更新更改。已锁定价格的学校价格永不变动。",es:"Los precios solo cambian con una ronda de la aplicación. Una escuela que ya fijó un precio nunca se mueve.",fr:"Les prix ne changent que par une mise à jour de l'application. Une école qui a verrouillé un prix ne bouge jamais.",pt:"Os preços só mudam numa ronda da aplicação. Uma escola que já fixou um preço nunca muda.",ru:"Цены меняются только при обновлении приложения. Школа, зафиксировавшая цену, никогда не меняет её.",id:"Harga hanya berubah lewat satu putaran aplikasi. Sekolah yang sudah mengunci harga tidak pernah berubah.",de:"Preise ändern sich nur durch ein App-Update. Eine Schule mit festgelegtem Preis ändert sich nie.",ja:"価格はアプリの更新でのみ変更されます。価格をロックした学校は決して変わりません。",pa:"قیمتاں صرف ایپ دے اک راؤنڈ نال بدلدیاں نیں۔ جس سکول نے قیمت لاک کر لئی اے اوہ کدی نہیں بدلدی۔",mr:"किंमती फक्त अ‍ॅपच्या एका राउंडने बदलतात. ज्या शाळेने किंमत लॉक केली आहे ती कधीही बदलत नाही.",te:"ధరలు యాప్ రౌండ్ ద్వారా మాత్రమే మారుతాయి. ధరను లాక్ చేసిన పాఠశాల ధర ఎప్పటికీ మారదు.",fa:"قیمت‌ها فقط با یک دور از برنامه تغییر می‌کنند. مدرسه‌ای که قیمت را قفل کرده هرگز تغییر نمی‌کند.",tr:"Fiyatlar yalnızca bir uygulama turuyla değişir. Fiyatı kilitlemiş bir okulun fiyatı asla değişmez.",ta:"விலைகள் பயன்பாட்டு சுற்றின் மூலம் மட்டுமே மாறும். விலையை பூட்டிய பள்ளியின் விலை ஒருபோதும் மாறாது.",vi:"Giá chỉ thay đổi qua một vòng cập nhật ứng dụng. Trường đã khóa giá sẽ không bao giờ thay đổi.",ko:"가격은 앱 업데이트 라운드로만 변경됩니다. 가격을 고정한 학교는 절대 바뀌지 않습니다.",tl:"Ang mga presyo ay nagbabago lamang sa pamamagitan ng isang round ng app. Ang paaralang nag-lock na ng presyo ay hindi kailanman gumagalaw.",ha:"Farashi yana canzawa ne kawai ta zagayen manhaja. Makarantar da ta kulle farashi ba ta taɓa canzawa.",it:"I prezzi cambiano solo con un aggiornamento dell'app. Una scuola che ha bloccato un prezzo non si muove mai.",ps:"بیې یوازې د اپ یوې دورې سره بدلېږي. هغه ښوونځی چې بیه یې قلف کړې وي هېڅکله نه بدلېږي.",ms:"Harga hanya berubah melalui satu pusingan aplikasi. Sekolah yang telah mengunci harga tidak akan berubah.",yo:"Owó ń yípadà nípasẹ̀ ìyípadà app kan ṣoṣo. Ilé-ìwé tó ti tì owó mọ́ kò ní yípadà rárá.",ig:"Ọnụahịa na-agbanwe naanị site na otu okirikiri ngwa. Ụlọ akwụkwọ nke kpọchiri ọnụahịa anaghị agbanwe."},
 });
 
 /* ================= IDENTITY RULE =================
@@ -27115,6 +27455,10 @@ function certDossierHTML(st){
 /* ================= settings ================= */
 function schoolCardHTML(){
   if(typeof Cloud==="undefined"||!Cloud.enabled||!Cloud.school)return "";
+  /* Round 167 (E5.1): the subscription section is head-only — a
+     non-head teacher sees the subscription state via subStripHTML
+     instead (one line, no payment action). */
+  if(!isSchoolAdmin())return "";
   const s=Cloud.school;
   const planTxt=s.plan==="trial"?t("plan_trial"):s.plan==="paid"?t("plan_paid"):t("plan_free");
   const lc=subLifecycle(s);
@@ -27124,40 +27468,65 @@ function schoolCardHTML(){
   let h='<div class="card">'+
     '<p><b>'+esc(s.name||"—")+'</b> • '+esc(planTxt)+billTxt+' • '+esc(statusTxt)+
     (s.freeAccess?"":until?" • "+esc(t("sub_until"))+": "+esc(String(until).slice(0,10)):"")+'</p>';
-  const pk=countryPack(schoolCountry());
-  const lp=schoolPrice(s);
-  const eff=effectivePrice(s,s.billing==="annual"?"annual":"monthly");
-  h+='<p>'+esc(t("sub_price"))+": <b>"+esc(eff.currency+" "+fmtNum(eff.monthly))+" "+esc(t("pricing_per_month"))+"</b>"+
-    "<br>"+esc(t("pricing_annual"))+": <b>"+esc(eff.currency+" "+fmtNum(eff.annual))+" "+esc(t("pricing_per_year"))+"</b> ("+esc(t("pricing_save"))+" "+esc(eff.currency+" "+fmtNum(annualSave(eff)))+")<br>"+
-    esc(t("sub_rails"))+": "+esc(pk.rails)+"</p>";
-  if(eff.discountPct>0)h+='<p class="msg ok">🎉 '+esc(t("disc_applied").replace("{pct}",String(eff.discountPct)).replace("{reason}",eff.discountReason||""))+"</p>";
-  const cap95=capacityStatus(s);
-  if(cap95.over){
-    const what95=cap95.students.over?"ho_students":"ho_staff";
-    const hv95=cap95.students.over?cap95.students.have:cap95.staff.have;
-    const lm95=cap95.students.over?cap95.students.limit:cap95.staff.limit;
-    h+='<p class="msg warn">⚠️ '+esc(t("cap_over").replace("{what}",t(what95)).replace("{have}",String(hv95)).replace("{limit}",String(lm95)))+"</p>";
+  /* (1) country + flag + currency — NEVER the words "Tier 1/2/3". */
+  const cfg=configCountry(schoolCountry());
+  const isIntl=schoolCountry()!=="PK";
+  h+='<p>'+esc(cfg?cfg.flag+" "+cfg.name+" · "+cfg.cur:"")+((cfg&&cfg.available)?"":" "+esc(t("pricing_not_set")))+"</p>";
+  /* (2) current package — name, student limit, price, renewal date. */
+  const curPkg=PKG_IDS.indexOf(s.package)>=0?s.package:(s.package==="custom"?"custom":"standard");
+  const cycle=s.billing==="annual"?"annual":"monthly";
+  const eff=effectivePrice(s,cycle);
+  h+='<p>'+esc(t("pkg_current"))+": <b>"+esc(pkgName(curPkg))+"</b>"+(curPkg==="custom"?" • "+esc(t("pkg_request")):" • "+esc(t("pkg_up_to").replace("{n}",String(PKG_LIMITS[curPkg])))+" • <b>"+esc(eff.currency+" "+fmtNum(cycle==="annual"?eff.annual:eff.monthly))+" "+esc(cycle==="annual"?t("pricing_per_year"):t("pricing_per_month"))+"</b>")+"</p>";
+  /* (3) live student count vs cap. A free school shows the free-access
+     line and no cap line (R165); a Custom package has no config limit. */
+  const cap167s=studentCapFor(s);
+  const have167s=enrolledStudents().length;
+  if(s.freeAccess)h+='<p>'+esc(t("adm_free_on"))+"</p>";
+  else{
+    const limTxt=cap167s.limit===Infinity?"∞":String(cap167s.limit);
+    h+='<p>'+esc(t("pkg_count").replace("{have}",String(have167s)).replace("{limit}",limTxt))+"</p>";
+    if(cap167s.limit!==Infinity&&have167s>=cap167s.limit)h+='<p class="msg warn">⚠️ '+esc(t("cap_over").replace("{what}",t("ho_students")).replace("{have}",String(have167s)).replace("{limit}",String(cap167s.limit)))+' <button type="button" class="btn btn-sm btn-primary" id="sub-pkg-upgrade">'+esc(t("pkg_cap_upgrade_btn"))+"</button></p>";
   }
+  /* (4) the five package cards. A Special country shows the request
+     action instead (E2.5) — never an empty grid. */
+  const isSpecial=!cfg;
+  if(isSpecial)h+='<p class="msg warn">'+esc(t("pricing_not_set"))+'</p><button type="button" class="btn btn-primary" id="sub-pkg-request">'+esc(t("pkg_request"))+"</button>";
+  else h+=pkgCardsHTML(schoolCountry(),{current:curPkg,selectable:true,cta:"action",trial:s.plan==="trial",id:"sub-pkg-cards"});
+  /* Discount message (unchanged). */
+  if(eff.discountPct>0)h+='<p class="msg ok">🎉 '+esc(t("disc_applied").replace("{pct}",String(eff.discountPct)).replace("{reason}",eff.discountReason||""))+"</p>";
+  /* Lifecycle state messages (unchanged). */
   if(lc.state==="trial_ending"||lc.state==="renewal_due")h+='<p class="msg warn">⏰ '+esc(t("sub_due_in").replace("{days}",String(lc.daysLeft)))+'</p>';
   else if(lc.state==="grace")h+='<p class="msg err">⚠️ '+esc(t("sub_lc_grace_msg"))+'</p>';
   else if(lc.state==="expired")h+='<p class="msg err">⚠️ '+esc(t("sub_lc_expired_msg"))+'</p>';
   else if(lc.state==="blocked")h+='<p class="msg err">⛔ '+esc(t("sub_lc_blocked"))+'</p>';
   else if(lc.state==="cancelled")h+='<p class="msg err">⚫ '+esc(t("sub_lc_cancelled"))+'</p>';
   else if(lc.state==="pending")h+='<p class="msg warn">⚠️ '+esc(t("sub_lc_pending_msg"))+'</p>';
-  if(lc.state==="trial_ending"||lc.state==="renewal_due"||lc.state==="grace"||lc.state==="expired")h+='<p class="muted">'+esc(t("sub_renew"))+((schoolCountry()!=="PK")?"<br>"+esc(t("sub_renew_intl")):"")+'</p>';
-  /* Report a subscription payment (teacher side). */
+  /* Renew hint (E5.2/E3.7): the country's payment rails + the
+     international note for a non-PK school. */
+  if(lc.state==="trial_ending"||lc.state==="renewal_due"||lc.state==="grace"||lc.state==="expired")h+='<p class="muted">'+esc(t("pkg_renew_hint").replace("{rails}",cfg?cfg.rails:""))+(isIntl?"<br>"+esc(t("sub_renew_intl")):"")+'</p>';
+  /* (7) report-payment form (head-only — this whole section is
+     head-only; the form is disabled for a Special country). */
   h+='<h3 style="margin:.8rem 0 .3rem">'+esc(t("sub_report_title"))+'</h3>'+
-    '<p class="muted">'+esc(t("sub_report_hint"))+'</p>'+
-    '<div class="grid2">'+
-    '<div class="field"><label>'+esc(t("sub_billing"))+'</label><select id="sub-cycle"><option value="monthly">'+esc(t("sub_monthly"))+'</option><option value="annual">'+esc(t("sub_annual"))+'</option></select></div>'+
-    '<div class="field"><label>'+esc(t("sub_amount"))+' ('+esc(lp.currency)+')</label><input id="sub-amount" inputmode="numeric" value="'+subAmountFor(lp,"monthly")+'"></div>'+
+    '<p class="muted">'+esc(t("sub_report_hint"))+'</p>';
+  if(isSpecial)h+='<p class="msg warn">'+esc(t("pricing_not_set"))+"</p>";
+  else{
+    const formCycle=isIntl?"annual":cycle;
+    const initPr=packagePrice(schoolCountry(),curPkg,formCycle);
+    const initAmt=initPr?initPr.amount:0;
+    h+='<div class="grid2">'+
+    '<div class="field"><label>'+esc(t("sub_billing"))+'</label><select id="sub-cycle">'+(isIntl?"":'<option value="monthly">'+esc(t("sub_monthly"))+"</option>")+'<option value="annual"'+(isIntl?" selected":"")+'>'+esc(t("sub_annual"))+"</option></select>"+(isIntl?'<p class="muted">'+esc(t("pkg_annual_only"))+"</p>":"")+"</div>"+
+    '<div class="field"><label>'+esc(t("sub_amount"))+' ('+esc(eff.currency)+')</label><input id="sub-amount" inputmode="numeric" value="'+initAmt+'"></div>'+
     '<div class="field"><label>'+esc(t("sub_method"))+'</label><select id="sub-method">'+payMethodOptions(SUB_PAY_METHODS)+'</select></div>'+
     '<div class="field"><label>'+esc(t("sub_txn"))+'</label><input id="sub-txn" placeholder="..."></div></div>'+
+    '<div id="sub-diff-msg" class="muted"></div>'+
     '<button type="button" class="btn btn-primary" id="sub-report">'+esc(t("sub_report"))+'</button><div id="sub-msg"></div>';
+  }
+  /* (8) payment history (package + kind). */
   const list=subPaymentsList();
   if(list.length){
     h+='<div style="margin-top:.6rem">'+list.map(function(p){
-      return '<div class="toolbar" style="margin:.3rem 0"><span>'+esc(String(p.at).slice(0,10))+' • '+esc(p.cycle==="annual"?t("sub_annual"):t("sub_monthly"))+' • <b>'+esc(lp.currency+" "+fmtNum(p.amount))+'</b> • '+esc(methodName(p.method))+(p.txnId?" • "+esc(p.txnId):"")+'</span><span class="chip">'+esc(p.status==="confirmed"?t("sub_confirmed"):t("sub_reported"))+'</span></div>';
+      const pPkg=PKG_IDS.indexOf(p.package)>=0?p.package:(p.package==="custom"?"custom":"standard");
+      return '<div class="toolbar" style="margin:.3rem 0"><span>'+esc(String(p.at).slice(0,10))+' • '+esc(p.cycle==="annual"?t("sub_annual"):t("sub_monthly"))+' • '+esc(pkgName(pPkg))+(p.kind==="upgrade"?" • "+esc(t("pkg_upgrade")):"")+' • <b>'+esc(eff.currency+" "+fmtNum(p.amount))+'</b> • '+esc(methodName(p.method))+(p.txnId?" • "+esc(p.txnId):"")+'</span><span class="chip">'+esc(p.status==="confirmed"?t("sub_confirmed"):t("sub_reported"))+'</span></div>';
     }).join("")+"</div>";
   }
   return h+"</div>";
@@ -27231,13 +27600,26 @@ function adminSchoolHTML(row){
   const confirmed=(row.pays||[]).filter(function(p){return p.status==="confirmed";});
   if(reported.length){
     h+='<div style="margin-top:.5rem">'+reported.map(function(p){
-      const exp=subAmountFor(lp,p.cycle),mismatch=Number(p.amount)!==exp;
-      return '<div class="toolbar" style="margin:.3rem 0"><span>'+esc(String(p.at).slice(0,10))+' • '+esc(p.cycle==="annual"?t("sub_annual"):t("sub_monthly"))+' • <b>'+esc(lp.currency+" "+fmtNum(p.amount))+'</b> • '+esc(methodName(p.method))+(p.txnId?" • "+esc(p.txnId):"")+' • '+esc(t("sub_expected"))+': '+esc(lp.currency+" "+fmtNum(exp))+'</span>'+
+      const pPkg167=PKG_IDS.indexOf(p.package)>=0?p.package:(p.package==="custom"?"custom":"standard");
+      /* Round 167 (E3.4): for an upgrade the expected amount is the
+         DIFFERENCE, not the full package price. */
+      const exp=p.kind==="upgrade"?(upgradeDiffFor(s,pPkg167)||{amount:0}).amount:subAmountFor(lp,p.cycle),mismatch=Number(p.amount)!==exp;
+      return '<div class="toolbar" style="margin:.3rem 0"><span>'+esc(String(p.at).slice(0,10))+' • '+esc(p.cycle==="annual"?t("sub_annual"):t("sub_monthly"))+' • '+esc(pkgName(pPkg167))+(p.kind==="upgrade"?" • "+esc(t("pkg_upgrade")):"")+' • <b>'+esc(lp.currency+" "+fmtNum(p.amount))+'</b> • '+esc(methodName(p.method))+(p.txnId?" • "+esc(p.txnId):"")+' • '+esc(t("sub_expected"))+': '+esc(lp.currency+" "+fmtNum(exp))+'</span>'+
       (mismatch?' <span class="msg warn">'+esc(t("sub_mismatch_warn").replace("{reported}",lp.currency+" "+fmtNum(p.amount)).replace("{expected}",lp.currency+" "+fmtNum(exp)))+'</span>':"")+
       '<button type="button" class="btn btn-sm btn-primary" data-confirm="'+esc(s.id)+"|"+esc(p.id)+'" data-amt="'+esc(String(p.amount))+'" data-exp="'+esc(String(exp))+'">'+esc(t("sub_confirm"))+'</button></div>';
     }).join("")+"</div>";
   }
   if(confirmed.length)h+='<p class="muted" style="margin-top:.4rem">'+esc(t("sub_confirmed"))+': '+confirmed.length+'</p>';
+  /* Round 167 (E5.6): the school's current package (name + limit +
+     price) and a package picker (setSchoolPackage), plus the live
+     student count vs the cap. */
+  const pkg167=PKG_IDS.indexOf(s.package)>=0?s.package:(s.package==="custom"?"custom":"standard");
+  const cap167a=studentCapFor(s);
+  const have167a=row.info&&row.info.summary?row.info.summary.students:0;
+  h+='<div style="margin-top:.4rem;border-top:1px solid var(--line);padding-top:.4rem"><b>'+esc(t("pkg_package"))+': '+esc(pkgName(pkg167))+"</b> "+(pkg167==="custom"?esc(t("pkg_request")):esc(t("pkg_up_to").replace("{n}",String(PKG_LIMITS[pkg167])))+" • "+esc(lp.currency+" "+fmtNum(amt)))+
+    (s.freeAccess?" • "+esc(t("adm_free_on")):" • "+esc(t("pkg_count").replace("{have}",String(have167a)).replace("{limit}",cap167a.limit===Infinity?"∞":String(cap167a.limit))))+
+    '<br><select id="adm-pkg-'+s.id+'">'+PKG_IDS.concat(["custom"]).map(function(pid){return '<option value="'+pid+'"'+(pid===pkg167?" selected":"")+'>'+esc(pkgName(pid))+"</option>";}).join("")+"</select> "+
+    '<button type="button" class="btn btn-sm" data-pkg="'+s.id+'">'+esc(t("pkg_change"))+'</button> <span id="adm-pkg-msg-'+s.id+'" class="muted"></span></div>';
   h+='<div style="margin-top:.4rem;border-top:1px solid var(--line);padding-top:.4rem"><b>'+esc(t("adm_trial_until"))+'</b> '+
     '<input type="date" id="adm-trial-'+s.id+'" value="'+esc(s.trialEndsAt||"")+'" style="min-height:36px"> '+
     '<button type="button" class="btn btn-sm" data-trial="'+s.id+'">'+esc(t("adm_trial_set"))+'</button> '+
@@ -27425,7 +27807,6 @@ function afterAdmin(){
   loadAdminSignups();
   renderAdmPeople();
   renderAdminPricing();
-  loadPricingOverride().then(function(changed){if(changed)renderAdminPricing();});
   const sgBox=$("adm-signups");
   if(sgBox)sgBox.onclick=function(ev){
     const el=ev.target&&ev.target.closest?ev.target.closest("[data-sgapprove],[data-sgreject]"):null;
@@ -27447,7 +27828,7 @@ function afterAdmin(){
   };
   const box=$("adm-list");
   if(box)box.onclick=function(ev){
-    const el=ev.target&&ev.target.closest?ev.target.closest("[data-confirm],[data-block],[data-teachers],[data-tblock],[data-tmakehead],[data-tmaketeacher],[data-tremove],[data-trial],[data-free-grant],[data-free-remove],[data-expire],[data-exit-deact],[data-exit-delete],[data-disc-set],[data-disc-remove],[data-cap]"):null;
+    const el=ev.target&&ev.target.closest?ev.target.closest("[data-confirm],[data-block],[data-teachers],[data-tblock],[data-tmakehead],[data-tmaketeacher],[data-tremove],[data-trial],[data-free-grant],[data-free-remove],[data-expire],[data-exit-deact],[data-exit-delete],[data-disc-set],[data-disc-remove],[data-cap],[data-pkg]"):null;
     if(!el)return;
     if(el.hasAttribute("data-confirm")){
       const parts=String(el.getAttribute("data-confirm")).split("|");
@@ -27589,6 +27970,20 @@ function afterAdmin(){
       if(!(mb>=1&&mb<=1024)){loadAdminList();return;}
       el.disabled=true;el.textContent="⏳";
       Cloud.setSchoolCap(sid,mb).then(function(){loadAdminList();});
+      return;
+    }
+    if(el.hasAttribute("data-pkg")){
+      const sid=el.getAttribute("data-pkg");
+      const sel=document.getElementById("adm-pkg-"+sid);
+      const pkg=sel?sel.value:"";
+      if(PKG_IDS.indexOf(pkg)<0&&pkg!=="custom")return;
+      el.disabled=true;el.textContent="⏳";
+      Cloud.setSchoolPackage(sid,pkg).then(function(r){
+        const m=document.getElementById("adm-pkg-msg-"+sid);
+        if(m)m.textContent=(r&&r.ok)?t("pkg_admin_done").replace("{package}",t("pkg_"+pkg)):t("login_fail");
+        if(r&&r.ok){clearAdmListCache();loadAdminList();}
+        else{el.disabled=false;el.textContent=t("pkg_change");}
+      });
       return;
     }
     if(el.hasAttribute("data-trial")){
@@ -27761,6 +28156,7 @@ function saveSettingsAll(){
   const s=db().settings;
   const gv=function(id){const e=$(id);return e?e.value:"";};
   s.schoolName=gv("s-name").trim();s.deviceName=gv("s-device").trim();s.schoolPhone=gv("s-phone").trim();s.supportPhone=gv("s-support").trim();
+  const oldCountry167=s.country;
   s.country=gv("s-country")||s.country;
   s.schoolType=gv("s-schooltype")||s.schoolType||"coed";
   s.bankTitle=gv("s-banktitle").trim();s.bankAccount=gv("s-bankacct").trim();s.bankIBAN=gv("s-bankiban").trim();
@@ -27798,6 +28194,14 @@ function saveSettingsAll(){
   }
   if(typeof Cloud!=="undefined")Cloud.pushPublicInfo();
   Store.save();
+  /* Round 167 (E2.4): a changed country is written to the cloud school
+     doc too (head-only Cloud.setSchoolCountry) so the school's price
+     tier follows the country. Local/demo saves skip it. NOTE: the live
+     Firestore rules (v3, and the v4 draft) allow school-doc updates
+     only by a super/platform admin, so a head's write is denied by the
+     rules until a rules change allows it — the same standing gap as
+     setSchoolExit (R94). The local setting is saved regardless. */
+  if(typeof Cloud!=="undefined"&&Cloud.enabled&&Cloud.schoolId&&Cloud.setSchoolCountry&&oldCountry167!==s.country)Cloud.setSchoolCountry(s.country);
   return true;
 }
 function viewSettings(){
@@ -27822,7 +28226,7 @@ function viewSettings(){
     '<div class="hint">'+esc(t("logo")).split("(")[0]+'— 300 KB max</div></div>');
   h+=setSecHTML("lang",t("set_sec_lang"),
     fld("def_lang",'<input id="s-lang-search" autocomplete="off" placeholder="'+esc(t("lang_search"))+'" value="'+esc((LANGS[s.lang||"en"]||LANGS.en).native)+'"><input type="hidden" id="s-lang" value="'+esc(s.lang||"en")+'"><div id="s-lang-list"></div>')+
-    fld("country",'<select id="s-country">'+COUNTRY_PACKS.map(function(p){return '<option value="'+p.code+'"'+((s.country||"PK")===p.code?" selected":"")+'>'+esc(p.name)+" ("+esc(p.cur)+")</option>";}).join("")+"</select>"));
+    fld("country",'<select id="s-country">'+countryOptionsHTML(s.country||"PK")+"</select>"));
   h+=setSecHTML("fees",t("set_sec_fees"),
     fld("fees_enabled",'<select id="s-feeson"><option value="1"'+(feesOn()?" selected":"")+'>'+esc(t("fees_yes"))+'</option><option value="0"'+(!feesOn()?" selected":"")+'>'+esc(t("fees_no"))+"</option></select>")+
     payCardHTML());
@@ -28050,18 +28454,44 @@ function afterSettings(){
     if(nm!==db().settings.schoolName){$("s-msg").innerHTML='<div class="msg err">'+esc(t("wipe_name_wrong"))+"</div>";return;}
     DB=defaultDB();Store.save();render();
   };
-  /* Subscription payment report (Round 23): cycle change refills the amount. */
+  /* Subscription payment report (Round 167): the head taps a package
+     card to pick it, then reports the payment manually in the existing
+     form. A cycle change refills the amount from the selected package;
+     an upgrade shows the DIFFERENCE (E3.4). During a trial, tapping a
+     card switches the trial package for free (E3.5) — no payment, no
+     admin step. */
+  subSelectedPkg="";
   const subCyc=$("sub-cycle"),subAmt=$("sub-amount");
-  if(subCyc&&subAmt)subCyc.onchange=function(){
-    subAmt.value=subAmountFor(schoolPrice((typeof Cloud!=="undefined"&&Cloud.school)||{}),subCyc.value);
+  if(subCyc&&subAmt)subCyc.onchange=function(){refillSubAmount();};
+  const subCards=$("sub-pkg-cards");
+  if(subCards)subCards.onclick=function(ev){
+    const el=ev.target&&ev.target.closest?ev.target.closest("[data-pkgpick]"):null;
+    if(!el||!subCards.contains(el))return;
+    const pkg=el.getAttribute("data-pkgpick");
+    const sch=(typeof Cloud!=="undefined"&&Cloud.school)||{};
+    if(sch.plan==="trial"&&typeof Cloud!=="undefined"&&Cloud.setTrialPackage){
+      Cloud.setTrialPackage(pkg).then(function(r){
+        const m=$("sub-msg");
+        if(r&&r.ok){if(m)m.innerHTML='<div class="msg okm">'+esc(t("pkg_upgrade_done").replace("{package}",t("pkg_"+pkg)))+"</div>";render();}
+        else if(m)m.innerHTML='<div class="msg err">'+esc(t("req"))+"</div>";
+      });
+      return;
+    }
+    subSelectedPkg=pkg;
+    Array.prototype.forEach.call(subCards.querySelectorAll("[data-pkgpick]"),function(x){x.classList.toggle("pkg-selected",x.getAttribute("data-pkgpick")===pkg);});
+    refillSubAmount();
   };
   const subRep=$("sub-report");
   if(subRep)subRep.onclick=function(){
-    const r=reportSubPayment({cycle:$("sub-cycle").value,amount:$("sub-amount").value,method:$("sub-method").value,txnId:$("sub-txn").value});
+    const r=reportSubPayment({cycle:$("sub-cycle").value,amount:$("sub-amount").value,method:$("sub-method").value,txnId:$("sub-txn").value,package:subSelectedPkg||undefined,kind:subReportKind()});
     const m=$("sub-msg");
     if(!r.ok){if(m)m.innerHTML='<div class="msg err">'+esc(r.error||t("req"))+'</div>';return;}
     render();
   };
+  const subUpg=$("sub-pkg-upgrade");
+  if(subUpg)subUpg.onclick=function(){const pc=$("sub-pkg-cards");if(pc){try{pc.scrollIntoView({block:"center"});}catch(e){}}};
+  const subReq=$("sub-pkg-request");
+  if(subReq)subReq.onclick=function(){const m=$("sub-msg");if(m)m.innerHTML='<div class="msg warn">'+esc(t("pricing_not_set"))+"</div>";};
   if($("s-paymethods")){$("s-paymethods").onchange=function(){togglePayRows();};togglePayRows();}
   const sb=$("ses-startbtn");
   if(sb)sb.onclick=function(){const r=sessionStart($("ses-label").value,$("ses-start").value,$("ses-end").value);const m=$("ses-msg");if(m)m.innerHTML=r.ok?'<div class="msg okm">'+esc(t("ses_current"))+": "+esc(r.session.label)+"</div>":'<div class="msg err">'+esc(r.code||t("req"))+"</div>";if(r.ok)render();};
@@ -29103,10 +29533,10 @@ const SRS={db:db,Store:Store,SyncAdapter:SyncAdapter,T:T,t:t,bl:bl,lang:lang,LAN
   boardEligible:boardEligible,defaultBoard:defaultBoard,
   sha256Hex:sha256Hex,parentHash:parentHash,publishResults:publishResults,unpublishResults:unpublishResults,publishFeeBalances:publishFeeBalances,feeBalancePayload:feeBalancePayload,parentVerifyFee:parentVerifyFee,parentLink:parentLink,mergeDefaults:mergeDefaults,dbArr:dbArr,
   verifyCodeFor:verifyCodeFor,verifyCodeLegacy:verifyCodeLegacy,newVerifyCode:newVerifyCode,randCryptoBytes:randCryptoBytes,randIntBelow:randIntBelow,ensureAdmitCode:ensureAdmitCode,resultCodeFor:resultCodeFor,ensureResultCode:ensureResultCode,verifyURL:verifyURL,netOnlineNow:netOnlineNow,setNetOnline:setNetOnline,offlineBannerHTML:offlineBannerHTML,pendingSyncText:pendingSyncText,pendingHomeHTML:pendingHomeHTML,draftGet:draftGet,draftSave:draftSave,draftClear:draftClear,draftHasSecrets:draftHasSecrets,DRAFTS_KEY:DRAFTS_KEY,draftBannerHTML:draftBannerHTML,draftDiscard:draftDiscard,draftContinue:draftContinue,draftSaveMarksGrid:draftSaveMarksGrid,qrSVG:qrSVG,verifyBlockHTML:verifyBlockHTML,scanQRText:scanQRText,findStudentByScan:findStudentByScan,openStudentByScan:openStudentByScan,setupSteps:setupSteps,setupCardHTML:setupCardHTML,briefingHTML:briefingHTML,subStripHTML:subStripHTML,adminQueueHTML:adminQueueHTML,renderAdmQueue:renderAdmQueue,homeTeamHTML:homeTeamHTML,loadHomeTeam:loadHomeTeam,bindHomeTeam:bindHomeTeam,clearAdmListCache:clearAdmListCache,setupChecklist:setupChecklist,setupChecklistCardHTML:setupChecklistCardHTML,setupHomeLineHTML:setupHomeLineHTML,setupProgressText:setupProgressText,attMonthPct:attMonthPct,idCardHTML:idCardHTML,idCardPrintHTML:idCardPrintHTML,
-  COUNTRY_PACKS:COUNTRY_PACKS,countryPack:countryPack,schoolCountry:schoolCountry,countryPriceText:countryPriceText,pricingHTML:pricingHTML,COUNTRY_TIERS:COUNTRY_TIERS,TIER_TABLE_VERSION:TIER_TABLE_VERSION,countryTier:countryTier,countryName:countryName,PRICE_MATRIX:PRICE_MATRIX,PRICING_LIMITS:PRICING_LIMITS,priceFor:priceFor,priceLockedFor:priceLockedFor,ensurePriceLocked:ensurePriceLocked,schoolPrice:schoolPrice,discountActive:discountActive,effectivePrice:effectivePrice,pricingForCountry:pricingForCountry,capacityStatus:capacityStatus,annualDisc:annualDisc,discPresets:discPresets,setPricingOverride:setPricingOverride,getPricingOverride:getPricingOverride,loadPricingOverride:loadPricingOverride,adminPricingHTML:adminPricingHTML,renderAdminPricing:renderAdminPricing,savePricingPanel:savePricingPanel,grantSchoolDiscount:grantSchoolDiscount,removeSchoolDiscount:removeSchoolDiscount,schoolCardHTML:schoolCardHTML,
+  PRICING_CONFIG:PRICING_CONFIG,PRICING_CONFIG_VERSION:PRICING_CONFIG_VERSION,TIER4_DEFAULT:TIER4_DEFAULT,PKG_IDS:PKG_IDS,PKG_LIMITS:PKG_LIMITS,configCountry:configCountry,configGroup:configGroup,configCurrency:configCurrency,packagePrice:packagePrice,packageLimit:packageLimit,pkgName:pkgName,studentCapFor:studentCapFor,fmtMoney:fmtMoney,countryOptionsHTML:countryOptionsHTML,pkgCardsHTML:pkgCardsHTML,upgradeDiffFor:upgradeDiffFor,refillSubAmount:refillSubAmount,subReportKind:subReportKind,countryPack:countryPack,schoolCountry:schoolCountry,countryPriceText:countryPriceText,pricingHTML:pricingHTML,COUNTRY_TIERS:COUNTRY_TIERS,countryTier:countryTier,countryName:countryName,PRICING_LIMITS:PRICING_LIMITS,ensurePriceLocked:ensurePriceLocked,schoolPrice:schoolPrice,discountActive:discountActive,effectivePrice:effectivePrice,pricingForCountry:pricingForCountry,capacityStatus:capacityStatus,adminPricingHTML:adminPricingHTML,renderAdminPricing:renderAdminPricing,grantSchoolDiscount:grantSchoolDiscount,removeSchoolDiscount:removeSchoolDiscount,schoolCardHTML:schoolCardHTML,
   payDetailsHTML:payDetailsHTML,payMethods:payMethods,payMethodOptions:payMethodOptions,payMethodsFromSelect:payMethodsFromSelect,ALL_PAY_METHODS:ALL_PAY_METHODS,DEFAULT_PAY_METHODS:DEFAULT_PAY_METHODS,parentFeeHTML:parentFeeHTML,concAmount:concAmount,setConcession:setConcession,removeConcession:removeConcession,concDossierHTML:concDossierHTML,weekKey:weekKey,attFlags:attFlags,attFlagsHTML:attFlagsHTML,coverUncovered:coverUncovered,coverAssign:coverAssign,coverRemove:coverRemove,coverClash:coverClash,coverFor:coverFor,coverDayIndex:coverDayIndex,coverBoardHTML:coverBoardHTML,coverClashText:coverClashText,riskScreen:riskScreen,riskHTML:riskHTML,riskNewly:riskNewly,riskWaLink:riskWaLink,riskLatestRow:riskLatestRow,teacherRemark:teacherRemark,ttSetupFor:ttSetupFor,ttSetupSave:ttSetupSave,ttGenerate:ttGenerate,ttSetupRows:ttSetupRows,ttTeacherBusy:ttTeacherBusy,ttFilledCount:ttFilledCount,ttHasEmptyCell:ttHasEmptyCell,ttFindSlot:ttFindSlot,setRemark:setRemark,
   feesOn:feesOn,attOn:attOn,staffOn:staffOn,ttOn:ttOn,labOn:labOn,certOn:certOn,feePayStatus:feePayStatus,feePayStatusText:feePayStatusText,
-  annualPrice:annualPrice,annualSave:annualSave,subAmountFor:subAmountFor,subCycleMonths:subCycleMonths,addMonthsISO:addMonthsISO,subDue:subDue,subLifecycle:subLifecycle,subWriteGuard:subWriteGuard,reportSubPayment:reportSubPayment,subPaymentsList:subPaymentsList,waNumber:waNumber,subReminderMsg:subReminderMsg,ANNUAL_DISC:ANNUAL_DISC,
+  annualPrice:annualPrice,annualSave:annualSave,subAmountFor:subAmountFor,subCycleMonths:subCycleMonths,addMonthsISO:addMonthsISO,subDue:subDue,subLifecycle:subLifecycle,subWriteGuard:subWriteGuard,reportSubPayment:reportSubPayment,subPaymentsList:subPaymentsList,waNumber:waNumber,subReminderMsg:subReminderMsg,
   askAnswer:askAnswer,askNorm:askNorm,askFindStudent:askFindStudent,askFindClass:askFindClass,askBuild:askBuild,ASK_INTENTS:ASK_INTENTS,askIsDraft:askIsDraft,askResultExam:askResultExam,
   setTTCell:setTTCell,ttConflicts:ttConflicts,ttClasses:ttClasses,ttCell:ttCell,
   attGet:attGet,setAtt:setAtt,attMarkAll:attMarkAll,attSummary:attSummary,attDetailHTML:attDetailHTML,attMetricsHTML:attMetricsHTML,adminAttHTML:adminAttHTML,attAbsentees:attAbsentees,
