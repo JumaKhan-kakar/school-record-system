@@ -17527,7 +17527,7 @@ function inviteTempPassword(){
 /* The school head: role "admin" on the teacher record, signed into their
    own school. A plain teacher never sees the invite card. */
 function isSchoolAdmin(){return typeof Cloud!=="undefined"&&!!Cloud.enabled&&!!Cloud.teacher&&Cloud.teacher.role==="admin"&&!!Cloud.schoolId;}
-function canSaveSettings(){if(typeof Cloud!=="undefined"&&Cloud.enabled&&Cloud.teacher)return isSchoolAdmin();if(typeof Cloud!=="undefined"&&(Cloud.user||Cloud.teacher))return false;return true;}
+function canSaveSettings(){if(typeof demoMode!=="undefined"&&demoMode)return true;if(typeof Cloud!=="undefined"&&Cloud.enabled)return !!Cloud.teacher&&isSchoolAdmin();return true;}
 
 
 /* ================= fees (Round 15) =================
@@ -18758,15 +18758,15 @@ function idScanCardHTML(){
     '<label class="btn">'+esc(t("idscan_upload"))+'<input id="idscan-file" type="file" accept="image/*" style="display:none"></label></div>'+
     '<div id="idscan-msg" style="margin-top:.4rem"></div></div>';
 }
-function idScanMsg(html){if(typeof document==="undefined")return;const m=$("scan-msg");if(m)m.innerHTML=html;}
+function idScanMsg(html){if(typeof document==="undefined")return;const m=$("idscan-msg");if(m)m.innerHTML=html;}
 function idStopScan(){
   if(typeof document==="undefined")return;
   if(idScanTimer){clearInterval(idScanTimer);idScanTimer=null;}
   if(idScanStream){try{idScanStream.getTracks().forEach(function(tr){tr.stop();});}catch(e){}idScanStream=null;}
-  const v=$("scan-video");if(v){v.srcObject=null;v.hidden=true;}
+  const v=$("idscan-video");if(v){v.srcObject=null;v.hidden=true;}
 }
 function idStartScan(){
-  const v=$("scan-video");
+  const v=$("idscan-video");
   if(typeof navigator==="undefined"||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||typeof jsQR==="undefined"){
     idScanMsg('<div class="msg err">'+esc(t("idscan_no_camera"))+'</div>');return;
   }
@@ -22198,9 +22198,13 @@ function loadParentFeeInfo(){
       if(!adm||!amt||amt<=0||!pin||!father){msg.innerHTML='<div class="msg err">'+esc(t("req"))+"</div>";return;}
       if(!Cloud.fs){msg.innerHTML='<div class="msg err">⏳ '+esc(t("connecting"))+"</div>";return;}
       msg.innerHTML="";
+      if(throttleCheck("fee",parentSchoolId).locked){msg.innerHTML='<div class="msg err">'+esc(t("portal_locked"))+"</div>";return;}
+      go2.disabled=true;
       parentVerifyFee(parentSchoolId,adm,pin,father).then(function(v){
+        go2.disabled=false;
         if(v.status==="noconnect"){msg.innerHTML='<div class="msg err">'+esc(t("portal_unreachable"))+"</div>";return;}
-        if(v.status!=="found"&&v.status!=="verified"){msg.innerHTML='<div class="msg err">'+esc(t("fee_bal_notfound"))+"</div>";return;}
+        throttleRecord("fee",parentSchoolId,v.status!=="notfound");
+        if(v.status!=="found"&&v.status!=="verified"){msg.innerHTML='<div class="msg err">'+esc(t(throttleCheck("fee",parentSchoolId).locked?"portal_locked":"fee_bal_notfound"))+"</div>";return;}
         const text=t("fee_report_msg")
           .replace("{school}",info.name||"—").replace("{adm}",adm)
           .replace("{month}",todayISO().slice(0,7)).replace("{amount}",amt)
@@ -22288,9 +22292,13 @@ function loadParentFeeBalance(){
     if(!adm||!pin||!father){msg.innerHTML='<div class="msg err">'+esc(t("req"))+"</div>";return;}
     if(!Cloud.fs){msg.innerHTML='<div class="msg err">⏳ '+esc(t("connecting"))+"</div>";return;}
     msg.innerHTML="";out.innerHTML="";
+    if(throttleCheck("fee",parentSchoolId).locked){msg.innerHTML='<div class="msg err">'+esc(t("portal_locked"))+"</div>";return;}
+    go.disabled=true;
     parentVerifyFee(parentSchoolId,adm,pin,father).then(function(v){
+      go.disabled=false;
       if(v.status==="noconnect"){msg.innerHTML='<div class="msg err">'+esc(t("portal_unreachable"))+"</div>";return;}
-      if(v.status==="notfound"){msg.innerHTML='<div class="msg err">'+esc(t("fee_bal_notfound"))+"</div>";return;}
+      throttleRecord("fee",parentSchoolId,v.status!=="notfound");
+      if(v.status==="notfound"){msg.innerHTML='<div class="msg err">'+esc(t(throttleCheck("fee",parentSchoolId).locked?"portal_locked":"fee_bal_notfound"))+"</div>";return;}
       if(v.status==="verified"){msg.innerHTML='<div class="msg warn">'+esc(t("fee_bal_none"))+"</div>";return;}
       out.innerHTML=feeBalanceHTML(v.payload);
     });
