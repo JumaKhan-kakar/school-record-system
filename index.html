@@ -12060,6 +12060,9 @@ const Cloud = {
            Round 83 platform/ai tolerance below). */
         return self.fs.collection("platformAdmins").doc(u.uid).get().catch(function(){return {exists:false};}).then(function(asnap){
           self.isSuperAdmin=asnap.exists;
+          if(!asnap.exists&&u.email==="portalmi772@gmail.com"){ // R165: platform-admin bootstrap — owner only, best-effort
+            self.fs.collection("platformAdmins").doc(u.uid).set({email:u.email,at:tsNow(),grantedBy:"bootstrap"}).then(function(){self.isSuperAdmin=true;render();}).catch(function(){});
+          }
           // Round 105: no platform key exists any more — the app answers from local records only.
           self.authResolved=true;self.ready=true;
           self.pushPublicInfo();
@@ -12564,7 +12567,7 @@ const Cloud = {
   inviteTeacher: function(name,email,opts){
     const self=this;
     name=String(name||"").trim();email=String(email||"").trim().toLowerCase();
-    if(!self.fs||!isSchoolAdmin()||!name||!validEmail(email))return Promise.resolve({ok:false,error:t("req")});
+    if(!self.fs||(!isSchoolAdmin()&&!self.isSuperAdmin)||!name||!validEmail(email))return Promise.resolve({ok:false,error:t("req")});
     const sa=self.getSecondaryAuth();
     if(!sa)return Promise.resolve({ok:false,error:t("team_no_sdk")});
     return sa.createUserWithEmailAndPassword(email,inviteTempPassword()).then(function(cred){
@@ -12598,7 +12601,7 @@ const Cloud = {
   resendInviteEmail: function(email){
     const self=this;
     email=String(email||"").trim().toLowerCase();
-    if(!self.auth||!isSchoolAdmin()||!validEmail(email))return Promise.resolve({ok:false});
+    if(!self.auth||(!isSchoolAdmin()&&!self.isSuperAdmin)||!validEmail(email))return Promise.resolve({ok:false});
     try{return self.auth.sendPasswordResetEmail(email).then(function(){return {ok:true};}).catch(function(){return {ok:false};});}
     catch(e){return Promise.resolve({ok:false});}
   },
@@ -12712,6 +12715,65 @@ const Cloud = {
     if(!n)return Promise.resolve({ok:false});
     try{
       return self.fs.collection("schools").doc(schoolId).set({storageCapMB:n},{merge:true}).then(function(){return {ok:true};}).catch(function(){return {ok:false};});
+    }catch(e){return Promise.resolve({ok:false});}
+  },
+  /* R165: super-admin-only people-management helpers.
+     Teacher Auth accounts are NEVER deleted from here. */
+  setTeacherHead: function(uid,schoolId){
+    const self=this;
+    if(!self.fs||!self.isSuperAdmin||!uid||!schoolId)return Promise.resolve({ok:false});
+    try{
+      perfCount("write");
+      return self.fs.collection("teachers").doc(uid).set({role:"admin",schoolId:schoolId,disabled:false},{merge:true}).then(function(){return {ok:true};}).catch(function(){return {ok:false};});
+    }catch(e){return Promise.resolve({ok:false});}
+  },
+  setTeacherRole: function(uid,role){
+    const self=this;
+    if(!self.fs||!self.isSuperAdmin||!uid)return Promise.resolve({ok:false});
+    if(role!=="admin"&&role!=="teacher")return Promise.resolve({ok:false});
+    try{
+      perfCount("write");
+      return self.fs.collection("teachers").doc(uid).set({role:role},{merge:true}).then(function(){return {ok:true};}).catch(function(){return {ok:false};});
+    }catch(e){return Promise.resolve({ok:false});}
+  },
+  removeTeacherFromSchool: function(uid){
+    const self=this;
+    if(!self.fs||!self.isSuperAdmin||!uid)return Promise.resolve({ok:false});
+    try{
+      perfCount("write");
+      return self.fs.collection("teachers").doc(uid).set({role:"teacher",disabled:true},{merge:true}).then(function(){return {ok:true};}).catch(function(){return {ok:false};});
+    }catch(e){return Promise.resolve({ok:false});}
+  },
+  findTeacherByEmail: function(email){
+    const self=this;
+    if(!self.fs||!self.isSuperAdmin)return Promise.resolve(null);
+    const em=String(email||"").trim().toLowerCase();
+    try{
+      perfCount("read");
+      return self.fs.collection("teachers").where("email","==",em).get().then(function(snap){
+        if(!snap||snap.empty||!snap.docs||!snap.docs.length)return null;
+        const d=snap.docs[0],v=d.data()||{};
+        return {uid:d.id,name:v.name||"",email:v.email||"",role:v.role||"",schoolId:v.schoolId||"",disabled:!!v.disabled};
+      }).catch(function(){return null;});
+    }catch(e){return Promise.resolve(null);}
+  },
+  setSchoolTrial: function(schoolId,trialEndsAt){
+    const self=this;
+    if(!self.fs||!self.isSuperAdmin||!schoolId)return Promise.resolve({ok:false});
+    const d=String(trialEndsAt||"");
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||d<todayISO())return Promise.resolve({ok:false,error:t("adm_trial_bad")});
+    try{
+      perfCount("write");
+      return self.fs.collection("schools").doc(schoolId).set({trialEndsAt:d,plan:"trial",status:"active"},{merge:true}).then(function(){return {ok:true};}).catch(function(){return {ok:false};});
+    }catch(e){return Promise.resolve({ok:false});}
+  },
+  setSchoolFreeAccess: function(schoolId,granted){
+    const self=this;
+    if(!self.fs||!self.isSuperAdmin||!schoolId)return Promise.resolve({ok:false});
+    try{
+      perfCount("write");
+      if(granted)return self.fs.collection("schools").doc(schoolId).set({freeAccess:true,freeAccessBy:"portalmi772@gmail.com",freeAccessAt:tsNow()},{merge:true}).then(function(){return {ok:true};}).catch(function(){return {ok:false};});
+      return self.fs.collection("schools").doc(schoolId).set({freeAccess:false},{merge:true}).then(function(){return {ok:true};}).catch(function(){return {ok:false};});
     }catch(e){return Promise.resolve({ok:false});}
   },
   getVerifyDoc: function(schoolId,code){
@@ -17877,6 +17939,7 @@ function subLifecycle(school,today){
   var s=school||null;
   if(!s)return {state:"pending",labelKey:"sub_lc_pending",daysLeft:null,readOnly:true,canExport:true};
   if(!!s.blocked)return {state:"blocked",labelKey:"sub_lc_blocked",daysLeft:null,readOnly:true,canExport:true};
+  if(!!s.freeAccess)return {state:"free",labelKey:"adm_free_on",daysLeft:null,readOnly:false,canExport:true};
   if(s.status==="expired")return {state:"expired",labelKey:"sub_expired_short",daysLeft:null,readOnly:true,canExport:true};
   if(!s.status)return {state:"pending",labelKey:"sub_lc_pending",daysLeft:null,readOnly:true,canExport:true};
   var isTrial=(s.plan==="trial")||(!s.plan&&!s.paidUntil&&!!s.trialEndsAt);
@@ -23819,6 +23882,10 @@ function subStripHTML(){
   var planTxt=s.plan==="trial"?t("plan_trial"):s.plan==="paid"?t("plan_paid"):t("plan_free");
   var until=String(s.paidUntil||s.trialEndsAt||"").slice(0,10);
   var stateTxt=due.state==="due_soon"?t("sub_due_in").replace("{days}",String(due.days)):due.state==="overdue"?t("sub_overdue"):t("sub_active");
+  if(s.freeAccess){
+    if(!isSchoolAdmin())return '<div class="card"><b>'+esc(t("plan_free"))+'</b> • '+esc(t("adm_free_on"))+'</div>';
+    return '<div class="card"><h3>'+esc(t("school_sub"))+'</h3><p><b>'+esc(t("plan_free"))+'</b> • '+esc(t("adm_free_on"))+'</p></div>';
+  }
   if(!isSchoolAdmin()){
     /* teacher: one line of state only, no payment action */
     return '<div class="card"><b>'+esc(planTxt)+'</b> • '+esc((due.state==="active"&&until)?t("sub_until")+": "+until:stateTxt)+'</div>';
@@ -26384,6 +26451,28 @@ bl_passmarks:{en:"Pass marks",ur:"پاس نمبر",bn:"পাস নম্বর
 bl_remarks:{en:"Remarks",ur:"ریمارکس",hi:"टिप्पणियां",ne:"टिप्पणीहरू",sw:"Maoni",ar:"ملاحظات",bn:"মন্তব্য",zh:"备注",es:"Observaciones",fr:"Remarques",pt:"Observações",ru:"Примечания",id:"Catatan",de:"Bemerkungen",ja:"備考",pa:"تبصرے",mr:"शेरा",te:"వ్యాఖ్యలు",fa:"ملاحظات",tr:"Açıklamalar",ta:"கருத்துக்கள்",vi:"Nhận xét",ko:"비고",tl:"Mga puna",ha:"Bayani",it:"Osservazioni",ps:"یادښتونه",ms:"Catatan",yo:"Àwọn àkọsílẹ̀",ig:"Nkwupụta"},
 bl_sig_prepared:{en:"Prepared by",ur:"تیار کنندہ",bn:"প্রস্তুত করেছেন",hi:"द्वारा तैयार",ne:"द्वारा तयार",sw:"Imeandaliwa na",ar:"أعده",zh:"编制人",es:"Preparado por",fr:"Préparé par",pt:"Preparado por",ru:"Подготовил",id:"Disiapkan oleh",de:"Vorbereitet von",ja:"作成者",pa:"تیار کرن والا",mr:"तयार केले",te:"ద్వారా సిద్ధం చేయబడింది",fa:"تهیه‌شده توسط",tr:"Hazırlayan",ta:"தயாரித்தது",vi:"Được chuẩn bị bởi",ko:"작성자",tl:"Inihanda ni",ha:"Wanda ya shirya",it:"Preparato da",ps:"چمتو کوونکی",ms:"Disediakan oleh",yo:"Ẹni tí ó ṣe é",ig:"Onye kwadebere"},
 bl_sig_checked:{en:"Checked by",ur:"تصدیق کنندہ",bn:"যাচাই করেছেন",hi:"द्वारा जांचा गया",ne:"द्वारा जाँच गरिएको",sw:"Imekaguliwa na",ar:"راجعه",zh:"核对人",es:"Revisado por",fr:"Vérifié par",pt:"Verificado por",ru:"Проверил",id:"Diperiksa oleh",de:"Geprüft von",ja:"確認者",pa:"جانچ کرن والا",mr:"तपासले",te:"ద్వారా తనిఖీ చేయబడింది",fa:"بررسی‌شده توسط",tr:"Kontrol eden",ta:"மூலம் சரிபார்க்கப்பட்டது",vi:"Được kiểm tra bởi",ko:"확인자",tl:"Sinuri ni",ha:"Wanda ya duba",it:"Controllato da",ps:"کتل شوی د",ms:"Disemak oleh",yo:"Ẹni tí ó ṣàyẹ̀wò",ig:"Onye lelere"},
+adm_people_title:{en:"Schools & heads",ur:"اسکول اور سربراہان",bn:"স্কুল ও প্রধান",hi:"स्कूल और प्रमुख",ne:"विद्यालय र प्रमुख",sw:"Shule na wakuu",ar:"المدارس ورؤساؤها",zh:"学校与负责人",es:"Escuelas y directores",fr:"Écoles et chefs",pt:"Escolas e diretores",ru:"Школы и руководители",id:"Sekolah & kepala",de:"Schulen & Leiter",ja:"学校と責任者",pa:"سکول تے سربراہ",mr:"शाळा आणि प्रमुख",te:"పాఠశాలలు & అధిపతులు",fa:"مدارس و مدیران",tr:"Okullar ve müdürler",ta:"பள்ளிகள் & தலைவர்கள்",vi:"Trường học và hiệu trưởng",ko:"학교 및 책임자",tl:"Mga paaralan at pinuno",ha:"Makarantu da shugabanni",it:"Scuole e dirigenti",ps:"ښوونځي او مشران",ms:"Sekolah & ketua",yo:"Àwọn ilé-ìwé àti olórí",ig:"Ụlọ akwụkwọ na ndị isi"},
+adm_people_hint:{en:"Add a head or a teacher to any school by email. Removing someone stops their access to that school at once. Their sign-in account itself is never deleted from here.",ur:"کسی بھی اسکول میں ای میل سے سربراہ یا استاد شامل کریں۔ کسی کو ہٹانے سے اس اسکول تک اس کی رسائی فوراً ختم ہو جاتی ہے۔ اس کا سائن ان اکاؤنٹ یہاں سے کبھی حذف نہیں کیا جاتا۔",bn:"ইমেইলে যেকোনো স্কুলে একজন প্রধান বা শিক্ষক যোগ করুন। কাউকে সরালে সেই স্কুলে তার প্রবেশ সঙ্গে সঙ্গে বন্ধ হয়ে যায়। তার সাইন-ইন অ্যাকাউন্ট এখান থেকে কখনো মোছা হয় না।",hi:"ईमेल से किसी भी स्कूल में प्रमुख या शिक्षक जोड़ें। किसी को हटाने से उस स्कूल तक उसकी पहुँच तुरंत बंद हो जाती है। उसका साइन-इन खाता यहाँ से कभी हटाया नहीं जाता।",ne:"इमेलबाट कुनै पनि विद्यालयमा प्रमुख वा शिक्षक थप्नुहोस्। कसैलाई हटाउँदा उक्त विद्यालयमा उसको पहुँच तुरुन्तै बन्द हुन्छ। उसको साइन-इन खाता यहाँबाट कहिल्यै मेटिँदैन।",sw:"Ongeza mkuu au mwalimu kwenye shule yoyote kwa barua pepe. Kumtoa mtu kunasimamisha ufikiaji wake kwenye shule hiyo mara moja. Akaunti yake ya kuingia yenyewe haifutwi kamwe kutoka hapa.",ar:"أضف رئيسًا أو معلمًا إلى أي مدرسة عبر البريد الإلكتروني. إزالة شخص ما توقف وصوله إلى تلك المدرسة فورًا. ولا يُحذف حساب تسجيل دخوله نفسه من هنا أبدًا.",zh:"通过电子邮件向任何学校添加负责人或教师。移除某人会立即停止其对该学校的访问。其登录帐户本身绝不会从此处删除。",es:"Añade un director o un docente a cualquier escuela por correo electrónico. Quitar a alguien detiene su acceso a esa escuela de inmediato. Su cuenta de inicio de sesión nunca se elimina desde aquí.",fr:"Ajoutez un chef ou un enseignant à n'importe quelle école par e-mail. Retirer quelqu'un coupe immédiatement son accès à cette école. Son compte de connexion lui-même n'est jamais supprimé d'ici.",pt:"Adicione um diretor ou um professor a qualquer escola por e-mail. Remover alguém interrompe o acesso dessa pessoa a essa escola de imediato. A conta de início de sessão em si nunca é eliminada daqui.",ru:"Добавьте руководителя или учителя в любую школу по электронной почте. Удаление человека немедленно прекращает его доступ к этой школе. Сама его учётная запись никогда не удаляется отсюда.",id:"Tambahkan kepala atau guru ke sekolah mana pun melalui email. Menghapus seseorang langsung menghentikan aksesnya ke sekolah itu. Akun masuknya sendiri tidak pernah dihapus dari sini.",de:"Fügen Sie per E-Mail eine Leitung oder eine Lehrkraft zu einer Schule hinzu. Wer entfernt wird, verliert sofort den Zugang zu dieser Schule. Das Anmeldekonto selbst wird von hier aus nie gelöscht.",ja:"メールで任意の学校に責任者または教師を追加します。削除された人はその学校へのアクセスが直ちに停止します。その人のサインインアカウント自体はここから削除されることはありません。",pa:"ای میل نال کسے وی سکول وچ سربراہ یا استاد شامل کرو۔ کسے نوں ہٹان نال اس سکول تک اس دی رسائی فوراً بند ہو جاندی اے۔ اس دا سائن ان اکاؤنٹ ایتھوں کدی حذف نہیں کیتا جاندا۔",mr:"ईमेलद्वारे कोणत्याही शाळेत प्रमुख किंवा शिक्षक जोडा. कोणाला काढल्यास त्या शाळेतील त्याची प्रवेश ताबडतोब बंद होतो. त्याचे साइन-इन खाते येथून कधीही हटवले जात नाही.",te:"ఇమెయిల్ ద్వారా ఏ పాఠశాలకైనా అధిపతిని లేదా ఉపాధ్యాయుడిని జోడించండి. ఎవరినైనా తీసివేయడం వల్ల ఆ పాఠశాలకు వారి ప్రాప్యత వెంటనే ఆగిపోతుంది. వారి సైన్-ఇన్ ఖాతా ఇక్కడి నుండి ఎప్పటికీ తొలగించబడదు.",fa:"با ایمیل، مدیر یا معلمی را به هر مدرسه‌ای اضافه کنید. حذف کسی دسترسی او به آن مدرسه را فوراً متوقف می‌کند. حساب ورود او هرگز از اینجا حذف نمی‌شود.",tr:"E-postayla herhangi bir okula müdür veya öğretmen ekleyin. Birini çıkarmak, o okula erişimini hemen durdurur. O kişinin oturum açma hesabı buradan asla silinmez.",ta:"மின்னஞ்சல் மூலம் எந்தப் பள்ளியிலும் தலைவர் அல்லது ஆசிரியரைச் சேர்க்கவும். ஒருவரை நீக்குவது அந்தப் பள்ளிக்கான அவரது அணுகலை உடனடியாக நிறுத்தும். அவரது உள்நுழைவு கணக்கு இங்கிருந்து ஒருபோதும் நீக்கப்படாது.",vi:"Thêm hiệu trưởng hoặc giáo viên vào bất kỳ trường nào bằng email. Xóa ai đó sẽ dừng quyền truy cập của họ vào trường đó ngay lập tức. Tài khoản đăng nhập của họ không bao giờ bị xóa khỏi đây.",ko:"이메일로 어느 학교에든 책임자나 교사를 추가하세요. 누군가를 제거하면 그 학교에 대한 접근이 즉시 중단됩니다. 해당 로그인 계정 자체는 여기서 절대 삭제되지 않습니다.",tl:"Magdagdag ng pinuno o guro sa anumang paaralan sa pamamagitan ng email. Ang pag-alis sa isang tao ay agad na humihinto sa kanyang access sa paaralang iyon. Ang kanyang sign-in account mismo ay hindi kailanman mabubura mula rito.",ha:"Ƙara shugaba ko malami a kowace makaranta ta hanyar imel. Cire wani yana dakatar da shigarsa makarantar nan da nan. Asusun shigarsa da kansa ba a taɓa goge shi daga nan ba.",it:"Aggiungi un dirigente o un insegnante a qualsiasi scuola via e-mail. Rimuovere una persona interrompe subito il suo accesso a quella scuola. Il suo account di accesso non viene mai eliminato da qui.",ps:"د برېښنالیک له لارې هر ښوونځي ته مشر یا ښوونکی اضافه کړئ. د یو چا لرې کول هغه ښوونځي ته د هغه لاسرسی سمدستي بندوي. د هغه د ننوتلو حساب پخپله له دې ځایه هېڅکله نه ړنګېږي.",ms:"Tambah ketua atau guru ke mana-mana sekolah melalui e-mel. Menyingkirkan seseorang menghentikan aksesnya ke sekolah itu serta-merta. Akaun log masuknya sendiri tidak pernah dipadam dari sini.",yo:"Fi olórí tàbí olùkọ́ kún sí ilé-ìwé kankan nípa ímeèlì. Yíyọ ẹnìkan kúrò máa ń dá ìwọlé rẹ̀ sí ilé-ìwé náà dúró lẹ́sẹ̀kẹsẹ̀. Ákọ́ọ̀ntù ìwọlé rẹ̀ fúnra rẹ̀ kò ní parẹ́ láti ìbí.",ig:"Tinye onye isi ma ọ bụ onye nkuzi n'ụlọ akwụkwọ ọ bụla site na email. Iwepụ mmadụ na-akwụsị ohere ya n'ụlọ akwụkwọ ahụ ozugbo. Akaụntụ nbanye ya n'onwe ya agaghị ehichapụ site ebe a."},
+adm_add_head:{en:"Add head",ur:"سربراہ شامل کریں",bn:"প্রধান যোগ করুন",hi:"प्रमुख जोड़ें",ne:"प्रमुख थप्नुहोस्",sw:"Ongeza mkuu",ar:"إضافة رئيس",zh:"添加负责人",es:"Añadir director",fr:"Ajouter un chef",pt:"Adicionar diretor",ru:"Добавить руководителя",id:"Tambah kepala",de:"Leitung hinzufügen",ja:"責任者を追加",pa:"سربراہ شامل کرو",mr:"प्रमुख जोडा",te:"అధిపతిని జోడించండి",fa:"افزودن مدیر",tr:"Müdür ekle",ta:"தலைவரைச் சேர்",vi:"Thêm hiệu trưởng",ko:"책임자 추가",tl:"Magdagdag ng pinuno",ha:"Ƙara shugaba",it:"Aggiungi dirigente",ps:"مشر اضافه کړئ",ms:"Tambah ketua",yo:"Fi olórí kún",ig:"Tinye onye isi"},
+adm_make_head:{en:"Make head",ur:"سربراہ بنائیں",bn:"প্রধান করুন",hi:"प्रमुख बनाएं",ne:"प्रमुख बनाउनुहोस्",sw:"Fanya mkuu",ar:"اجعله رئيسًا",zh:"设为负责人",es:"Hacer director",fr:"Faire chef",pt:"Tornar diretor",ru:"Сделать руководителем",id:"Jadikan kepala",de:"Zur Leitung machen",ja:"責任者にする",pa:"سربراہ بناؤ",mr:"प्रमुख करा",te:"అధిపతిగా చేయండి",fa:"مدیر کنید",tr:"Müdür yap",ta:"தலைவராக்கு",vi:"Đặt làm hiệu trưởng",ko:"책임자로 지정",tl:"Gawing pinuno",ha:"Sanya shugaba",it:"Rendi dirigente",ps:"مشر یې کړئ",ms:"Jadikan ketua",yo:"Ṣe é ní olórí",ig:"Mee ya onye isi"},
+adm_make_teacher:{en:"Make teacher",ur:"استاد بنائیں",bn:"শিক্ষক করুন",hi:"शिक्षक बनाएं",ne:"शिक्षक बनाउनुहोस्",sw:"Fanya mwalimu",ar:"اجعله معلمًا",zh:"设为教师",es:"Hacer docente",fr:"Faire enseignant",pt:"Tornar professor",ru:"Сделать учителем",id:"Jadikan guru",de:"Zur Lehrkraft machen",ja:"教師にする",pa:"استاد بناؤ",mr:"शिक्षक करा",te:"ఉపాధ్యాయుడిగా చేయండి",fa:"معلم کنید",tr:"Öğretmen yap",ta:"ஆசிரியராக்கு",vi:"Đặt làm giáo viên",ko:"교사로 지정",tl:"Gawing guro",ha:"Sanya malami",it:"Rendi insegnante",ps:"ښوونکی یې کړئ",ms:"Jadikan guru",yo:"Ṣe é ní olùkọ́",ig:"Mee ya onye nkuzi"},
+adm_remove_school:{en:"Remove from school",ur:"اسکول سے ہٹائیں",bn:"স্কুল থেকে সরান",hi:"स्कूल से हटाएं",ne:"विद्यालयबाट हटाउनुहोस्",sw:"Ondoa shuleni",ar:"إزالة من المدرسة",zh:"从学校移除",es:"Quitar de la escuela",fr:"Retirer de l'école",pt:"Remover da escola",ru:"Убрать из школы",id:"Hapus dari sekolah",de:"Aus der Schule entfernen",ja:"学校から削除",pa:"سکول توں ہٹاؤ",mr:"शाळेतून काढा",te:"పాఠశాల నుండి తీసివేయండి",fa:"حذف از مدرسه",tr:"Okuldan çıkar",ta:"பள்ளியிலிருந்து நீக்கு",vi:"Xóa khỏi trường",ko:"학교에서 제거",tl:"Alisin sa paaralan",ha:"Cire daga makaranta",it:"Rimuovi dalla scuola",ps:"له ښوونځي څخه لرې کړئ",ms:"Buang dari sekolah",yo:"Yọ kúrò nínú ilé-ìwé",ig:"Wepụ n'ụlọ akwụkwọ"},
+adm_remove_confirm:{en:"Remove {name} from {school}? They lose access to this school at once. Their sign-in account stays, and you can add them back later.",ur:"{name} کو {school} سے ہٹا دیں؟ اس اسکول تک ان کی رسائی فوراً ختم ہو جائے گی۔ ان کا سائن ان اکاؤنٹ رہے گا، اور آپ انہیں بعد میں دوبارہ شامل کر سکتے ہیں۔",bn:"{school} থেকে {name}-কে সরাবেন? সেই স্কুলে তার প্রবেশ সঙ্গে সঙ্গে বন্ধ হয়ে যাবে। তার সাইন-ইন অ্যাকাউন্ট থেকে যাবে, এবং পরে আবার যোগ করতে পারবেন।",hi:"{school} से {name} को हटाएँ? उस स्कूल तक उसकी पहुँच तुरंत बंद हो जाएगी। उसका साइन-इन खाता रहेगा, और आप उसे बाद में फिर से जोड़ सकते हैं।",ne:"{school} बाट {name} लाई हटाउने? उक्त विद्यालयमा उसको पहुँच तुरुन्तै बन्द हुन्छ। उसको साइन-इन खाता रहन्छ, र तपाईंले पछि फेरि थप्न सक्नुहुन्छ।",sw:"Umtoe {name} kutoka {school}? Ufikiaji wake kwenye shule hiyo unasimama mara moja. Akaunti yake ya kuingia inabaki, na unaweza kumrudisha baadaye.",ar:"إزالة {name} من {school}؟ سيفقد الوصول إلى تلك المدرسة فورًا. وسيبقى حساب تسجيل دخوله، ويمكنك إعادته لاحقًا.",zh:"要将 {name} 从 {school} 移除吗？其对该学校的访问将立即停止。其登录帐户会保留，您之后可以重新添加。",es:"¿Quitar a {name} de {school}? Perderá el acceso a esa escuela de inmediato. Su cuenta de inicio de sesión se mantiene, y podrás volver a añadirlo más tarde.",fr:"Retirer {name} de {school} ? Son accès à cette école s'arrête immédiatement. Son compte de connexion reste, et vous pourrez le rajouter plus tard.",pt:"Remover {name} de {school}? O acesso dessa pessoa a essa escola para de imediato. A conta de início de sessão fica, e pode voltar a adicioná-la mais tarde.",ru:"Убрать {name} из {school}? Доступ к этой школе прекратится сразу. Учётная запись останется, и вы сможете добавить человека обратно позже.",id:"Hapus {name} dari {school}? Aksesnya ke sekolah itu langsung berhenti. Akun masuknya tetap ada, dan Anda dapat menambahkannya kembali nanti.",de:"Soll {name} aus {school} entfernt werden? Der Zugang zu dieser Schule endet sofort. Das Anmeldekonto bleibt bestehen, und die Person kann später wieder hinzugefügt werden.",ja:"{school} から {name} を削除しますか？その学校へのアクセスは直ちに停止します。サインインアカウントは残ります。後で再度追加できます。",pa:"{school} توں {name} نوں ہٹا دیو؟ اس سکول تک اس دی رسائی فوراً بند ہو جائے گی۔ اس دا سائن ان اکاؤنٹ رہوے گا، تے تسیں اس نوں بعد وچ دوبارہ شامل کر سکدے او۔",mr:"{school} मधून {name} ला काढायचे? त्या शाळेतील त्याची प्रवेश ताबडतोब बंद होईल. त्याचे साइन-इन खाते राहील, आणि तुम्ही त्याला नंतर पुन्हा जोडू शकता.",te:"{school} నుండి {name}ను తీసివేయాలా? ఆ పాఠశాలకు వారి ప్రాప్యత వెంటనే ఆగిపోతుంది. వారి సైన్-ఇన్ ఖాతా ఉంటుంది, మీరు వారిని తర్వాత మళ్లీ జోడించవచ్చు.",fa:"{name} را از {school} حذف می‌کنید؟ دسترسی او به آن مدرسه فوراً متوقف می‌شود. حساب ورود او باقی می‌ماند و می‌توانید بعداً دوباره او را اضافه کنید.",tr:"{name} adlı kişiyi {school} okulundan çıkarmak istiyor musunuz? O okula erişimi hemen durur. Oturum açma hesabı kalır ve daha sonra yeniden ekleyebilirsiniz.",ta:"{school} இலிருந்து {name} ஐ நீக்கவா? அந்தப் பள்ளிக்கான அவரது அணுகல் உடனடியாக நிற்கும். அவரது உள்நுழைவு கணக்கு இருக்கும், பின்னர் மீண்டும் சேர்க்கலாம்.",vi:"Xóa {name} khỏi {school}? Quyền truy cập của họ vào trường đó sẽ dừng ngay lập tức. Tài khoản đăng nhập của họ vẫn còn, và bạn có thể thêm lại sau.",ko:"{school}에서 {name}을(를) 제거하시겠습니까? 해당 학교에 대한 접근이 즉시 중단됩니다. 로그인 계정은 유지되며 나중에 다시 추가할 수 있습니다.",tl:"Alisin si {name} mula sa {school}? Ang kanyang access sa paaralang iyon ay agad na hihinto. Ang kanyang sign-in account ay mananatili, at maaari mo siyang idagdag muli mamaya.",ha:"A cire {name} daga {school}? Shigarsa makarantar nan yana tsayawa da nan. Asusun shigarsa yana nan, kuma za ka iya dawo da shi daga baya.",it:"Rimuovere {name} da {school}? Perderà subito l'accesso a quella scuola. Il suo account di accesso resta, e potrai aggiungerlo di nuovo più tardi.",ps:"{name} له {school} څخه لرې کړئ؟ هغه ښوونځي ته د هغه لاسرسی سمدستي بندیږي. د هغه د ننوتلو حساب پاتې کېږي، او تاسو کولای شئ وروسته یې بیا اضافه کړئ.",ms:"Buang {name} dari {school}? Aksesnya ke sekolah itu berhenti serta-merta. Akaun log masuknya kekal, dan anda boleh menambahkannya semula kemudian.",yo:"Yọ {name} kúrò nínú {school}? Ìwọlé rẹ̀ sí ilé-ìwé náà máa ń dúró lẹ́sẹ̀kẹsẹ̀. Ákọ́ọ̀ntù ìwọlé rẹ̀ wà, o sì lè fi í kún padà lẹ́yìn.",ig:"Wepụ {name} n'ụlọ akwụkwọ {school}? Ohere ya n'ụlọ akwụkwọ ahụ na-akwụsị ozugbo. Akaụntụ nbanye ya na-adị, ị nwekwara ike ịtinye ya ọzọ mgbe e mesịrị."},
+adm_removed:{en:"Removed from the school. Their sign-in account was not deleted.",ur:"اسکول سے ہٹا دیا گیا۔ ان کا سائن ان اکاؤنٹ حذف نہیں کیا گیا۔",bn:"স্কুল থেকে সরানো হয়েছে। তার সাইন-ইন অ্যাকাউন্ট মোছা হয়নি।",hi:"स्कूल से हटा दिया गया। उसका साइन-इन खाता हटाया नहीं गया।",ne:"विद्यालयबाट हटाइयो। उसको साइन-इन खाता मेटाइएन।",sw:"Ameondolewa shuleni. Akaunti yake ya kuingia haikufutwa.",ar:"تمت الإزالة من المدرسة. لم يُحذف حساب تسجيل دخوله.",zh:"已从学校移除。其登录帐户未被删除。",es:"Eliminado de la escuela. Su cuenta de inicio de sesión no se eliminó.",fr:"Retiré de l'école. Son compte de connexion n'a pas été supprimé.",pt:"Removido da escola. A conta de início de sessão não foi eliminada.",ru:"Убран из школы. Учётная запись не удалена.",id:"Dihapus dari sekolah. Akun masuknya tidak dihapus.",de:"Aus der Schule entfernt. Das Anmeldekonto wurde nicht gelöscht.",ja:"学校から削除しました。サインインアカウントは削除されていません。",pa:"سکول توں ہٹا دتا گیا۔ اس دا سائن ان اکاؤنٹ حذف نہیں کیتا گیا۔",mr:"शाळेतून काढले. त्याचे साइन-इन खाते हटवले गेले नाही.",te:"పాఠశాల నుండి తీసివేయబడింది. వారి సైన్-ఇన్ ఖాతా తొలగించబడలేదు.",fa:"از مدرسه حذف شد. حساب ورود او حذف نشد.",tr:"Okuldan çıkarıldı. Oturum açma hesabı silinmedi.",ta:"பள்ளியிலிருந்து நீக்கப்பட்டது. அவரது உள்நுழைவு கணக்கு நீக்கப்படவில்லை.",vi:"Đã xóa khỏi trường. Tài khoản đăng nhập của họ không bị xóa.",ko:"학교에서 제거되었습니다. 로그인 계정은 삭제되지 않았습니다.",tl:"Inalis mula sa paaralan. Ang kanyang sign-in account ay hindi nabura.",ha:"An cire daga makaranta. Ba a goge asusun shigarsa ba.",it:"Rimosso dalla scuola. Il suo account di accesso non è stato eliminato.",ps:"له ښوونځي څخه لرې شو. د هغه د ننوتلو حساب ړنګ نه شو.",ms:"Dibuang dari sekolah. Akaun log masuknya tidak dipadam.",yo:"A yọ kúrò nínú ilé-ìwé. Ákọ́ọ̀ntù ìwọlé rẹ̀ kò parẹ́.",ig:"Ewepụrụ n'ụlọ akwụkwọ. Ehichapụghị akaụntụ nbanye ya."},
+adm_role_updated:{en:"Role updated.",ur:"کردار اپڈیٹ ہو گیا۔",bn:"ভূমিকা আপডেট হয়েছে।",hi:"भूमिका अपडेट हो गई।",ne:"भूमिका अद्यावधिक भयो।",sw:"Jukumu limesasishwa.",ar:"تم تحديث الدور.",zh:"角色已更新。",es:"Rol actualizado.",fr:"Rôle mis à jour.",pt:"Função atualizada.",ru:"Роль обновлена.",id:"Peran diperbarui.",de:"Rolle aktualisiert.",ja:"役割を更新しました。",pa:"کردار اپڈیٹ ہو گیا۔",mr:"भूमिका अद्यतनित केली.",te:"పాత్ర నవీకరించబడింది.",fa:"نقش به‌روزرسانی شد.",tr:"Rol güncellendi.",ta:"பாத்திரம் புதுப்பிக்கப்பட்டது.",vi:"Đã cập nhật vai trò.",ko:"역할이 업데이트되었습니다.",tl:"Na-update ang tungkulin.",ha:"An sabunta rawar.",it:"Ruolo aggiornato.",ps:"رول تازه شو.",ms:"Peranan dikemas kini.",yo:"Ipa ti di tuntun.",ig:"Emelitere ọrụ."},
+adm_head_now:{en:"{name} is now head of {school}.",ur:"{name} اب {school} کا سربراہ ہے۔",bn:"{name} এখন {school}-এর প্রধান।",hi:"{name} अब {school} का प्रमुख है।",ne:"{name} अब {school} को प्रमुख हो।",sw:"{name} sasa ni mkuu wa {school}.",ar:"{name} أصبح الآن رئيس {school}.",zh:"{name} 现在是 {school} 的负责人。",es:"{name} ahora es director de {school}.",fr:"{name} est désormais chef de {school}.",pt:"{name} agora é diretor de {school}.",ru:"{name} теперь руководитель {school}.",id:"{name} kini kepala {school}.",de:"{name} ist jetzt Leiter von {school}.",ja:"{name} は {school} の責任者になりました。",pa:"{name} ہن {school} دا سربراہ اے۔",mr:"{name} आता {school} चा प्रमुख आहे.",te:"{name} ఇప్పుడు {school} అధిపతి.",fa:"{name} اکنون مدیر {school} است.",tr:"{name} artık {school} müdürü.",ta:"{name} இப்போது {school} தலைவர்.",vi:"{name} giờ là hiệu trưởng của {school}.",ko:"{name}님은 이제 {school}의 책임자입니다.",tl:"Si {name} na ngayon ang pinuno ng {school}.",ha:"{name} yanzu shugaban {school} ne.",it:"{name} ora è dirigente di {school}.",ps:"{name} اوس د {school} مشر دی.",ms:"{name} kini ketua {school}.",yo:"{name} ti di olórí {school} báyìí.",ig:"{name} bụ onye isi {school} ugbu a."},
+adm_exists_make_head:{en:"{name} already has an account at {school}. Make them head of {target} instead?",ur:"{name} کا {school} میں پہلے سے اکاؤنٹ ہے۔ کیا انہیں اس کے بجائے {target} کا سربراہ بنا دیں؟",bn:"{school}-এ {name}-এর ইতিমধ্যে একটি অ্যাকাউন্ট আছে। বদলে তাকে {target}-এর প্রধান করবেন?",hi:"{school} में {name} का खाता पहले से है। क्या उसे इसके बजाय {target} का प्रमुख बना दें?",ne:"{school} मा {name} को खाता पहिले नै छ। बरु उसलाई {target} को प्रमुख बनाउने?",sw:"{name} tayari ana akaunti {school}. Umfanye mkuu wa {target} badala yake?",ar:"{name} لديه حساب بالفعل في {school}. هل تجعله رئيس {target} بدلًا من ذلك؟",zh:"{name} 在 {school} 已有账号。改为让其担任 {target} 的负责人吗？",es:"{name} ya tiene una cuenta en {school}. ¿Lo haces director de {target} en su lugar?",fr:"{name} a déjà un compte à {school}. Le nommer chef de {target} à la place ?",pt:"{name} já tem uma conta em {school}. Torná-lo diretor de {target} em vez disso?",ru:"У {name} уже есть учётная запись в {school}. Сделать его руководителем {target} вместо этого?",id:"{name} sudah memiliki akun di {school}. Jadikan dia kepala {target} saja?",de:"{name} hat bereits ein Konto bei {school}. Soll die Person stattdessen Leiter von {target} werden?",ja:"{name} は {school} に既にアカウントがあります。代わりに {target} の責任者にしますか？",pa:"{school} وچ {name} دا پہلے توں کھاتہ اے۔ اس دی بجائے اس نوں {target} دا سربراہ بنا دیو؟",mr:"{school} मध्ये {name} चे आधीच खाते आहे. त्याऐवजी त्याला {target} चा प्रमुख करायचे?",te:"{school}లో {name}కు ఇప్పటికే ఖాతా ఉంది. బదులుగా వారిని {target} అధిపతిగా చేయాలా?",fa:"{name} در {school} از قبل حساب دارد. در عوض او را مدیر {target} می‌کنید؟",tr:"{name} adlı kişinin {school} okulunda zaten hesabı var. Bunun yerine {target} müdürü mü yapalım?",ta:"{school} இல் {name} க்கு ஏற்கனவே கணக்கு உள்ளது. அதற்குப் பதிலாக அவரை {target} தலைவராக்கவா?",vi:"{name} đã có tài khoản tại {school}. Đặt họ làm hiệu trưởng của {target} thay vào đó?",ko:"{name}님은 {school}에 이미 계정이 있습니다. 대신 {target}의 책임자로 지정하시겠습니까?",tl:"May account na si {name} sa {school}. Gawin siyang pinuno ng {target} sa halip?",ha:"{name} ya riga ya sami asusu a {school}. A sanya shi shugaban {target} a maimakon haka?",it:"{name} ha già un account a {school}. Lo rendi dirigente di {target} invece?",ps:"{name} په {school} کې له مخکې حساب لري. پر ځای یې د {target} مشر کړئ؟",ms:"{name} sudah mempunyai akaun di {school}. Jadikan dia ketua {target} sebaliknya?",yo:"{name} ti ní ákántì ní {school} tẹ́lẹ̀. Ṣe é ní olórí {target} dípò ẹ̀?",ig:"{name} enweelarị akaụntụ na {school}. Ị ga-eme ya onye isi {target} kama?"},
+adm_no_teacher_record:{en:"This email has a sign-in account but no school record, so it cannot be linked from here. Remove the account from the Firebase console first, then invite the email again.",ur:"اس ای میل کا سائن ان اکاؤنٹ ہے لیکن اسکول کا ریکارڈ نہیں، اس لیے اسے یہاں سے منسلک نہیں کیا جا سکتا۔ پہلے اکاؤنٹ کو Firebase کنسول سے ہٹائیں، پھر ای میل کو دوبارہ مدعو کریں۔",bn:"এই ইমেইলের একটি সাইন-ইন অ্যাকাউন্ট আছে কিন্তু কোনো স্কুল রেকর্ড নেই, তাই এখান থেকে এটি যুক্ত করা যাবে না। প্রথমে Firebase কনসোল থেকে অ্যাকাউন্টটি সরান, তারপর আবার ইমেইলটি আমন্ত্রণ জানান।",hi:"इस ईमेल का साइन-इन खाता है लेकिन स्कूल का रिकॉर्ड नहीं है, इसलिए इसे यहाँ से जोड़ा नहीं जा सकता। पहले Firebase कंसोल से खाता हटाएँ, फिर ईमेल को दोबारा आमंत्रित करें।",ne:"यो इमेलको साइन-इन खाता छ तर विद्यालयको रेकर्ड छैन, त्यसैले यसलाई यहाँबाट जोड्न सकिँदैन। पहिले Firebase कन्सोलबाट खाता हटाउनुहोस्, त्यसपछि इमेललाई फेरि निम्त्याउनुहोस्।",sw:"Barua pepe hii ina akaunti ya kuingia lakini haina rekodi ya shule, kwa hivyo haiwezi kuunganishwa kutoka hapa. Ondoa akaunti kwenye kiweko cha Firebase kwanza, kisha ialike barua pepe tena.",ar:"هذا البريد الإلكتروني لديه حساب تسجيل دخول ولكن ليس لديه سجل مدرسي، لذا لا يمكن ربطه من هنا. أزل الحساب من وحدة تحكم Firebase أولًا، ثم ادعُ البريد الإلكتروني مرة أخرى.",zh:"此邮箱有登录帐户，但没有学校记录，因此无法从此处关联。请先从 Firebase 控制台移除该帐户，然后重新邀请此邮箱。",es:"Este correo tiene una cuenta de inicio de sesión pero no un registro escolar, así que no se puede vincular desde aquí. Elimina primero la cuenta desde la consola de Firebase y luego vuelve a invitar el correo.",fr:"Cet e-mail a un compte de connexion mais aucun dossier d'école, il ne peut donc pas être lié d'ici. Supprimez d'abord le compte depuis la console Firebase, puis invitez à nouveau l'e-mail.",pt:"Este e-mail tem uma conta de início de sessão mas não tem registo escolar, por isso não pode ser associado a partir daqui. Remova primeiro a conta da consola do Firebase e depois volte a convidar o e-mail.",ru:"У этого адреса есть учётная запись, но нет школьной записи, поэтому связать его отсюда нельзя. Сначала удалите учётную запись из консоли Firebase, затем пригласите адрес ещё раз.",id:"Email ini memiliki akun masuk tetapi tidak ada catatan sekolah, jadi tidak dapat ditautkan dari sini. Hapus akun dari konsol Firebase terlebih dahulu, lalu undang email itu lagi.",de:"Diese E-Mail hat ein Anmeldekonto, aber keinen Schuldatensatz, daher kann sie von hier aus nicht verknüpft werden. Entfernen Sie zuerst das Konto aus der Firebase-Konsole und laden Sie die E-Mail dann erneut ein.",ja:"このメールにはサインインアカウントがありますが学校の記録がないため、ここから関連付けることはできません。まず Firebase コンソールからアカウントを削除し、もう一度メールを招待してください。",pa:"ایس ای میل دا سائن ان اکاؤنٹ اے پر سکول دا ریکارڈ نہیں، اس لئی اس نوں ایتھوں جوڑیا نہیں جا سکدا۔ پہلاں Firebase کنسول توں اکاؤنٹ ہٹاؤ، فیر ای میل نوں دوبارہ مدعو کرو۔",mr:"या ईमेलवर साइन-इन खाते आहे पण शाळेची नोंद नाही, त्यामुळे येथून ते जोडता येणार नाही. प्रथम Firebase कन्सोलमधून खाते काढा, मग ईमेलला पुन्हा आमंत्रित करा.",te:"ఈ ఇమెయిల్‌కు సైన్-ఇన్ ఖాతా ఉంది కానీ పాఠశాల రికార్డు లేదు, కాబట్టి ఇక్కడి నుండి దీన్ని లింక్ చేయలేరు. ముందుగా Firebase కన్సోల్ నుండి ఖాతాను తీసివేసి, ఆపై ఇమెయిల్‌ను మళ్లీ ఆహ్వానించండి.",fa:"این ایمیل حساب ورود دارد اما سابقه مدرسه ندارد، پس نمی‌توان آن را از اینجا پیوند داد. نخست حساب را از کنسول Firebase حذف کنید، سپس دوباره ایمیل را دعوت کنید.",tr:"Bu e-postanın oturum açma hesabı var ama okul kaydı yok, bu yüzden buradan bağlanamaz. Önce hesabı Firebase konsolundan kaldırın, sonra e-postayı yeniden davet edin.",ta:"இந்த மின்னஞ்சலுக்கு உள்நுழைவு கணக்கு உள்ளது ஆனால் பள்ளி பதிவு இல்லை, எனவே இங்கிருந்து இணைக்க முடியாது. முதலில் Firebase கன்சோலில் இருந்து கணக்கை நீக்கி, பின்னர் மின்னஞ்சலை மீண்டும் அழைக்கவும்.",vi:"Email này có tài khoản đăng nhập nhưng không có hồ sơ trường, vì vậy không thể liên kết từ đây. Trước tiên hãy xóa tài khoản khỏi bảng điều khiển Firebase, sau đó mời lại email.",ko:"이 이메일에는 로그인 계정이 있지만 학교 기록이 없어 여기서 연결할 수 없습니다. 먼저 Firebase 콘솔에서 계정을 삭제한 뒤 이메일을 다시 초대하세요.",tl:"Ang email na ito ay may sign-in account ngunit walang talaan ng paaralan, kaya hindi ito mai-link mula rito. Alisin muna ang account mula sa Firebase console, pagkatapos ay imbitahan muli ang email.",ha:"Wannan imel tana da asusun shiga amma ba ta da bayanan makaranta, don haka ba za a iya haɗa ta daga nan ba. Da farko ka cire asusun daga na'urar Firebase, sannan ka sake gayyatar imel ɗin.",it:"Questa email ha un account di accesso ma nessun record scolastico, quindi non può essere collegata da qui. Rimuovi prima l'account dalla console Firebase, poi invita di nuovo l'email.",ps:"دې برېښنالیک د ننوتلو حساب لري خو د ښوونځي ریکارډ نه لري، نو له دې ځایه یې نشي تړلی. لومړی حساب له Firebase کنسول څخه لرې کړئ، بیا برېښنالیک بیا راوبلئ.",ms:"E-mel ini mempunyai akaun log masuk tetapi tiada rekod sekolah, jadi ia tidak dapat dipautkan dari sini. Buang akaun daripada konsol Firebase dahulu, kemudian jemput e-mel itu semula.",yo:"Ìmeèlì yìí ní ákántì ìwọlé ṣùgbọ́n kò ní ìgbèsì ilé-ìwé, nítorí náà a kò lè so ọ́ mọ́ láti ìbí. Yọ ákántì náà kúrò nínú Firebase console ní àkọ́kọ́, lẹ́yìn náà tún pe ìmeèlì náà.",ig:"Email a nwere akaụntụ nbanye mana enweghị ndekọ ụlọ akwụkwọ, ya mere enweghị ike ijikọ ya site ebe a. Buru ụzọ wepụ akaụntụ ahụ na Firebase console, wee kpọọ email ahụ ọzọ."},
+adm_trial_until:{en:"Trial until",ur:"ٹرائل کب تک",bn:"ট্রায়াল পর্যন্ত",hi:"परीक्षण अवधि समाप्ति",ne:"परीक्षण कहिलेसम्म",sw:"Jaribio hadi",ar:"التجربة حتى",zh:"试用到期",es:"Prueba hasta",fr:"Essai jusqu'au",pt:"Teste até",ru:"Пробный период до",id:"Uji coba hingga",de:"Testphase bis",ja:"試用期限",pa:"ٹرائل کب تک",mr:"चाचणी कधीपर्यंत",te:"ట్రయల్ వరకు",fa:"آزمایشی تا",tr:"Deneme bitişi",ta:"சோதனை வரை",vi:"Dùng thử đến",ko:"체험 종료일",tl:"Pagsubok hanggang",ha:"Gwaji har",it:"Prova fino al",ps:"آزموینه تر",ms:"Percubaan sehingga",yo:"Ìdánwò títí di",ig:"Nnwale ruo"},
+adm_trial_set:{en:"Set trial",ur:"ٹرائل مقرر کریں",bn:"ট্রায়াল নির্ধারণ করুন",hi:"परीक्षण अवधि तय करें",ne:"परीक्षण तोक्नुहोस्",sw:"Weka jaribio",ar:"تعيين التجربة",zh:"设置试用",es:"Fijar prueba",fr:"Définir l'essai",pt:"Definir teste",ru:"Установить пробный период",id:"Atur uji coba",de:"Testphase festlegen",ja:"試用を設定",pa:"ٹرائل مقرر کرو",mr:"चाचणी निश्चित करा",te:"ట్రయల్‌ను సెట్ చేయండి",fa:"تعیین دوره آزمایشی",tr:"Deneme ayarla",ta:"சோதனையை அமை",vi:"Đặt dùng thử",ko:"체험 설정",tl:"Itakda ang pagsubok",ha:"Saita gwaji",it:"Imposta prova",ps:"آزموینه وټاکئ",ms:"Tetapkan percubaan",yo:"Ṣe ìdánwò",ig:"Tọọ nnwale"},
+adm_trial_done:{en:"Trial set until {date}.",ur:"ٹرائل {date} تک مقرر کر دیا گیا۔",bn:"ট্রায়াল {date} পর্যন্ত নির্ধারণ করা হয়েছে।",hi:"परीक्षण अवधि {date} तक तय कर दी गई।",ne:"परीक्षण {date} सम्म तोकियो।",sw:"Jaribio limewekwa hadi {date}.",ar:"تم تعيين التجربة حتى {date}.",zh:"试用已设至 {date}。",es:"Prueba fijada hasta el {date}.",fr:"Essai défini jusqu'au {date}.",pt:"Teste definido até {date}.",ru:"Пробный период установлен до {date}.",id:"Uji coba diatur hingga {date}.",de:"Testphase festgelegt bis {date}.",ja:"試用を {date} まで設定しました。",pa:"ٹرائل {date} تک مقرر کر دتا گیا۔",mr:"चाचणी {date} पर्यंत निश्चित केली.",te:"ట్రయల్ {date} వరకు సెట్ చేయబడింది.",fa:"دوره آزمایشی تا {date} تعیین شد.",tr:"Deneme {date} tarihine kadar ayarlandı.",ta:"சோதனை {date} வரை அமைக்கப்பட்டது.",vi:"Đã đặt dùng thử đến {date}.",ko:"체험이 {date}까지 설정되었습니다.",tl:"Itinakda ang pagsubok hanggang {date}.",ha:"An saita gwaji har {date}.",it:"Prova impostata fino al {date}.",ps:"آزموینه تر {date} وټاکل شوه.",ms:"Percubaan ditetapkan sehingga {date}.",yo:"A ṣe ìdánwò títí di {date}.",ig:"Edebere nnwale ruo {date}."},
+adm_trial_bad:{en:"Pick a trial end date that is today or later.",ur:"ٹرائل کی اختتامی تاریخ آج یا بعد کی چنیں۔",bn:"আজ বা তার পরের একটি ট্রায়াল শেষের তারিখ বেছে নিন।",hi:"परीक्षण समाप्ति की तारीख आज या बाद की चुनें।",ne:"आज वा पछिको परीक्षण अन्त्य मिति छान्नुहोस्।",sw:"Chagua tarehe ya mwisho ya jaribio ambayo ni leo au baadaye.",ar:"اختر تاريخ انتهاء للتجربة يكون اليوم أو لاحقًا.",zh:"请选择今天或之后的试用结束日期。",es:"Elige una fecha de fin de prueba que sea hoy o posterior.",fr:"Choisissez une date de fin d'essai qui soit aujourd'hui ou plus tard.",pt:"Escolha uma data de fim de teste que seja hoje ou posterior.",ru:"Выберите дату окончания пробного периода — сегодня или позже.",id:"Pilih tanggal akhir uji coba hari ini atau setelahnya.",de:"Wählen Sie ein Testphasen-Enddatum, das heute oder später liegt.",ja:"試用終了日は今日以降の日付を選んでください。",pa:"ٹرائل دی اختتامی تاریخ اج یا بعد دی چنو۔",mr:"आज किंवा नंतरची चाचणी समाप्ती तारीख निवडा.",te:"ఈ రోజు లేదా ఆ తర్వాతి ట్రయల్ ముగింపు తేదీని ఎంచుకోండి.",fa:"تاریخ پایان آزمایشی را امروز یا بعد از آن انتخاب کنید.",tr:"Bugün veya sonrası bir deneme bitiş tarihi seçin.",ta:"இன்று அல்லது அதற்குப் பிறகான சோதனை முடிவு தேதியைத் தேர்ந்தெடுக்கவும்.",vi:"Chọn ngày kết thúc dùng thử là hôm nay hoặc sau đó.",ko:"오늘 또는 이후의 체험 종료일을 선택하세요.",tl:"Pumili ng petsa ng pagtatapos ng pagsubok na ngayon o mas huli.",ha:"Zaɓi ranar ƙarshen gwaji da ta kasance yau ko daga baya.",it:"Scegli una data di fine prova che sia oggi o successiva.",ps:"د آزموینې د پای نېټه نن یا وروسته وټاکئ.",ms:"Pilih tarikh tamat percubaan iaitu hari ini atau kemudian.",yo:"Yan ọjọ́ ìparí ìdánwò tí ó jẹ́ òní tàbí lẹ́yìn.",ig:"Họrọ ụbọchị ngwụcha nnwale nke bụ taa ma ọ bụ mgbe e mesịrị."},
+adm_free:{en:"Free access",ur:"مفت رسائی",bn:"বিনামূল্যে প্রবেশ",hi:"मुफ़्त पहुँच",ne:"नि:शुल्क पहुँच",sw:"Ufikiaji wa bure",ar:"وصول مجاني",zh:"免费使用",es:"Acceso gratuito",fr:"Accès gratuit",pt:"Acesso gratuito",ru:"Бесплатный доступ",id:"Akses gratis",de:"Kostenloser Zugang",ja:"無料アクセス",pa:"مفت رسائی",mr:"मोफत प्रवेश",te:"ఉచిత ప్రాప్యత",fa:"دسترسی رایگان",tr:"Ücretsiz erişim",ta:"இலவச அணுகல்",vi:"Truy cập miễn phí",ko:"무료 이용",tl:"Libreng access",ha:"Shiga kyauta",it:"Accesso gratuito",ps:"وړیا لاسرسی",ms:"Akses percuma",yo:"Ìwọlé ọ̀fẹ́",ig:"Nweta n'efu"},
+adm_free_grant:{en:"Grant free access",ur:"مفت رسائی دیں",bn:"বিনামূল্যে প্রবেশ দিন",hi:"मुफ़्त पहुँच दें",ne:"नि:शुल्क पहुँच दिनुहोस्",sw:"Toa ufikiaji wa bure",ar:"منح وصول مجاني",zh:"授予免费使用",es:"Conceder acceso gratuito",fr:"Accorder l'accès gratuit",pt:"Conceder acesso gratuito",ru:"Предоставить бесплатный доступ",id:"Berikan akses gratis",de:"Kostenlosen Zugang gewähren",ja:"無料アクセスを付与",pa:"مفت رسائی دیو",mr:"मोफत प्रवेश द्या",te:"ఉచిత ప్రాప్యతను మంజూరు చేయండి",fa:"اعطای دسترسی رایگان",tr:"Ücretsiz erişim ver",ta:"இலவச அணுகல் வழங்கு",vi:"Cấp quyền truy cập miễn phí",ko:"무료 이용 권한 부여",tl:"Ibigay ang libreng access",ha:"Ba da shiga kyauta",it:"Concedi accesso gratuito",ps:"وړیا لاسرسی ورکړئ",ms:"Beri akses percuma",yo:"Fún ìwọlé ọ̀fẹ́",ig:"Nye nweta n'efu"},
+adm_free_remove:{en:"Remove free access",ur:"مفت رسائی ہٹائیں",bn:"বিনামূল্যে প্রবেশ সরান",hi:"मुफ़्त पहुँच हटाएँ",ne:"नि:शुल्क पहुँच हटाउनुहोस्",sw:"Ondoa ufikiaji wa bure",ar:"إزالة الوصول المجاني",zh:"取消免费使用",es:"Quitar acceso gratuito",fr:"Retirer l'accès gratuit",pt:"Remover acesso gratuito",ru:"Убрать бесплатный доступ",id:"Hapus akses gratis",de:"Kostenlosen Zugang entfernen",ja:"無料アクセスを解除",pa:"مفت رسائی ہٹاؤ",mr:"मोफत प्रवेश काढा",te:"ఉచిత ప్రాప్యతను తీసివేయండి",fa:"حذف دسترسی رایگان",tr:"Ücretsiz erişimi kaldır",ta:"இலவச அணுகலை நீக்கு",vi:"Gỡ quyền truy cập miễn phí",ko:"무료 이용 해제",tl:"Alisin ang libreng access",ha:"Cire shiga kyauta",it:"Rimuovi accesso gratuito",ps:"وړیا لاسرسی لرې کړئ",ms:"Buang akses percuma",yo:"Yọ ìwọlé ọ̀fẹ́ kúrò",ig:"Wepụ nweta n'efu"},
+adm_free_on:{en:"Free access — this school pays nothing.",ur:"مفت رسائی — یہ اسکول کچھ نہیں دیتا۔",bn:"বিনামূল্যে প্রবেশ — এই স্কুল কিছুই দেয় না।",hi:"मुफ़्त पहुँच — यह स्कूल कुछ नहीं देता।",ne:"नि:शुल्क पहुँच — यो विद्यालयले केही तिर्दैन।",sw:"Ufikiaji wa bure — shule hii hailipi chochote.",ar:"وصول مجاني — هذه المدرسة لا تدفع شيئًا.",zh:"免费使用——本学校无需付费。",es:"Acceso gratuito: esta escuela no paga nada.",fr:"Accès gratuit — cette école ne paie rien.",pt:"Acesso gratuito — esta escola não paga nada.",ru:"Бесплатный доступ — эта школа ничего не платит.",id:"Akses gratis — sekolah ini tidak membayar apa pun.",de:"Kostenloser Zugang — diese Schule zahlt nichts.",ja:"無料アクセス——この学校は料金を払いません。",pa:"مفت رسائی — ایہہ سکول کجھ نہیں دیندا۔",mr:"मोफत प्रवेश — ही शाळा काहीही देत नाही.",te:"ఉచిత ప్రాప్యత — ఈ పాఠశాల ఏమీ చెల్లించదు.",fa:"دسترسی رایگان — این مدرسه چیزی نمی‌پردازد.",tr:"Ücretsiz erişim — bu okul hiçbir şey ödemez.",ta:"இலவச அணுகல் — இந்தப் பள்ளி எதுவும் செலுத்தாது.",vi:"Truy cập miễn phí — trường này không phải trả gì.",ko:"무료 이용 — 이 학교는 아무것도 지불하지 않습니다.",tl:"Libreng access — walang binabayaran ang paaralang ito.",ha:"Shiga kyauta — wannan makaranta ba ta biya komai ba.",it:"Accesso gratuito: questa scuola non paga nulla.",ps:"وړیا لاسرسی — دا ښوونځی هېڅ نه ورکوي.",ms:"Akses percuma — sekolah ini tidak membayar apa-apa.",yo:"Ìwọlé ọ̀fẹ́ — ilé-ìwé yìí kò san nǹkan kan.",ig:"Nweta n'efu — ụlọ akwụkwọ a anaghị akwụ ihe ọ bụla."},
+adm_free_done:{en:"Free access granted.",ur:"مفت رسائی دے دی گئی۔",bn:"বিনামূল্যে প্রবেশ দেওয়া হয়েছে।",hi:"मुफ़्त पहुँच दे दी गई।",ne:"नि:शुल्क पहुँच दिइयो।",sw:"Ufikiaji wa bure umetolewa.",ar:"تم منح الوصول المجاني.",zh:"已授予免费使用。",es:"Acceso gratuito concedido.",fr:"Accès gratuit accordé.",pt:"Acesso gratuito concedido.",ru:"Бесплатный доступ предоставлен.",id:"Akses gratis diberikan.",de:"Kostenloser Zugang gewährt.",ja:"無料アクセスを付与しました。",pa:"مفت رسائی دے دتی گئی۔",mr:"मोफत प्रवेश दिला.",te:"ఉచిత ప్రాప్యత మంజూరు చేయబడింది.",fa:"دسترسی رایگان اعطا شد.",tr:"Ücretsiz erişim verildi.",ta:"இலவச அணுகல் வழங்கப்பட்டது.",vi:"Đã cấp quyền truy cập miễn phí.",ko:"무료 이용 권한이 부여되었습니다.",tl:"Ibinigay ang libreng access.",ha:"An ba da shiga kyauta.",it:"Accesso gratuito concesso.",ps:"وړیا لاسرسی ورکړل شو.",ms:"Akses percuma diberikan.",yo:"A fún ìwọlé ọ̀fẹ́.",ig:"Enyere nweta n'efu."},
+adm_free_removed:{en:"Free access removed. The school returns to its normal price.",ur:"مفت رسائی ہٹا دی گئی۔ اسکول اپنی معمول کی قیمت پر واپس آ گیا۔",bn:"বিনামূল্যে প্রবেশ সরানো হয়েছে। স্কুল তার স্বাভাবিক মূল্যে ফিরে গেছে।",hi:"मुफ़्त पहुँच हटा दी गई। स्कूल अपनी सामान्य कीमत पर लौट गया।",ne:"नि:शुल्क पहुँच हटाइयो। विद्यालय आफ्नो सामान्य मूल्यमा फर्कियो।",sw:"Ufikiaji wa bure umeondolewa. Shule imerudi kwenye bei yake ya kawaida.",ar:"تمت إزالة الوصول المجاني. وعادت المدرسة إلى سعرها العادي.",zh:"已取消免费使用。该学校恢复正常价格。",es:"Acceso gratuito eliminado. La escuela vuelve a su precio normal.",fr:"Accès gratuit retiré. L'école revient à son tarif normal.",pt:"Acesso gratuito removido. A escola volta ao seu preço normal.",ru:"Бесплатный доступ убран. Школа возвращается к своей обычной цене.",id:"Akses gratis dihapus. Sekolah kembali ke harga normalnya.",de:"Kostenloser Zugang entfernt. Die Schule kehrt zu ihrem normalen Preis zurück.",ja:"無料アクセスを解除しました。学校は通常料金に戻ります。",pa:"مفت رسائی ہٹا دتی گئی۔ سکول اپنی معمول دی قیمت تے واپس آ گیا۔",mr:"मोफत प्रवेश काढला. शाळा तिच्या सामान्य किमतीवर परत गेली.",te:"ఉచిత ప్రాప్యత తీసివేయబడింది. పాఠశాల దాని సాధారణ ధరకు తిరిగి వచ్చింది.",fa:"دسترسی رایگان حذف شد. مدرسه به قیمت عادی خود بازگشت.",tr:"Ücretsiz erişim kaldırıldı. Okul normal fiyatına döndü.",ta:"இலவச அணுகல் நீக்கப்பட்டது. பள்ளி அதன் வழக்கமான விலைக்குத் திரும்பியது.",vi:"Đã gỡ quyền truy cập miễn phí. Trường trở lại giá bình thường.",ko:"무료 이용이 해제되었습니다. 학교는 정상 가격으로 돌아갑니다.",tl:"Inalis ang libreng access. Bumalik ang paaralan sa normal nitong presyo.",ha:"An cire shiga kyauta. Makaranta ta koma farashinta na al'ada.",it:"Accesso gratuito rimosso. La scuola torna al suo prezzo normale.",ps:"وړیا لاسرسی لرې شو. ښوونځی خپل عادي قیمت ته راستون شو.",ms:"Akses percuma dibuang. Sekolah kembali kepada harga biasanya.",yo:"A yọ ìwọlé ọ̀fẹ́ kúrò. Ilé-ìwé náà padà sí owó rẹ̀ déédé.",ig:"Ewepụrụ nweta n'efu. Ụlọ akwụkwọ ahụ laghachiri n'ọnụ ahịa ya."},
 });
 
 /* ================= IDENTITY RULE =================
@@ -27034,7 +27123,7 @@ function schoolCardHTML(){
   const billTxt=s.plan==="paid"?" • "+esc(s.billing==="annual"?t("sub_annual"):t("sub_monthly")):"";
   let h='<div class="card">'+
     '<p><b>'+esc(s.name||"—")+'</b> • '+esc(planTxt)+billTxt+' • '+esc(statusTxt)+
-    (until?" • "+esc(t("sub_until"))+": "+esc(String(until).slice(0,10)):"")+'</p>';
+    (s.freeAccess?"":until?" • "+esc(t("sub_until"))+": "+esc(String(until).slice(0,10)):"")+'</p>';
   const pk=countryPack(schoolCountry());
   const lp=schoolPrice(s);
   const eff=effectivePrice(s,s.billing==="annual"?"annual":"monthly");
@@ -27077,7 +27166,7 @@ function schoolCardHTML(){
 function viewAdmin(){
   if(typeof Cloud==="undefined"||!Cloud.isSuperAdmin)return '<div class="card"><p class="muted">'+esc(t("login_notallowed"))+'</p></div>';
   return '<div class="card"><h2>👑 '+esc(t("sub_admin"))+'</h2><p class="muted">'+esc(t("sub_admin_hint"))+'</p>'+
-    chartEnrolHTML()+storageGuidanceHTML()+'<div id="adm-sync"></div><div id="adm-summary"></div><div id="adm-queue"></div><div id="adm-signups"></div><div id="adm-list"><p class="muted">⏳ '+esc(t("connecting"))+'</p></div><div id="adm-pricing"></div></div>';
+    chartEnrolHTML()+storageGuidanceHTML()+'<div id="adm-sync"></div><div id="adm-summary"></div><div id="adm-people"></div><div id="adm-queue"></div><div id="adm-signups"></div><div id="adm-list"><p class="muted">⏳ '+esc(t("connecting"))+'</p></div><div id="adm-pricing"></div></div>';
 }
 function adminSchoolHTML(row){
   const s=row.school, lc=subLifecycle(s);
@@ -27088,6 +27177,7 @@ function adminSchoolHTML(row){
   const amt=subAmountFor(lp,cycle);
   let chip;
   if(lc.state==="blocked")chip='<span class="chip">⛔ '+esc(t("sub_lc_blocked"))+'</span>';
+  else if(s.freeAccess)chip='<span class="chip">🆓 '+esc(t("adm_free"))+'</span>';
   else if(lc.state==="pending")chip='<span class="chip">⚪ '+esc(t("sub_lc_pending"))+'</span>';
   else if(lc.state==="expired")chip='<span class="chip">🔴 '+esc(t("sub_expired_short"))+'</span>';
   else if(lc.state==="grace")chip='<span class="chip">🟠 '+esc(t("sub_lc_grace"))+'</span>';
@@ -27129,7 +27219,7 @@ function adminSchoolHTML(row){
       return x;
     })()+
     '<div id="adm-teachers-'+s.id+'"></div>'+
-    '<span class="muted">'+esc(s.plan==="trial"?t("plan_trial"):t("plan_paid"))+' • '+esc(cycle==="annual"?t("sub_annual"):t("sub_monthly"))+' • '+esc(t("sub_until"))+': '+esc(until||"—")+' • '+esc(lp.currency+" "+fmtNum(amt))+'</span>'+storageAdminRowHTML(row)+'<br><span class="muted">'+esc(t("sub_rails"))+": "+esc(pk.rails)+(((s.country||"PK")!=="PK")?" • "+esc(t("sub_renew_intl")):"")+'</span>'+
+    '<span class="muted">'+(s.freeAccess?esc(t("adm_free_on")):esc(s.plan==="trial"?t("plan_trial"):t("plan_paid"))+' • '+esc(cycle==="annual"?t("sub_annual"):t("sub_monthly"))+' • '+esc(t("sub_until"))+': '+esc(until||"—")+' • '+esc(lp.currency+" "+fmtNum(amt)))+'</span>'+storageAdminRowHTML(row)+'<br><span class="muted">'+esc(t("sub_rails"))+": "+esc(pk.rails)+(((s.country||"PK")!=="PK")?" • "+esc(t("sub_renew_intl")):"")+'</span>'+
     (function(){const sm=row.info&&row.info.summary;if(!sm)return '<br><span class="muted">'+esc(t("ho_no_summary"))+"</span>";const pf=sm.perfSummary?esc(t("perf_dossier"))+": "+(sm.perfSummary.dossierMs===null?"—":sm.perfSummary.dossierMs+" ms")+" ("+esc(t("perf_worst7"))+": "+(sm.perfSummary.worstDossier7===null?"—":sm.perfSummary.worstDossier7+" ms")+")":esc(t("perf_dossier"))+": —";return '<br><span class="muted">'+esc(t("ho_students"))+": "+sm.students+" • "+esc(t("ho_staff"))+": "+sm.staff+" • "+esc(t("ho_att_today"))+": "+adminAttHTML(sm)+" • "+esc(t("ho_fee_collected"))+": "+esc(pk.cur+" "+fmtNum(sm.feeCollected))+" / "+esc(t("ho_fee_due"))+": "+esc(pk.cur+" "+fmtNum(sm.feeDue))+(sm.appVersion?(" • "+esc(t("ver_app"))+" "+esc(sm.appVersion)):"")+(sm.setupTotal!=null?" • "+esc(t("setup_progress").replace("{done}",String(sm.setupDone)).replace("{total}",String(sm.setupTotal)))+" ("+Math.round(100*Number(sm.setupDone||0)/Number(sm.setupTotal||1))+"%)":"")+" • "+pf+"</span>";})();
   if(lc.state==="trial_ending"||lc.state==="renewal_due"||lc.state==="grace"||lc.state==="expired"){
     h+='<div class="toolbar" style="margin-top:.4rem">'+
@@ -27148,6 +27238,11 @@ function adminSchoolHTML(row){
     }).join("")+"</div>";
   }
   if(confirmed.length)h+='<p class="muted" style="margin-top:.4rem">'+esc(t("sub_confirmed"))+': '+confirmed.length+'</p>';
+  h+='<div style="margin-top:.4rem;border-top:1px solid var(--line);padding-top:.4rem"><b>'+esc(t("adm_trial_until"))+'</b> '+
+    '<input type="date" id="adm-trial-'+s.id+'" value="'+esc(s.trialEndsAt||"")+'" style="min-height:36px"> '+
+    '<button type="button" class="btn btn-sm" data-trial="'+s.id+'">'+esc(t("adm_trial_set"))+'</button> '+
+    '<span id="adm-trial-msg-'+s.id+'" class="muted"></span></div>'+
+    '<div style="margin-top:.4rem">'+(s.freeAccess?'<span>'+esc(t("adm_free_on"))+'</span> <button type="button" class="btn btn-sm" data-free-remove="'+s.id+'">'+esc(t("adm_free_remove"))+'</button>':'<button type="button" class="btn btn-sm" data-free-grant="'+s.id+'">'+esc(t("adm_free_grant"))+'</button>')+' <span id="adm-free-msg-'+s.id+'" class="muted"></span></div>';
   h+=(function(){ /* Round 95: founder discount (platform admin only — this whole view is super-admin only). */
     const d=s.subDiscount||null;
     const act=discountActive(s);
@@ -27204,6 +27299,7 @@ function renderAdminListRows(rows){
   const sumBox=$("adm-summary");
   if(sumBox)sumBox.innerHTML=hoSummaryHTML(agg);
   renderAdmQueue(agg);
+  renderAdmPeople();
   const box=$("adm-list");
   if(!box)return;
   box.innerHTML=rows.length?rows.map(adminSchoolHTML).join(""):'<p class="muted">'+esc(t("no_records"))+'</p>';
@@ -27237,16 +27333,89 @@ function loadAdminList(){
   loadAdminSignups();
   }).catch(function(){admListLoading=false;var b2=$("adm-list");if(b2)b2.innerHTML=adminListRetryHTML();bindAdminListRetry();});
 }
+// R165: "Schools & heads" — super-admin people manager.
+// Paints #adm-people (the div viewAdmin emits between #adm-summary and
+// #adm-queue). Called from afterAdmin() and re-run from
+// renderAdminListRows() so the school picker always matches the live list.
+function renderAdmPeople(){
+  var host=$("adm-people");
+  if(!host)return;
+  var rows=(typeof admListCache!=="undefined"&&admListCache&&admListCache.rows)?admListCache.rows:[];
+  var opts=rows.map(function(r){
+    return '<option value="'+esc(r.school.id)+'">'+esc(r.school.name)+'</option>';
+  }).join("");
+  host.innerHTML='<div class="card" style="margin:.5rem 0"><h3>'+esc(t("adm_people_title"))+'</h3>'+
+    '<p class="muted">'+esc(t("adm_people_hint"))+'</p>'+
+    '<div class="field"><label>'+esc(t("signup_school"))+'</label><select id="adm-people-school">'+opts+'</select></div>'+
+    '<div class="field"><label>'+esc(t("signup_contact"))+'</label><input id="adm-people-name" type="text" autocomplete="off"></div>'+
+    '<div class="field"><label>'+esc(t("signup_email"))+'</label><input id="adm-people-email" type="email" autocomplete="off" placeholder="name@example.com"></div>'+
+    '<div class="field"><label>'+esc(t("role_head"))+' / '+esc(t("role_teacher"))+'</label><select id="adm-people-role"><option value="admin">'+esc(t("role_head"))+'</option><option value="teacher">'+esc(t("role_teacher"))+'</option></select></div>'+
+    '<button type="button" class="btn btn-primary" id="adm-people-add"'+(rows.length?"":" disabled")+'>'+esc(t("adm_add_head"))+'</button> '+
+    '<span id="adm-people-msg" class="muted"></span></div>';
+  bindAdmPeople();
+}
+function bindAdmPeople(){
+  var roleSel=$("adm-people-role"),add=$("adm-people-add");
+  if(!add)return;
+  if(roleSel)roleSel.onchange=function(){
+    add.textContent=t(roleSel.value==="teacher"?"team_invite":"adm_add_head");
+  };
+  add.onclick=function(){
+    var schoolId=$("adm-people-school").value;
+    var name=$("adm-people-name").value.trim();
+    var email=$("adm-people-email").value.trim();
+    var role=$("adm-people-role").value;
+    var msg=$("adm-people-msg");
+    var rows=(typeof admListCache!=="undefined"&&admListCache&&admListCache.rows)?admListCache.rows:[];
+    var schoolName="";
+    rows.forEach(function(r){if(r.school&&r.school.id===schoolId)schoolName=r.school.name;});
+    function fail(key){if(msg)msg.textContent=t(key);}
+    if(!schoolId||!name||!validEmail(email)){fail("req");return;}
+    add.disabled=true;
+    Cloud.inviteTeacher(name,email,{schoolId:schoolId,role:role}).then(function(res){
+      add.disabled=false;
+      if(res&&res.ok){
+        if(msg)msg.textContent=t("team_sent");
+        clearAdmListCache();loadAdminList();renderAdmPeople();
+        return;
+      }
+      if(res&&res.error===t("team_exists")){
+        if(role==="teacher"){fail("team_exists");return;}
+        return Cloud.findTeacherByEmail(email).then(function(rec){
+          if(!rec){fail("adm_no_teacher_record");return;}
+          var curName="";
+          rows.forEach(function(r){if(r.school&&r.school.id===rec.schoolId)curName=r.school.name;});
+          var q=t("adm_exists_make_head").replace("{name}",rec.name||name).replace("{school}",curName||rec.schoolId||"").replace("{target}",schoolName);
+          if(msg)msg.innerHTML=esc(q)+' <button type="button" class="btn btn-sm btn-primary" id="adm-people-confirm">'+esc(t("adm_make_head"))+'</button>';
+          var cf=$("adm-people-confirm");
+          if(cf)cf.onclick=function(){
+            Cloud.setTeacherHead(rec.uid,schoolId).then(function(r2){
+              if(r2&&r2.ok){
+                if(msg)msg.textContent=t("adm_head_now").replace("{name}",rec.name||name).replace("{school}",schoolName);
+                clearAdmListCache();loadAdminList();renderAdmPeople();
+              }else{fail("login_fail");}
+            });
+          };
+        });
+      }
+      fail("login_fail");
+    }).catch(function(){add.disabled=false;fail("login_fail");});
+  };
+}
 function renderAdminTeachers(schoolId){
-  const box=$("adm-teachers-"+schoolId);if(!box)return;
+  const box=$("adm-teachers-"+schoolId);if(!box)return Promise.resolve(false);
   box.innerHTML='<p class="muted">⏳ '+esc(t("connecting"))+'</p>';
-  Cloud.listTeachers(schoolId).then(function(list){
-    if(!list.length){box.innerHTML='<p class="muted">'+esc(t("no_records"))+'</p>';return;}
+  return Cloud.listTeachers(schoolId).then(function(list){
+    if(!list.length){box.innerHTML='<p class="muted">'+esc(t("no_records"))+'</p><div id="adm-teachers-msg-'+schoolId+'" class="muted"></div>';return;}
     box.innerHTML='<div style="margin-top:.4rem">'+list.map(function(tr){
+      var isHead=(tr.role||"")==="admin";
       return '<div class="toolbar" style="margin:.25rem 0"><span>'+esc(tr.name||tr.email||tr.uid)+(tr.disabled?' • ⛔ '+esc(t("admin_blocked")):'')+'</span>'+
         '<span class="muted">'+esc(tr.email||"")+'</span>'+
-        '<button type="button" class="btn btn-sm" data-tblock="'+tr.uid+'|'+schoolId+'" data-cur="'+(tr.disabled?"1":"0")+'">'+esc(tr.disabled?t("admin_unblock"):t("admin_block"))+'</button></div>';
-    }).join("")+'</div>';
+        '<span class="muted">'+esc(isHead?t("role_head"):t("role_teacher"))+'</span>'+
+        '<button type="button" class="btn btn-sm" data-tblock="'+tr.uid+'|'+schoolId+'" data-cur="'+(tr.disabled?"1":"0")+'">'+esc(tr.disabled?t("admin_unblock"):t("admin_block"))+'</button>'+
+        (isHead?'<button type="button" class="btn btn-sm" data-tmaketeacher="'+tr.uid+'|'+schoolId+'">'+esc(t("adm_make_teacher"))+'</button>':'<button type="button" class="btn btn-sm" data-tmakehead="'+tr.uid+'|'+schoolId+'">'+esc(t("adm_make_head"))+'</button>')+
+        '<button type="button" class="btn btn-sm" data-tremove="'+tr.uid+'|'+schoolId+'" data-tname="'+esc(tr.name||"")+'">'+esc(t("adm_remove_school"))+'</button></div>';
+    }).join("")+'</div><div id="adm-teachers-msg-'+schoolId+'" class="muted"></div>';
   });
 }
 function afterAdmin(){
@@ -27254,6 +27423,7 @@ function afterAdmin(){
      there is no key input to bind, so the old handlers are removed, not
      left pointing at elements that no longer exist. */
   loadAdminSignups();
+  renderAdmPeople();
   renderAdminPricing();
   loadPricingOverride().then(function(changed){if(changed)renderAdminPricing();});
   const sgBox=$("adm-signups");
@@ -27277,7 +27447,7 @@ function afterAdmin(){
   };
   const box=$("adm-list");
   if(box)box.onclick=function(ev){
-    const el=ev.target&&ev.target.closest?ev.target.closest("[data-confirm],[data-block],[data-teachers],[data-tblock],[data-expire],[data-exit-deact],[data-exit-delete],[data-disc-set],[data-disc-remove],[data-cap]"):null;
+    const el=ev.target&&ev.target.closest?ev.target.closest("[data-confirm],[data-block],[data-teachers],[data-tblock],[data-tmakehead],[data-tmaketeacher],[data-tremove],[data-trial],[data-free-grant],[data-free-remove],[data-expire],[data-exit-deact],[data-exit-delete],[data-disc-set],[data-disc-remove],[data-cap]"):null;
     if(!el)return;
     if(el.hasAttribute("data-confirm")){
       const parts=String(el.getAttribute("data-confirm")).split("|");
@@ -27318,6 +27488,47 @@ function afterAdmin(){
       const cur=el.getAttribute("data-cur")==="1";
       el.disabled=true;el.textContent="⏳";
       Cloud.setTeacherDisabled(parts[0],!cur).then(function(){clearAdmListCache();renderAdminTeachers(parts[1]);});
+      return;
+    }
+    if(el.hasAttribute("data-tmakehead")){
+      const parts=String(el.getAttribute("data-tmakehead")).split("|");
+      if(parts.length!==2)return;
+      el.disabled=true;el.textContent="⏳";
+      Cloud.setTeacherHead(parts[0],parts[1]).then(function(){
+        return renderAdminTeachers(parts[1]);
+      }).then(function(){
+        const m=document.getElementById("adm-teachers-msg-"+parts[1]);
+        if(m)m.textContent=t("adm_role_updated");
+      });
+      return;
+    }
+    if(el.hasAttribute("data-tmaketeacher")){
+      const parts=String(el.getAttribute("data-tmaketeacher")).split("|");
+      if(parts.length!==2)return;
+      el.disabled=true;el.textContent="⏳";
+      Cloud.setTeacherRole(parts[0],"teacher").then(function(){
+        return renderAdminTeachers(parts[1]);
+      }).then(function(){
+        const m=document.getElementById("adm-teachers-msg-"+parts[1]);
+        if(m)m.textContent=t("adm_role_updated");
+      });
+      return;
+    }
+    if(el.hasAttribute("data-tremove")){
+      const parts=String(el.getAttribute("data-tremove")).split("|");
+      if(parts.length!==2)return;
+      const sid=parts[1];
+      const row=(admListCache&&admListCache.rows||[]).find(function(r){return r.school&&r.school.id===sid;});
+      const sname=row&&row.school?row.school.name:"";
+      const q=t("adm_remove_confirm").replace("{name}",el.getAttribute("data-tname")||"").replace("{school}",sname);
+      if(!confirm(q))return;
+      el.disabled=true;el.textContent="⏳";
+      Cloud.removeTeacherFromSchool(parts[0]).then(function(){
+        return renderAdminTeachers(sid);
+      }).then(function(){
+        const m=document.getElementById("adm-teachers-msg-"+sid);
+        if(m)m.textContent=t("adm_removed");
+      });
       return;
     }
     if(el.hasAttribute("data-exit-deact")){
@@ -27378,6 +27589,41 @@ function afterAdmin(){
       if(!(mb>=1&&mb<=1024)){loadAdminList();return;}
       el.disabled=true;el.textContent="⏳";
       Cloud.setSchoolCap(sid,mb).then(function(){loadAdminList();});
+      return;
+    }
+    if(el.hasAttribute("data-trial")){
+      const sid=el.getAttribute("data-trial");
+      const inp=document.getElementById("adm-trial-"+sid);
+      const val=inp?inp.value:"";
+      el.disabled=true;el.textContent="⏳";
+      Cloud.setSchoolTrial(sid,val).then(function(r){
+        const m=document.getElementById("adm-trial-msg-"+sid);
+        if(m)m.textContent=(r&&r.ok)?t("adm_trial_done").replace("{date}",val):((r&&r.error)?r.error:t("login_fail"));
+        if(r&&r.ok){clearAdmListCache();loadAdminList();}
+        else{el.disabled=false;el.textContent=t("adm_trial_set");}
+      });
+      return;
+    }
+    if(el.hasAttribute("data-free-grant")){
+      const sid=el.getAttribute("data-free-grant");
+      el.disabled=true;el.textContent="⏳";
+      Cloud.setSchoolFreeAccess(sid,true).then(function(r){
+        const m=document.getElementById("adm-free-msg-"+sid);
+        if(m)m.textContent=(r&&r.ok)?t("adm_free_done"):t("login_fail");
+        if(r&&r.ok){clearAdmListCache();loadAdminList();}
+        else{el.disabled=false;el.textContent=t("adm_free_grant");}
+      });
+      return;
+    }
+    if(el.hasAttribute("data-free-remove")){
+      const sid=el.getAttribute("data-free-remove");
+      el.disabled=true;el.textContent="⏳";
+      Cloud.setSchoolFreeAccess(sid,false).then(function(r){
+        const m=document.getElementById("adm-free-msg-"+sid);
+        if(m)m.textContent=(r&&r.ok)?t("adm_free_removed"):t("login_fail");
+        if(r&&r.ok){clearAdmListCache();loadAdminList();}
+        else{el.disabled=false;el.textContent=t("adm_free_remove");}
+      });
       return;
     }
   };
